@@ -1,8 +1,17 @@
 import { RAW_CONTENT, loadContent } from '@printhead/core';
 import { describe, expect, it } from 'vitest';
-import { REFERENCE_BOT, findBot, greedySpenderBot, idleBot } from './bots.js';
+import {
+  BOTS,
+  REFERENCE_BOT,
+  balancedBot,
+  findBot,
+  greedySpenderBot,
+  idleBot,
+  idleHeavyBot,
+} from './bots.js';
 import { buildBudgetTable, checkPhaseBudgets } from './budget.js';
 import { runHeadless } from './harness.js';
+import { checkWaitWalls } from './waitwall.js';
 
 const content = loadContent(RAW_CONTENT);
 const table = buildBudgetTable(content.pacing);
@@ -36,23 +45,37 @@ describe('budget table', () => {
   });
 });
 
+describe('the bot roster', () => {
+  it('ships the spec §12.1 trio plus the idle floor', () => {
+    expect(BOTS.map((bot) => bot.id)).toEqual(['idle', 'greedy-spender', 'balanced', 'idle-heavy']);
+    expect(REFERENCE_BOT).toBe(balancedBot);
+  });
+
+  it('resolves bots by id', () => {
+    expect(findBot('idle')).toBe(idleBot);
+    expect(findBot('balanced')).toBe(balancedBot);
+    expect(findBot('idle-heavy')).toBe(idleHeavyBot);
+    expect(() => findBot('nope')).toThrow(/unknown bot/);
+  });
+
+  it('checks in rarely when it is meant to be idle-heavy (spec §12.1)', () => {
+    expect(idleHeavyBot.checkInDesignSeconds).toBeGreaterThanOrEqual(600);
+    expect(balancedBot.checkInDesignSeconds).toBeLessThan(60);
+  });
+});
+
 describe('headless harness', () => {
   it('runs the real core and logs the run', () => {
-    const log = runHeadless({ content, bot: greedySpenderBot });
-    expect(log.botId).toBe('greedy-spender');
+    const log = runHeadless({ content, bot: balancedBot });
+    expect(log.botId).toBe('balanced');
     expect(log.ticks).toBeGreaterThan(0);
     expect(log.designMinutes).toBeGreaterThanOrEqual(table.totalDesignMinutes);
     expect(log.finalPhaseId).toBe('end');
   });
 
-  it('keeps the reference bot inside every phase budget (CI gate)', () => {
-    const log = runHeadless({ content, bot: REFERENCE_BOT });
-    expect(checkPhaseBudgets(table, log.phaseDurations)).toEqual([]);
-  });
-
   it('is deterministic for a given seed', () => {
-    const a = runHeadless({ content, bot: greedySpenderBot, seed: 7 });
-    const b = runHeadless({ content, bot: greedySpenderBot, seed: 7 });
+    const a = runHeadless({ content, bot: balancedBot, seed: 7 });
+    const b = runHeadless({ content, bot: balancedBot, seed: 7 });
     expect(b.phaseDurations).toEqual(a.phaseDurations);
     expect(b.ticks).toBe(a.ticks);
     expect(b.finalState).toEqual(a.finalState);
@@ -62,8 +85,8 @@ describe('headless harness', () => {
     const fastRaw = deepClone(RAW_CONTENT);
     (fastRaw.pacing as { targetHours: number }).targetHours = 4;
     const fast = loadContent(fastRaw);
-    const slow = runHeadless({ content, bot: greedySpenderBot });
-    const quick = runHeadless({ content: fast, bot: greedySpenderBot });
+    const slow = runHeadless({ content, bot: balancedBot });
+    const quick = runHeadless({ content: fast, bot: balancedBot });
     expect([...quick.phaseEnteredAt.keys()]).toEqual([...slow.phaseEnteredAt.keys()]);
     expect(quick.designMinutes).toBeCloseTo(slow.designMinutes, 6);
     expect(quick.wallHours).toBeCloseTo(slow.wallHours / 2, 6);
@@ -109,65 +132,90 @@ describe('headless harness', () => {
       }),
     ).toThrow(/twitchy/);
   });
+});
 
-  it('resolves bots by id', () => {
-    expect(findBot('idle')).toBe(idleBot);
-    expect(findBot('greedy-spender')).toBe(greedySpenderBot);
-    expect(() => findBot('nope')).toThrow(/unknown bot/);
+/**
+ * The CI balance gate (spec §12.6). A balance regression fails exactly like a
+ * failing unit test: the reference bot must finish every phase inside its
+ * window, and no wait wall may overrun the budget its phase declares.
+ *
+ * Phases 3–6 are still time-gated placeholders, so they are on budget by
+ * construction; the mechanics that make them real arrive in M4–M6. What this
+ * gate genuinely measures today is the intro, the bench and the farm — which
+ * is exactly what M3 built.
+ */
+describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
+  const log = runHeadless({ content, bot: REFERENCE_BOT });
+
+  it('finishes the whole arc', () => {
+    expect(log.finalPhaseId).toBe('end');
+  });
+
+  it('lands every phase inside its ±20 % window', () => {
+    expect(checkPhaseBudgets(table, log.phaseDurations)).toEqual([]);
+  });
+
+  it('keeps every wait wall under its phase budget (spec §12.2)', () => {
+    expect(checkWaitWalls(content, log.waitWalls)).toEqual([]);
+  });
+
+  it('keeps phases 0–2 — the ones M3 actually gates — on budget', () => {
+    for (const phaseId of ['intro', 'bench', 'farm']) {
+      const phase = table.phases.find((candidate) => candidate.phaseId === phaseId);
+      const actual = log.phaseDurations.get(phaseId);
+      expect(actual, phaseId).toBeDefined();
+      expect(actual, phaseId).toBeGreaterThanOrEqual(phase?.minDesignMinutes ?? 0);
+      expect(actual, phaseId).toBeLessThanOrEqual(phase?.maxDesignMinutes ?? 0);
+    }
   });
 });
 
 /**
- * The end-to-end proof M1 exists for: the loop the player will actually play,
- * driven by a bot through the real reducer, start to printer #2.
+ * The end-to-end proof the milestone exists for: the M3 loop — print, fail,
+ * recycle, upgrade, automate, trade — driven by a bot through the real reducer.
  */
-describe('greedy-spender plays the M1 loop end to end', () => {
-  const log = runHeadless({ content, bot: greedySpenderBot, stopAtPhaseId: 'farm' });
+describe('the balanced bot plays the M3 loop end to end', () => {
+  const log = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'studio' });
   const state = log.finalState;
 
   it('finishes the intro assembly by attaching every piece', () => {
     expect(log.actionsByType.ATTACH_PIECE).toBe(content.start.assemblyPieces.length);
-    expect(state.assembly.attachedPieceIds).toHaveLength(content.start.assemblyPieces.length);
     expect(log.eventCounts.ASSEMBLY_COMPLETED).toBe(1);
   });
 
-  it('prints, sells and restocks — the core loop turns', () => {
-    expect(log.eventCounts.PRINT_COMPLETED).toBeGreaterThan(0);
-    expect(log.eventCounts.PART_SOLD).toBeGreaterThan(0);
+  it('prints, fails, and turns the wreckage back into filament', () => {
+    expect(state.stats.printsCompleted).toBeGreaterThan(0);
+    expect(state.stats.printsFailed).toBeGreaterThan(0);
+    expect(state.stats.scrapProducedGrams).toBeGreaterThan(0);
+    expect(state.stats.scrapRecycledGrams).toBeGreaterThan(0);
+    expect(log.eventCounts.SCRAP_RECYCLED).toBeGreaterThan(0);
+  });
+
+  it('climbs the machine tree and unlocks a gated material', () => {
+    expect(state.upgrades['heated-bed']).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(state.upgrades).length).toBeGreaterThanOrEqual(2);
+    expect(log.eventCounts.UPGRADE_INSTALLED).toBeGreaterThan(0);
+  });
+
+  it('buys its way out of the friction it was sold (spec §5C)', () => {
+    expect(log.eventCounts.AUTOMATION_INSTALLED).toBeGreaterThanOrEqual(2);
+    expect(log.eventCounts.AUTOMATION_FIRED).toBeGreaterThan(0);
+  });
+
+  it('trades on the market rather than at a fixed shelf price', () => {
     expect(log.eventCounts.FILAMENT_PURCHASED).toBeGreaterThan(0);
-    expect(state.stats.partsProduced).toBeGreaterThan(0);
-    expect(state.stats.moneyEarned).toBeGreaterThan(0);
+    expect(state.stats.filamentPurchasedGrams).toBeGreaterThan(0);
   });
 
-  it('buys printer #2 and beyond off the cost curve', () => {
-    expect(state.printers[content.start.printerId]).toBeGreaterThanOrEqual(4);
-    // One built by hand in the intro, the rest paid for.
-    const paid = (log.actionsByType.BUY_PRINTER ?? 0) > 0;
-    expect(paid).toBe(true);
-    expect(log.eventCounts.PRINTER_BUILT).toBeGreaterThanOrEqual(4);
-  });
-
-  it('leaves intro and bench on budget and enters farm', () => {
-    expect(log.finalPhaseId).toBe('farm');
-    expect(checkPhaseBudgets(table, log.phaseDurations).map((v) => v.phaseId)).toEqual([
-      // Only phases the run stopped short of are unreached; intro/bench are on budget.
-      'farm',
-      'studio',
-      'prestige',
-      'absurd',
-      'end',
-    ]);
-  });
-
-  it('records resource curves and per-phase decision counts', () => {
+  it('records resource curves, wait walls and per-phase decision counts', () => {
     expect(log.samples.length).toBeGreaterThan(1);
     expect(log.samples[0]?.designMinutes).toBe(0);
-    expect(log.samples.at(-1)?.printers).toBeGreaterThanOrEqual(4);
     expect(log.decisionsByPhase.get('intro')).toBeGreaterThan(0);
     expect(log.decisionsByPhase.get('bench')).toBeGreaterThan(0);
     expect(log.decisions).toBe(
       [...log.decisionsByPhase.values()].reduce((total, count) => total + count, 0),
     );
+    expect(log.waitWalls.length).toBeGreaterThan(0);
   });
 
   it('never drives a resource negative', () => {
@@ -176,5 +224,41 @@ describe('greedy-spender plays the M1 loop end to end', () => {
       expect(sample.money).toBeGreaterThanOrEqual(0);
       expect(sample.filamentGrams).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+/**
+ * The three strategies must actually differ, or the roster is decoration.
+ * `greedy-spender` buying capacity the moment it can afford it is a *trap* in
+ * M3 content: printers stay cheap enough that it never saves for the SLA unit
+ * the farm gate needs, so it stalls where the balanced player moves on. That is
+ * a real finding about the economy, and it is asserted here so a future change
+ * that quietly erases the distinction is noticed.
+ */
+describe('the strategies are genuinely different players', () => {
+  const balanced = runHeadless({ content, bot: balancedBot });
+  const greedy = runHeadless({ content, bot: greedySpenderBot });
+  const idleHeavy = runHeadless({ content, bot: idleHeavyBot });
+
+  it('the balanced player is the only one that finishes', () => {
+    expect(balanced.finalPhaseId).toBe('end');
+    expect(greedy.finalPhaseId).not.toBe('end');
+    expect(idleHeavy.finalPhaseId).not.toBe('end');
+  });
+
+  it('greedy out-produces balanced and still gets stuck', () => {
+    expect(greedy.finalState.stats.printsCompleted).toBeGreaterThan(
+      balanced.finalState.stats.printsCompleted,
+    );
+    expect(greedy.finalState.printers['bench-mk1'] ?? 0).toBeGreaterThan(
+      balanced.finalState.printers['bench-mk1'] ?? 0,
+    );
+  });
+
+  it('idle-heavy pays for its inattention in the intro alone', () => {
+    // Seven clicks at one check-in every ten design-minutes.
+    expect(idleHeavy.phaseDurations.get('intro') ?? 0).toBeGreaterThan(
+      balanced.phaseDurations.get('intro') ?? 0,
+    );
   });
 });

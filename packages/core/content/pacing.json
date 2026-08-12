@@ -8,12 +8,21 @@
       "id": "intro",
       "name": "Intro",
       "budgetDesignMinutes": 5,
-      "waitWallBudgetDesignMinutes": 0.6,
+      "waitWallBudgetDesignMinutes": 1.0,
       "allowedActions": ["ATTACH_PIECE", "SET_SLOT_CONFIG", "START_PRINT", "SELL_PARTS"],
       "advanceWhen": [
-        { "metric": "assemblyProgress", "atLeast": 1 },
-        { "metric": "printsCompleted", "atLeast": 1 },
-        { "metric": "partsSold", "atLeast": 1 }
+        {
+          "metric": "assemblyProgress",
+          "atLeast": 1
+        },
+        {
+          "metric": "printsCompleted",
+          "atLeast": 1
+        },
+        {
+          "metric": "partsSold",
+          "atLeast": 1
+        }
       ]
     },
     {
@@ -34,9 +43,18 @@
         "RECYCLE_SCRAP"
       ],
       "advanceWhen": [
-        { "metric": "printers", "atLeast": 4 },
-        { "metric": "upgradesInstalled", "atLeast": 2 },
-        { "metric": "scrapRecycledGrams", "atLeast": 1 }
+        {
+          "metric": "printers",
+          "atLeast": 4
+        },
+        {
+          "metric": "upgradesInstalled",
+          "atLeast": 2
+        },
+        {
+          "metric": "scrapRecycledGrams",
+          "atLeast": 1
+        }
       ]
     },
     {
@@ -57,8 +75,18 @@
         "RECYCLE_SCRAP"
       ],
       "advanceWhen": [
-        { "metric": "printers", "atLeast": 8 },
-        { "metric": "automationsInstalled", "atLeast": 2 }
+        {
+          "metric": "printers",
+          "atLeast": 14
+        },
+        {
+          "metric": "upgradesInstalled",
+          "atLeast": 6
+        },
+        {
+          "metric": "automationsInstalled",
+          "atLeast": 3
+        }
       ]
     },
     {
@@ -78,7 +106,12 @@
         "SET_AUTOMATION",
         "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 75 }]
+      "advanceWhen": [
+        {
+          "metric": "phaseDesignMinutes",
+          "atLeast": 75
+        }
+      ]
     },
     {
       "id": "prestige",
@@ -97,7 +130,12 @@
         "SET_AUTOMATION",
         "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 90 }]
+      "advanceWhen": [
+        {
+          "metric": "phaseDesignMinutes",
+          "atLeast": 90
+        }
+      ]
     },
     {
       "id": "absurd",
@@ -116,7 +154,12 @@
         "SET_AUTOMATION",
         "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 80 }]
+      "advanceWhen": [
+        {
+          "metric": "phaseDesignMinutes",
+          "atLeast": 80
+        }
+      ]
     },
     {
       "id": "end",
@@ -135,7 +178,12 @@
         "SET_AUTOMATION",
         "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 60 }]
+      "advanceWhen": [
+        {
+          "metric": "phaseDesignMinutes",
+          "atLeast": 60
+        }
+      ]
     }
   ]
 }
