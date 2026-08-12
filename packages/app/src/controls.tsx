@@ -27,6 +27,7 @@ import type { GameStore } from './store.js';
 
 /** Batches one rota entry prints before the bay rotates on (spec §5B). */
 const ROTA_BATCHES = 5;
+
 export interface ControlsProps {
   readonly store: GameStore;
   readonly visual: VisualState;

@@ -71,8 +71,6 @@ export function queueEntryDone(slot: SlotState): boolean {
   return slot.queueBatches >= Math.max(entry.batches, ONE);
 }
 
-export type QueueRejection = 'unknown-target' | 'locked' | 'missing-prerequisite';
-
 /**
  * A rota may only name materials and objects that exist. Whether the *player*
  * has unlocked them is checked by the reducer against the same rules a manual
