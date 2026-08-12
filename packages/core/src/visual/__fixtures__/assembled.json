@@ -10,7 +10,7 @@
       "index": 0,
       "materialId": null,
       "objectId": null,
-      "machineTier": 0,
+      "machineTier": 1,
       "printerCount": 1,
       "phaseOffset": 0,
       "occupied": false,

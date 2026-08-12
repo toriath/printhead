@@ -1,82 +1,82 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
+import { BAY_HEIGHT, bayX, workshopWidth } from './geometry.js';
+import { Slot } from './slot.js';
+import { WORKSHOP_CSS } from './styles.js';
 
 /**
- * The renderer is a *pure function of `VisualState`* (spec §1, §15). It never
- * imports the reducer, never reads sim internals and holds no state of its own.
- * M2 replaces these placeholders with the real vector printer; M1 pins the
- * contract, the per-slot rule (spec §4) and the test seam.
+ * The workshop (spec §16: `renderer/` = Printer, Slot, Workshop, …).
+ *
+ * The renderer is a **pure function of `VisualState`** (spec §1, §15): same
+ * projection in, same markup out, no state, no clock, no content lookups and
+ * no imports from the reducer. `workshop.test.tsx` asserts exactly that by
+ * rendering the same fixture twice and comparing the HTML.
  */
 export interface WorkshopProps {
   readonly visual: VisualState;
 }
 
-const SLOT_WIDTH = 120;
-const SLOT_HEIGHT = 160;
-const SLOT_GAP = 16;
-const BAR_HEIGHT = 8;
-const MAX_SLOTS = 4;
+const EMPTY_BAY_ID = 'locked';
 
-export function SlotView({ slot, x }: { slot: SlotVisual; x: number }): ReactElement {
-  return (
-    <g data-testid={`printer-${slot.slotId}`} transform={`translate(${x}, 0)`}>
-      <rect
-        width={SLOT_WIDTH}
-        height={SLOT_HEIGHT}
-        rx={6}
-        className={`printer printer--tier-${slot.machineTier}${slot.running ? ' printer--running' : ''}`}
-      />
-      <rect
-        data-testid={`progress-${slot.slotId}`}
-        y={SLOT_HEIGHT - BAR_HEIGHT}
-        width={SLOT_WIDTH * slot.progress}
-        height={BAR_HEIGHT}
-        className="printer__progress"
-      />
-      <text x={SLOT_WIDTH / 2} y={SLOT_HEIGHT - SLOT_GAP} textAnchor="middle">
-        {`${slot.objectId} · ${slot.materialId} ×${slot.printerCount}`}
-      </text>
-    </g>
-  );
+/**
+ * Bays past the ones the save actually owns. Spec §4 caps config slots at four
+ * and asks for empty ones as faint outlines, so the workshop always shows the
+ * whole rack — the shape of the fleet is part of the information.
+ */
+function lockedBay(index: number, capacity: number): SlotVisual {
+  return {
+    slotId: `${EMPTY_BAY_ID}-${index + 1}`,
+    index,
+    materialId: null,
+    objectId: null,
+    machineTier: 0,
+    printerCount: 0,
+    phaseOffset: capacity > 0 ? index / capacity : 0,
+    occupied: false,
+    running: false,
+    progress: 0,
+    batch: 0,
+  };
 }
 
-/** The intro printer, drawn piece by piece as the player attaches them (spec §6). */
-export function AssemblyView({ visual }: WorkshopProps): ReactElement {
-  const { assembly } = visual;
-  return (
-    <g data-testid="assembly">
-      {assembly.attachedPieceIds.map((pieceId, index) => (
-        <rect
-          key={pieceId}
-          data-testid={`piece-${pieceId}`}
-          x={SLOT_GAP}
-          y={SLOT_HEIGHT - (index + 1) * (BAR_HEIGHT * 2)}
-          width={SLOT_WIDTH}
-          height={BAR_HEIGHT}
-          className={`piece piece--${pieceId}`}
-        />
-      ))}
-      <text data-testid="assembly-progress" x={SLOT_GAP} y={SLOT_GAP}>
-        {`${assembly.attachedPieceIds.length}/${assembly.totalPieces} pieces`}
-      </text>
-    </g>
+export function bays(visual: VisualState): readonly SlotVisual[] {
+  const capacity = Math.max(visual.slotCapacity, visual.slots.length);
+  return Array.from(
+    { length: capacity },
+    (_unused, index) => visual.slots[index] ?? lockedBay(index, capacity),
   );
 }
 
 export function Workshop({ visual }: WorkshopProps): ReactElement {
+  const rack = bays(visual);
+  const width = workshopWidth(rack.length);
+  // During the intro the first bay holds the machine being built: the pieces
+  // the player has clicked on, drawn on the printer that will keep them
+  // company for the rest of the game (spec §6 phase 0).
+  const assemblyParts = visual.assembly.complete ? undefined : visual.assembly.attachedPieceIds;
+
   return (
     <svg
+      className="printhead-workshop"
       role="img"
-      aria-label={`printhead workshop, phase ${visual.phaseId}`}
+      aria-label={`PRINTHEAD workshop — ${visual.phaseName}`}
       data-visual-version={visual.version}
       data-phase={visual.phaseId}
-      viewBox={`0 0 ${(SLOT_WIDTH + SLOT_GAP) * MAX_SLOTS} ${SLOT_HEIGHT}`}
+      data-slot-capacity={visual.slotCapacity}
+      viewBox={`0 0 ${width} ${BAY_HEIGHT}`}
+      preserveAspectRatio="xMidYMid meet"
     >
-      <title>{`PRINTHEAD — ${visual.phaseId}`}</title>
-      {visual.slots.map((slot, index) => (
-        <SlotView key={slot.slotId} slot={slot} x={index * (SLOT_WIDTH + SLOT_GAP)} />
+      <title>{`PRINTHEAD — ${visual.phaseName}`}</title>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant stylesheet, never user input */}
+      <style dangerouslySetInnerHTML={{ __html: WORKSHOP_CSS }} />
+      {rack.map((slot, index) => (
+        <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
+          <Slot
+            slot={slot}
+            {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
+          />
+        </g>
       ))}
-      {visual.slots.length === 0 ? <AssemblyView visual={visual} /> : null}
     </svg>
   );
 }

@@ -31,13 +31,17 @@ function toSlotVisual(
   machineTier: number,
 ): SlotVisual {
   const config = resolveSlotConfig(content, slot);
-  const occupied = config !== null && slot.printerCount > NONE;
+  const staffed = slot.printerCount > NONE;
+  // "Occupied" means the bay is actually working: a config *and* a machine.
+  // A staffed bay with no config still shows its printer — the player built it
+  // and it should not vanish while they decide what to load into it.
+  const occupied = config !== null && staffed;
   return {
     slotId: slot.id,
     index,
     materialId: config?.material.id ?? null,
     objectId: config?.object.id ?? null,
-    machineTier: occupied ? machineTier : NONE,
+    machineTier: staffed ? machineTier : NONE,
     printerCount: slot.printerCount,
     phaseOffset: phaseOffsetOf(index, slotCount),
     occupied,
