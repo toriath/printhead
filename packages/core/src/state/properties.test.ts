@@ -7,7 +7,10 @@ import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
 import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
+import { assignedPrinters, printersPerSlot } from '../systems/fleet.js';
 import { marketStateOf, priceMultiplier, quoteFor } from '../systems/market.js';
+import { countPrinters } from '../systems/requirements.js';
+import { effectiveSlotCapacity, hardSlotMaximum } from '../systems/slots.js';
 import { validateVisualState } from '../visual/schema.js';
 import { toVisualState } from '../visual/visual-state.js';
 import {
@@ -19,15 +22,19 @@ import {
 } from './__fixtures__/sim.js';
 import type { Action } from './actions.js';
 import {
+  assignPrinter,
   buyAutomation,
   buyFilament,
   buyPrinter,
+  buySlot,
   buyUpgrade,
+  chooseFork,
   recycleScrap,
   sellFilament,
   sellParts,
   setAutomation,
   setSlotConfig,
+  setSlotQueue,
   startPrint,
   tick,
 } from './actions.js';
@@ -107,6 +114,54 @@ const anyAction = (): fc.Arbitrary<Action> =>
       .tuple(fc.constantFrom(...content.materials.map((m) => m.id)), quantity())
       .map(([materialId, grams]) => recycleScrap(materialId, grams)),
     fc.constantFrom(...content.materials.map((m) => m.id)).map((id) => recycleScrap(id, null)),
+    // --- M4: slots, fleet, rotas and the fork (spec §4, §5B) ---
+    fc
+      .constantFrom(...content.slots.map((s) => s.id))
+      .map(buySlot),
+    fc.constantFrom(...content.forks.map((f) => f.id)).map(chooseFork),
+    fc
+      .tuple(slotIds(), slotIds(), quantity())
+      .map(([from, to, count]) => assignPrinter(from, to, count)),
+    fc
+      .tuple(
+        slotIds(),
+        fc.array(
+          fc
+            .tuple(
+              fc.constantFrom(...content.materials.map((m) => m.id)),
+              fc.constantFrom(...content.objects.map((o) => o.id)),
+              fc.integer({ min: 1, max: 5 }),
+            )
+            .map(([materialId, objectId, batches]) => ({ materialId, objectId, batches })),
+          { maxLength: 3 },
+        ),
+      )
+      .map(([slotId, entries]) => setSlotQueue(slotId, entries)),
+  );
+
+/**
+ * Bay ids, weighted towards the two a workshop actually owns.
+ *
+ * Spreading uniformly over four ids plus a ghost sounds more adversarial and is
+ * strictly worse: `ASSIGN_PRINTER` then needs a 1-in-25 pair to land on two
+ * real bays, and the fleet-conservation property below silently never fires a
+ * single successful move. The ghost id is still drawn — it is how the
+ * `unknown-target` path gets covered — just not most of the time.
+ */
+const slotIds = (): fc.Arbitrary<string> =>
+  fc.oneof(
+    { arbitrary: fc.constantFrom(`${content.start.slotIdPrefix}-1`), weight: 4 },
+    { arbitrary: fc.constantFrom(`${content.start.slotIdPrefix}-2`), weight: 4 },
+    {
+      arbitrary: fc.constantFrom(
+        ...Array.from(
+          { length: hardSlotMaximum(content) },
+          (_unused, index) => `${content.start.slotIdPrefix}-${index + 1}`,
+        ),
+        'ghost-slot',
+      ),
+      weight: 2,
+    },
   );
 
 const ticksFor = (designSeconds: number): number => (designSeconds * 1000) / TICK_MS;
@@ -138,14 +193,10 @@ function trading(seed: number): GameState {
   return state;
 }
 
-/**
- * A workshop with the full rack staffed. `start.slotCount` is 1 until M4, so no
- * amount of play reaches this shape yet — but the projection has to be right
- * for it before the mechanic lands, not after.
- */
+/** A workshop with the full rack staffed (spec §4's hard maximum). */
 function fullRack(seed: number): GameState {
   const base = trading(seed);
-  const capacity = content.start.maxSlotCount;
+  const capacity = hardSlotMaximum(content);
   return {
     ...base,
     printers: { [printerId]: capacity },
@@ -161,12 +212,93 @@ function fullRack(seed: number): GameState {
 }
 
 /**
+ * A farm-phase workshop with a full first bay and money in the tin. Everything
+ * M4 adds — buying a bay, moving machines, writing a rota — is gated on this
+ * phase, so without it the fleet properties below would fuzz a game in which
+ * none of their actions are even legal.
+ */
+function scaled(seed: number): GameState {
+  const base = trading(seed);
+  const rota = content.automation.find((def) => def.behavior === 'auto-changeover');
+  const ceiling = content.start.printersPerSlot;
+  return {
+    ...base,
+    phaseId: 'farm',
+    resources: { ...base.resources, parts: 3000 },
+    partsValue: 3000,
+    printers: { [printerId]: ceiling },
+    slots: [
+      testSlot({
+        id: FIRST_SLOT_ID,
+        materialId: FIRST_MATERIAL_ID,
+        objectId: FIRST_OBJECT_ID,
+        printerCount: ceiling,
+      }),
+    ],
+    automation:
+      rota === undefined
+        ? base.automation
+        : {
+            ...base.automation,
+            [rota.id]: { level: 1, enabled: true, threshold: rota.defaultThreshold, cooldownMs: 0 },
+          },
+  };
+}
+
+/** The same workshop with the second bay already bought and half-staffed. */
+function racked(seed: number): GameState {
+  const base = scaled(seed);
+  const ceiling = content.start.printersPerSlot;
+  return {
+    ...base,
+    slots: [
+      testSlot({
+        id: `${content.start.slotIdPrefix}-1`,
+        materialId: FIRST_MATERIAL_ID,
+        objectId: FIRST_OBJECT_ID,
+        printerCount: ceiling,
+      }),
+      testSlot({
+        id: `${content.start.slotIdPrefix}-2`,
+        materialId: FIRST_MATERIAL_ID,
+        objectId: FIRST_OBJECT_ID,
+        printerCount: 1,
+      }),
+    ],
+    printers: { [printerId]: ceiling + 1 },
+  };
+}
+
+/** The same workshop one phase on, where the Farm/Goliath fork is affordable. */
+function forking(seed: number): GameState {
+  const base = racked(seed);
+  return {
+    ...base,
+    phaseId: 'studio',
+    // The enclosure is the third bay's prerequisite, so this workshop can buy
+    // one — without it the only state that could reach `BUY_SLOT` at all would
+    // be `scaled`, and the coverage check below would depend on the draw.
+    upgrades: { ...base.upgrades, enclosure: 1 },
+    resources: { ...base.resources, parts: 9000 },
+    partsValue: 9000,
+  };
+}
+
+/**
  * Start states that actually unlock the actions under test. Fuzzing from a
  * fresh save alone is close to vacuous: the phase FSM gates every economy
  * action behind an intro that random input will never complete.
  */
 const startStates = (): fc.Arbitrary<GameState> =>
-  fc.constantFrom(createInitialState(content, { seed: 4 }), assembled(4), trading(4), fullRack(4));
+  fc.constantFrom(
+    createInitialState(content, { seed: 4 }),
+    assembled(4),
+    trading(4),
+    fullRack(4),
+    scaled(4),
+    racked(4),
+    forking(4),
+  );
 
 describe('property: resources are never negative', () => {
   it('holds for arbitrary action sequences from any reachable state', () => {
@@ -609,7 +741,7 @@ describe('property: the VisualState projection is always valid', () => {
     );
   });
 
-  it('projects exactly one entry per slot, never more, never fewer', () => {
+  it('projects exactly one entry per *active* slot, never more, never fewer', () => {
     fc.assert(
       fc.property(
         startStates(),
@@ -620,11 +752,16 @@ describe('property: the VisualState projection is always valid', () => {
             state = apply(state, action);
           }
           const visual = toVisualState(state, content);
-          expect(visual.slots).toHaveLength(state.slots.length);
+          // A Goliath run melts the rack into one bay (spec §5B), so the bays
+          // the projection publishes are the *active* ones, not every row the
+          // save happens to still carry.
+          const active = effectiveSlotCapacity(state, content);
+          expect(visual.slots).toHaveLength(active);
           expect(visual.slots.map((slot) => slot.slotId)).toEqual(
-            state.slots.map((slot) => slot.id),
+            state.slots.slice(0, active).map((slot) => slot.id),
           );
           expect(visual.slotCapacity).toBeGreaterThanOrEqual(visual.slots.length);
+          expect(visual.fleet.assigned).toBe(visual.fleet.printers);
         },
       ),
       { numRuns: 40 },
@@ -654,5 +791,177 @@ describe('property: the VisualState projection is always valid', () => {
       ),
       { numRuns: 40 },
     );
+  });
+});
+
+/**
+ * Fleet allocation is bookkeeping, and bookkeeping that leaks is a duplication
+ * glitch. Whatever a player does with the rack, the machines standing in bays
+ * must be exactly the machines they own — no more (free printers) and no fewer
+ * (machines lost in a move). This is the property that would have caught a
+ * `ASSIGN_PRINTER` that credited the target before debiting the source.
+ */
+describe('property: printer assignment conserves the fleet (spec §4)', () => {
+  it('keeps Σ slot.printerCount equal to the printers owned', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 120 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            state = apply(state, action);
+            expect(assignedPrinters(state), 'a machine went missing or was duplicated').toBe(
+              countPrinters(state),
+            );
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('never overfills a bay past the ceiling the content declares', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 120 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            state = apply(state, action);
+            const ceiling = printersPerSlot(state, content);
+            for (const slot of state.slots) {
+              expect(slot.printerCount, `${slot.id} overfilled`).toBeLessThanOrEqual(ceiling);
+            }
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});
+
+/**
+ * Spec §4: slots go **1 → 2 → 3 → 4 (hard max)**. The cap is derived from the
+ * unlock list, so this property is really "no sequence of clicks can grow the
+ * rack past the bays content declares" — including the prestige-gated fourth,
+ * which nothing in M4 can open.
+ */
+describe('property: the slot cap is never exceeded (spec §4)', () => {
+  it('holds for arbitrary play, and the active rack never exceeds the owned one', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 120 }),
+        (from, actions) => {
+          let state = from;
+          const cap = hardSlotMaximum(content);
+          for (const action of actions) {
+            state = apply(state, action);
+            expect(state.slots.length).toBeLessThanOrEqual(cap);
+            expect(effectiveSlotCapacity(state, content)).toBeLessThanOrEqual(state.slots.length);
+            // Bay ids stay unique — a duplicate would make `slotIndexOf` lie.
+            expect(new Set(state.slots.map((slot) => slot.id)).size).toBe(state.slots.length);
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});
+
+/**
+ * Spec §5B: the Farm/Goliath fork is **mutually exclusive per run**. Once a
+ * branch is committed, no sequence of actions may replace it — the run's shape
+ * is decided, and the endgame depends on which one it was.
+ */
+describe('property: the Farm/Goliath fork is exclusive (spec §5B)', () => {
+  it('never changes a commitment once it has been made', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
+        (from, actions) => {
+          // Start committed to a branch chosen at random, so both are covered.
+          const forkId = content.forks[from.simTimeMs % content.forks.length]?.id ?? null;
+          let state: GameState = { ...from, forkId };
+          for (const action of actions) {
+            state = apply(state, action);
+            expect(state.forkId, 'a committed fork was overwritten').toBe(forkId);
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('reaches at most one branch from an uncommitted run', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
+        (from, actions) => {
+          let state = from;
+          const chosen = new Set<string>();
+          for (const action of actions) {
+            state = apply(state, action);
+            if (state.forkId !== null) {
+              chosen.add(state.forkId);
+            }
+          }
+          expect(chosen.size).toBeLessThanOrEqual(1);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});
+
+/**
+ * A property that never exercises its mechanic is decoration.
+ *
+ * The M4 invariants above are all "nothing bad happened" shapes, which pass
+ * trivially on a game where `BUY_SLOT` and `CHOOSE_FORK` are phase-gated into
+ * no-ops — exactly what would happen if the start states drifted back to the
+ * intro. This test asserts the fuzz really reaches each mechanic, so those
+ * properties stay load-bearing rather than quietly becoming vacuous.
+ */
+describe('the M4 properties are not vacuous', () => {
+  it('the generated play actually buys bays, moves machines and takes the fork', () => {
+    // Counted by *action type* rather than by guessing from a state diff: a
+    // consolidating fork also moves machines, and crediting that to
+    // ASSIGN_PRINTER is exactly how a vacuity check quietly lies.
+    const reached: Record<string, boolean> = {
+      BUY_SLOT: false,
+      ASSIGN_PRINTER: false,
+      SET_SLOT_QUEUE: false,
+      CHOOSE_FORK: false,
+    };
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 40, maxLength: 200 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            const before = state;
+            state = apply(state, action);
+            if (state !== before && action.type in reached) {
+              reached[action.type] = true;
+            }
+          }
+        },
+      ),
+      // A fixed seed: this test asserts *coverage*, and a coverage claim that
+      // depends on today's dice is not a claim at all.
+      { numRuns: 80, seed: 20260812 },
+    );
+    expect(reached).toEqual({
+      BUY_SLOT: true,
+      ASSIGN_PRINTER: true,
+      SET_SLOT_QUEUE: true,
+      CHOOSE_FORK: true,
+    });
   });
 });

@@ -305,6 +305,20 @@ function fire(
       return fireBuyFilament(state, content, owned.threshold, def.moneyReserve, emit);
     case 'trade-filament':
       return fireTradeFilament(state, content, def, owned.threshold, emit);
+    case 'auto-changeover':
+      /*
+       * The rota is turned by the print loop, not by this timer.
+       *
+       * A slot that auto-restarts re-arms the instant a batch lands, so an
+       * interval-driven changeover would almost never find an idle bay and
+       * would have to interrupt a run to do anything at all — abandoning
+       * filament the player already paid for, on a clock they did not set.
+       * Rotating at the natural boundary (`printing.ts`, when a batch
+       * completes) is both cheaper and what a queue means. This automation's
+       * job is to *permit* that rotation and to hold its stock floor, which
+       * `systems/queue.ts` reads straight off the installed level.
+       */
+      return state;
   }
 }
 

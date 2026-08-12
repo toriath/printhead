@@ -4,6 +4,8 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 %
 
 **PASS** — every phase inside its window, no wait wall over budget.
 
+_11 further wait wall(s) sit in phases that are still time-gated placeholders; they become real when the milestones that fill those phases land._
+
 ## Phase timeline
 
 ![Phase timeline](./phase-timeline.svg)
@@ -11,12 +13,12 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 %
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
 | Intro | 5 (4–6) | 420.0 | 5.0 | 5.0 | 90.0 |
-| Bench | 30 (24–36) | — | 30.4 | 29.7 | 150.0 |
-| Farm | 80 (64–96) | — | 384.6 | 80.4 | 180.0 |
-| Studio | 75 (60–90) | — | — | 75.0 | — |
-| Prestige runs 1-2 | 90 (72–108) | — | — | 90.0 | — |
-| The Absurd | 80 (64–96) | — | — | 80.0 | — |
-| The End | 60 (48–72) | — | — | 59.9 | — |
+| Bench | 30 (24–36) | — | 22.9 | 25.9 | 140.0 |
+| Farm | 80 (64–96) | — | 57.0 | 80.1 | 190.0 |
+| Studio | 75 (60–90) | — | 75.0 | 75.0 | — |
+| Prestige runs 1-2 | 90 (72–108) | — | 90.0 | 90.0 | — |
+| The Absurd | 80 (64–96) | — | 80.0 | 80.0 | — |
+| The End | 60 (48–72) | — | 90.1 | 64.0 | — |
 | **Total** | **420** | **420.0** | **420.0** | **420.0** | **420.0** |
 
 The reference run took 420.0 design-minutes (7.00 wall-hours at targetHours=8) and ended in `end`.
@@ -32,12 +34,12 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Phase | Longest wall | Budget | Walls found |
 |---|---|---|---|
 | Intro | 0.7 | 1 | 8 |
-| Bench | 2.9 | 3 | 16 |
-| Farm | 4.0 | 5 | 35 |
-| Studio | 4.0 | 5 | 26 |
-| Prestige runs 1-2 | 4.0 | 6 | 27 |
-| The Absurd | 4.0 | 6 | 24 |
-| The End | 4.0 | 8 | 19 |
+| Bench | 2.9 | 3 | 13 |
+| Farm | 3.7 | 5 | 51 |
+| Studio | 6.5 | 5 | 24 |
+| Prestige runs 1-2 | 6.5 | 6 | 27 |
+| The Absurd | 7.0 | 6 | 25 |
+| The End | 6.3 | 8 | 257 |
 
 ## Resource curves
 
@@ -55,13 +57,9 @@ magnitude and a shared axis would flatten one of them into the floor.
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
 | idle | 42 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 5040 | 963 | 26426 | 2627 | 9.0 % | farm |
-| balanced | 5040 | 1036 | 3066 | 159 | 4.9 % | end |
-| idle-heavy | 42 | 58 | 589 | 39 | 6.2 % | farm |
-
-## Sweep
-
-Attached as [`sweep.csv`](./sweep.csv).
+| greedy-spender | 5040 | 875 | 21507 | 2129 | 9.0 % | end |
+| balanced | 5040 | 982 | 3018 | 150 | 4.7 % | end |
+| idle-heavy | 42 | 67 | 985 | 55 | 5.3 % | farm |
 
 ---
 

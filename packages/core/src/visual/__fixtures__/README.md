@@ -18,6 +18,8 @@ the documents the projection's freeze test does.
 | `assembled.json` | generated | printer #1 built, no config loaded |
 | `printing.json` | generated | the bench loop, one slot mid-batch |
 | `economy.json` | generated | M3: a machine node installed, an automation running, scrap in the bin |
+| `rack.json` | generated | M4: two bays, the fleet split between them, a print rota on the second |
+| `goliath.json` | generated | M4: the other side of the fork — one giant printer, no rack |
 | `showcase.json` | hand-authored | four bays, three machine tiers, badges, a purge in progress, one empty outline |
 
 Regenerate the *generated* ones (only when adding a new version) with:
@@ -26,11 +28,19 @@ Regenerate the *generated* ones (only when adding a new version) with:
 pnpm tsx scripts/make-visual-fixtures.ts
 ```
 
-`showcase.json` is written by hand on purpose: the simulation still has one
-slot, so nothing it can produce exercises the tier variants or the `×N` badges
-the renderer has to draw. It is schema-valid and represents a state the game
-reaches at M4; when the sim can produce it, it should become generated like the
-rest.
+`showcase.json` is still written by hand, but for a narrower reason than it was
+at M3. Multiple bays, count badges and mid-purge states are all reachable now
+(`rack.json` and `goliath.json` are generated from real play), so the only thing
+left that the simulation *cannot* produce is a rack with **different machine
+tiers side by side**: `machineTier` is a property of the workshop — the machine
+tree upgrades every bay at once — so every bay in a real save reports the same
+tier, while the renderer still has to draw all three. When tiers become
+per-slot, this fixture can be generated like the rest.
+
+The M4 fixtures are produced by handing the wheel to the reference bot until
+the phase where the fork unlocks, then making the slot, rota and fork decisions
+through the real reducer — the farm gate is a grind rather than a few clicks,
+and a fixture that skipped it would be a hand-written guess again.
 
 Validation is **lazy and memoised** (`visualStateFixtures()`), not run at import
 time. The corpus is still checked the moment anything reads it — which every

@@ -1,9 +1,10 @@
 {
-  "version": 4,
+  "version": 5,
   "phaseId": "farm",
   "phaseName": "Farm",
   "simTimeMs": 4620000,
   "slotCapacity": 4,
+  "goliath": false,
   "slots": [
     {
       "slotId": "slot-1",
@@ -14,6 +15,7 @@
       "objectName": "Bracket",
       "machineTier": 1,
       "printerCount": 7,
+      "printerCapacity": 8,
       "phaseOffset": 0,
       "occupied": true,
       "running": true,
@@ -21,7 +23,9 @@
       "batch": 7,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.85
+      "failureRisk": 0.85,
+      "queue": [],
+      "queueBatches": 0
     },
     {
       "slotId": "slot-2",
@@ -32,6 +36,7 @@
       "objectName": "Gear set",
       "machineTier": 2,
       "printerCount": 3,
+      "printerCapacity": 8,
       "phaseOffset": 0.25,
       "occupied": true,
       "running": true,
@@ -39,7 +44,9 @@
       "batch": 3,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.4
+      "failureRisk": 0.4,
+      "queue": [],
+      "queueBatches": 0
     },
     {
       "slotId": "slot-3",
@@ -50,6 +57,7 @@
       "objectName": "Bracket",
       "machineTier": 3,
       "printerCount": 1,
+      "printerCapacity": 8,
       "phaseOffset": 0.5,
       "occupied": true,
       "running": false,
@@ -57,7 +65,9 @@
       "batch": 0,
       "changingOver": true,
       "changeoverProgress": 0.4,
-      "failureRisk": 0
+      "failureRisk": 0,
+      "queue": [],
+      "queueBatches": 0
     },
     {
       "slotId": "slot-4",
@@ -68,6 +78,7 @@
       "objectName": null,
       "machineTier": 0,
       "printerCount": 0,
+      "printerCapacity": 8,
       "phaseOffset": 0.75,
       "occupied": false,
       "running": false,
@@ -75,7 +86,44 @@
       "batch": 0,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0
+      "failureRisk": 0,
+      "queue": [],
+      "queueBatches": 0
+    }
+  ],
+  "fleet": {
+    "printers": 11,
+    "assigned": 11,
+    "slotsOwned": 4,
+    "slotsActive": 4,
+    "slotsMaximum": 4,
+    "printerCapacity": 32
+  },
+  "slotUnlock": null,
+  "forks": [
+    {
+      "forkId": "farm-path",
+      "name": "The Farm",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "layout": "rack",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": false
+    },
+    {
+      "forkId": "goliath",
+      "name": "Goliath",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "layout": "goliath",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": true
     }
   ],
   "assembly": {

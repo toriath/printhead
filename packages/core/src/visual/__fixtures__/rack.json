@@ -1,0 +1,326 @@
+{
+  "version": 5,
+  "phaseId": "studio",
+  "phaseName": "Studio",
+  "simTimeMs": 8240000,
+  "slotCapacity": 4,
+  "goliath": false,
+  "slots": [
+    {
+      "slotId": "slot-1",
+      "index": 0,
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "bracket",
+      "objectName": "Bracket",
+      "machineTier": 3,
+      "printerCount": 8,
+      "printerCapacity": 8,
+      "phaseOffset": 0,
+      "occupied": true,
+      "running": false,
+      "progress": 0,
+      "batch": 0,
+      "changingOver": true,
+      "changeoverProgress": 0.25,
+      "failureRisk": 0,
+      "queue": [],
+      "queueBatches": 0
+    },
+    {
+      "slotId": "slot-2",
+      "index": 1,
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "bracket",
+      "objectName": "Bracket",
+      "machineTier": 3,
+      "printerCount": 6,
+      "printerCapacity": 8,
+      "phaseOffset": 0.5,
+      "occupied": true,
+      "running": false,
+      "progress": 0,
+      "batch": 0,
+      "changingOver": true,
+      "changeoverProgress": 0.25,
+      "failureRisk": 0,
+      "queue": [
+        {
+          "materialId": "pla",
+          "materialName": "PLA",
+          "objectId": "bracket",
+          "objectName": "Bracket",
+          "batches": 4,
+          "current": true
+        },
+        {
+          "materialId": "petg",
+          "materialName": "PETG",
+          "objectId": "bracket",
+          "objectName": "Bracket",
+          "batches": 4,
+          "current": false
+        }
+      ],
+      "queueBatches": 0
+    }
+  ],
+  "fleet": {
+    "printers": 14,
+    "assigned": 14,
+    "slotsOwned": 2,
+    "slotsActive": 2,
+    "slotsMaximum": 4,
+    "printerCapacity": 16
+  },
+  "slotUnlock": {
+    "unlockId": "slot-3",
+    "name": "Third config slot",
+    "available": true,
+    "affordable": false,
+    "cost": 2400,
+    "costResource": "parts",
+    "blockedReason": null
+  },
+  "forks": [
+    {
+      "forkId": "farm-path",
+      "name": "The Farm",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "layout": "rack",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": false
+    },
+    {
+      "forkId": "goliath",
+      "name": "Goliath",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "layout": "goliath",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": true
+    }
+  ],
+  "assembly": {
+    "attachedPieceIds": [
+      "frame",
+      "gantry",
+      "bed",
+      "extruder",
+      "hotend",
+      "spool-holder",
+      "controller"
+    ],
+    "totalPieces": 7,
+    "nextPieceId": null,
+    "nextPieceName": null,
+    "cooldownMs": 0,
+    "ready": false,
+    "progress": 1,
+    "complete": true
+  },
+  "ledger": {
+    "parts": 0,
+    "money": 247.58303727421088,
+    "scrap": 0,
+    "filamentGrams": {
+      "pla": 400,
+      "petg": 23.464999999999392,
+      "resin": 2250,
+      "metal": 0
+    }
+  },
+  "market": [
+    {
+      "materialId": "pla",
+      "materialName": "PLA",
+      "tradeable": false,
+      "available": true,
+      "buyPerGram": 0.05,
+      "sellPerGram": 0,
+      "priceMultiplier": 1,
+      "stockGrams": 0,
+      "heldGrams": 400
+    },
+    {
+      "materialId": "petg",
+      "materialName": "PETG",
+      "tradeable": true,
+      "available": true,
+      "buyPerGram": 0.08583280825310341,
+      "sellPerGram": 0.0795240968465003,
+      "priceMultiplier": 1.0729101031637926,
+      "stockGrams": 20.99999999689976,
+      "heldGrams": 23.464999999999392
+    },
+    {
+      "materialId": "resin",
+      "materialName": "Resin (SLA)",
+      "tradeable": true,
+      "available": false,
+      "buyPerGram": 0.38786000571500134,
+      "sellPerGram": 0.3593522952949487,
+      "priceMultiplier": 1.108171444900004,
+      "stockGrams": 1273.3333333329392,
+      "heldGrams": 2250
+    },
+    {
+      "materialId": "metal",
+      "materialName": "Sintered metal",
+      "tradeable": true,
+      "available": false,
+      "buyPerGram": 1.550004261782861,
+      "sellPerGram": 1.4360789485418208,
+      "priceMultiplier": 1.1071459012734723,
+      "stockGrams": 800,
+      "heldGrams": 0
+    }
+  ],
+  "upgrades": [
+    {
+      "upgradeId": "heated-bed",
+      "name": "Heated bed",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 169,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "recycler",
+      "name": "Scrap recycler",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 169,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "hardened-nozzle",
+      "name": "Hardened nozzle",
+      "tree": "machine",
+      "level": 3,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 431,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "enclosure",
+      "name": "Enclosure",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 169,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sla-unit",
+      "name": "SLA unit",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": true,
+      "affordable": false,
+      "cost": 900,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sintering-head",
+      "name": "Sintering head",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 900,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "broker-licence",
+      "name": "Broker licence",
+      "tree": "automation",
+      "level": 2,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 269.24032000000005,
+      "costResource": "money"
+    }
+  ],
+  "automation": [
+    {
+      "automationId": "auto-sell",
+      "name": "Auto-sell parts",
+      "behavior": "sell-parts",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 104,
+      "available": false,
+      "affordable": false,
+      "cost": 696,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-buy-filament",
+      "name": "Auto-buy filament",
+      "behavior": "buy-filament",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 400,
+      "available": false,
+      "affordable": false,
+      "cost": 696,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-trade",
+      "name": "Auto-trading desk",
+      "behavior": "trade-filament",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 250,
+      "available": false,
+      "affordable": false,
+      "cost": 695.7363,
+      "costResource": "money"
+    },
+    {
+      "automationId": "auto-changeover",
+      "name": "Auto-changeover rota",
+      "behavior": "auto-changeover",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 60,
+      "available": false,
+      "affordable": false,
+      "cost": 696,
+      "costResource": "parts"
+    }
+  ],
+  "recycler": {
+    "installed": true,
+    "scrapGrams": 0,
+    "yieldGrams": 0,
+    "yieldMaterialId": "pla"
+  }
+}

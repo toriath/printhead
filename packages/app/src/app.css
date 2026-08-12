@@ -274,6 +274,37 @@ button:disabled {
   gap: 6px;
 }
 
+/* The fleet allocator (spec §4): a row per bay, its rota nested underneath. */
+.fleet__bay {
+  align-items: flex-start;
+}
+
+.fleet__queue {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.fleet__queue-entry--current {
+  color: var(--ink);
+}
+
+.fleet__fork {
+  margin-top: 10px;
+  border-top: 1px solid var(--edge);
+  padding-top: 8px;
+}
+
+.fleet__fork h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
 /* The pity timer, drawn on the bay it belongs to (spec §7.1). */
 .slot__risk {
   fill: var(--warn);

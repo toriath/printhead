@@ -89,7 +89,7 @@ describe('the machine tree', () => {
 
   it('names the tree a node belongs to', () => {
     expect(nodeOf(base, 'heated-bed')?.tree).toBe('machine');
-    expect(nodeOf(base, 'config-slot-2')?.tree).toBe('farm');
+    expect(nodeOf(base, 'broker-licence')?.tree).toBe('automation');
   });
 
   it('prices the *next* level, not the first', () => {

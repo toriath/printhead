@@ -35,11 +35,28 @@ export interface PrintRunState {
   readonly batch: number;
 }
 
+/**
+ * One entry on a slot's print queue (spec §5B). A rota of configurations the
+ * slot works through; `batches` is how many batches it prints before the
+ * auto-changeover automation rotates it on to the next entry.
+ */
+export interface SlotQueueEntry {
+  readonly materialId: string;
+  readonly objectId: string;
+  readonly batches: number;
+}
+
 /** A config slot (spec §4): one `{ material, objectType }` plus its printers. */
 export interface SlotState {
   readonly id: string;
   readonly materialId: string | null;
   readonly objectId: string | null;
+  /**
+   * Printers assigned to this bay (spec §4). The fleet is a pool of identical
+   * machines the player allocates across slots, so this is a count, and the sum
+   * across every slot is exactly the number of printers owned — the invariant
+   * `ASSIGN_PRINTER` is written to preserve.
+   */
   readonly printerCount: number;
   /** Keep printing the same config when a run finishes (the idle loop). */
   readonly autoRestart: boolean;
@@ -55,6 +72,12 @@ export interface SlotState {
    * again (spec §3). Milliseconds for the same reason runs are: exact ticks.
    */
   readonly changeoverMs: number;
+  /** The rota this bay works through (spec §5B); empty means "one config". */
+  readonly queue: readonly SlotQueueEntry[];
+  /** Which rota entry is currently loaded. */
+  readonly queueIndex: number;
+  /** Batches finished on the current entry, counted towards its `batches`. */
+  readonly queueBatches: number;
 }
 
 /**
@@ -129,6 +152,13 @@ export interface GameState {
   /** Per-material market stock and trading pressure (spec §7.2). */
   readonly market: MarketLedger;
   readonly slots: readonly SlotState[];
+  /**
+   * The per-run Farm/Goliath commitment (spec §5B), or `null` before it is
+   * made. Mutually exclusive by construction: there is one field, the reducer
+   * only ever writes it when it is `null`, and a prestige run is what clears it
+   * (M5).
+   */
+  readonly forkId: string | null;
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
 }
@@ -174,10 +204,9 @@ export function slotIdAt(prefix: string, index: number): string {
   return `${prefix}-${index + 1}`;
 }
 
-export function createSlots(content: Content): readonly SlotState[] {
-  const { slotCount, slotIdPrefix } = content.start;
-  return Array.from({ length: slotCount }, (_unused, index) => ({
-    id: slotIdAt(slotIdPrefix, index),
+export function emptySlot(id: string): SlotState {
+  return {
+    id,
     materialId: null,
     objectId: null,
     printerCount: 0,
@@ -185,7 +214,17 @@ export function createSlots(content: Content): readonly SlotState[] {
     run: null,
     failureCharge: 0,
     changeoverMs: 0,
-  }));
+    queue: [],
+    queueIndex: 0,
+    queueBatches: 0,
+  };
+}
+
+export function createSlots(content: Content): readonly SlotState[] {
+  const { slotCount, slotIdPrefix } = content.start;
+  return Array.from({ length: slotCount }, (_unused, index) =>
+    emptySlot(slotIdAt(slotIdPrefix, index)),
+  );
 }
 
 /** Opening stock and a neutral price for every tradeable material (spec §7.2). */
@@ -229,6 +268,7 @@ export function createInitialState(content: Content, options: InitialStateOption
     automation: {},
     market: createMarket(content),
     slots: createSlots(content),
+    forkId: null,
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,
   };

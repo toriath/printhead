@@ -33,8 +33,11 @@ describe('bundled content', () => {
         'pacing',
         'prestige',
         'printers',
-        // Not in the spec §11 list, but the same rule applies: the starting kit
-        // and the intro assembly are numbers, so they are data too.
+        // Not in the spec §11 list, but the same rule applies: the starting
+        // kit, the intro assembly, the config-slot progression and the
+        // Farm/Goliath fork are numbers, so they are data too.
+        'slots',
+        'forks',
         'start',
         'upgrades',
       ].sort(),

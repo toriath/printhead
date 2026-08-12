@@ -2,6 +2,7 @@ import type { OfflineSummary } from '@printhead/core';
 import { Workshop } from '@printhead/renderer';
 import { type ReactElement, useEffect, useState } from 'react';
 import { Controls } from './controls.js';
+import { FleetPanel } from './fleet.js';
 import { useVisualState } from './hooks.js';
 import { Hud } from './hud.js';
 import { OfflineSummaryScreen } from './offline-summary.js';
@@ -65,6 +66,9 @@ export function App({
       {/* The economy panels appear as the game unlocks them; each one hides
           itself while its mechanic is still locked (spec §6's reveal order). */}
       <div className="app__panels">
+        {/* The fleet allocator appears the moment the rack becomes a decision
+            (spec §4): a second bay on sale, or more than one already owned. */}
+        <FleetPanel store={store} visual={visual} />
         <UpgradePanel store={store} visual={visual} />
         <MarketPanel store={store} visual={visual} />
         <RecyclerPanel store={store} visual={visual} />

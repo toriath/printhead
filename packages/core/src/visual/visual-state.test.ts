@@ -10,6 +10,7 @@ import {
 } from '../state/__fixtures__/sim.js';
 import { setSlotConfig, startPrint, tick } from '../state/actions.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
+import { hardSlotMaximum } from '../systems/slots.js';
 import { visualFixture, visualStateFixtures } from './fixtures.js';
 import { VISUAL_STATE_VERSION, VisualStateSchema, validateVisualState } from './schema.js';
 import { occupiedSlots, toVisualState } from './visual-state.js';
@@ -26,7 +27,8 @@ describe('toVisualState', () => {
       phaseId: 'intro',
       phaseName: 'Intro',
       simTimeMs: 0,
-      slotCapacity: content.start.maxSlotCount,
+      slotCapacity: hardSlotMaximum(content),
+      goliath: false,
       slots: [
         {
           slotId: FIRST_SLOT_ID,
@@ -37,6 +39,7 @@ describe('toVisualState', () => {
           objectName: null,
           machineTier: 0,
           printerCount: 0,
+          printerCapacity: content.start.printersPerSlot,
           phaseOffset: 0,
           occupied: false,
           running: false,
@@ -45,8 +48,21 @@ describe('toVisualState', () => {
           changingOver: false,
           changeoverProgress: 0,
           failureRisk: 0,
+          queue: [],
+          queueBatches: 0,
         },
       ],
+      fleet: {
+        printers: 0,
+        assigned: 0,
+        slotsOwned: 1,
+        slotsActive: 1,
+        slotsMaximum: hardSlotMaximum(content),
+        printerCapacity: content.start.printersPerSlot,
+      },
+      // The next bay on sale, and why it is not yet (spec §4).
+      slotUnlock: toVisualState(state, content).slotUnlock,
+      forks: toVisualState(state, content).forks,
       assembly: {
         attachedPieceIds: [],
         totalPieces: pieces.length,
@@ -108,7 +124,7 @@ describe('toVisualState', () => {
 
   it('publishes the hard slot cap so the renderer draws empty bays (spec §4)', () => {
     const visual = toVisualState(state, content);
-    expect(visual.slotCapacity).toBe(content.start.maxSlotCount);
+    expect(visual.slotCapacity).toBe(hardSlotMaximum(content));
     expect(visual.slotCapacity).toBeGreaterThanOrEqual(visual.slots.length);
   });
 
@@ -300,6 +316,8 @@ describe('the frozen VisualState contract (spec §15)', () => {
       'assembled',
       'printing',
       'economy',
+      'rack',
+      'goliath',
       'showcase',
     ]);
     // The M3 states the renderer newly has to draw.
@@ -307,10 +325,32 @@ describe('the frozen VisualState contract (spec §15)', () => {
     expect(economy?.upgrades.some((row) => row.level > 0)).toBe(true);
     expect(economy?.automation.some((row) => row.installed)).toBe(true);
     expect(economy?.ledger.scrap).toBeGreaterThan(0);
-    expect(economy?.slots.some((slot) => slot.failureRisk > 0)).toBe(true);
-    expect(byName.get('showcase')?.slots.some((slot) => slot.changingOver)).toBe(true);
-    // Machine-tier variants and count badges only exist in the showcase until
-    // the sim can produce multiple slots and printer tiers (M4).
+    expect(economy?.slots.some((slot) => slot.changingOver)).toBe(true);
+    // The pity meter filling up (spec §7.1) — a purge resets the charge, so the
+    // fixture that pins it is the one taken mid-loop, not mid-changeover.
+    expect(byName.get('printing')?.slots.some((slot) => slot.failureRisk > 0)).toBe(true);
+
+    // The M4 states: a real rack the sim can now produce, and the other side
+    // of the fork — one giant printer where the rack used to be (spec §5B).
+    const rack = byName.get('rack');
+    expect(rack?.slots.length).toBeGreaterThan(1);
+    expect(rack?.slots.some((slot) => slot.printerCount > 1)).toBe(true);
+    expect(rack?.slots.some((slot) => slot.queue.length > 1)).toBe(true);
+    expect(rack?.goliath).toBe(false);
+    const goliath = byName.get('goliath');
+    expect(goliath?.goliath).toBe(true);
+    expect(goliath?.slots).toHaveLength(1);
+    expect(goliath?.slotCapacity).toBe(1);
+    expect(goliath?.fleet.printers).toBe(goliath?.slots[0]?.printerCount);
+
+    /*
+     * `showcase` stays hand-authored, and this is the assertion that says why:
+     * it is the only document with *different machine tiers side by side*, and
+     * the simulation cannot produce one. `machineTier` is a property of the
+     * workshop (the machine tree upgrades every bay at once), so every bay in a
+     * real save reports the same tier — while the renderer still has to draw
+     * all three. When tiers become per-slot, this fixture can be generated too.
+     */
     const showcase = byName.get('showcase');
     expect(new Set(showcase?.slots.map((slot) => slot.machineTier))).toEqual(new Set([0, 1, 2, 3]));
     expect(showcase?.slots.some((slot) => slot.printerCount > 1)).toBe(true);

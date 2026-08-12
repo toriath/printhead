@@ -4,6 +4,7 @@ import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
+import { isQueueRunning, nextQueueEntry, queueEntryDone, queueStockFloor } from './queue.js';
 import { addParts, withFilament } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 
@@ -46,6 +47,14 @@ export function resolveSlotConfig(content: Content, slot: SlotState): SlotConfig
  * printer, or better still whatever the machine tree has bolted onto it. A
  * heated bed or an enclosure changes the SVG, so it has to reach the
  * projection, and it does so as a `machineTier` upgrade effect in content.
+ *
+ * It is a property of the *workshop*, not of a bay, and that is deliberate:
+ * machines are an undifferentiated pool the player allocates as counts (see
+ * `systems/fleet.ts`), and the machine tree upgrades all of them at once. Spec
+ * §4 asks a bay to show "the best machine tier among its printers", which under
+ * this model is the same number for every bay. If printers ever become
+ * per-slot — a bay holding *these* machines rather than *this many* — the
+ * projection gains a per-slot tier and this function gains a slot argument.
  */
 export function bestPrinterTier(
   state: GameState,
@@ -344,11 +353,81 @@ function completeRun(
     ...slot,
     run: null,
     failureCharge: outcome.charge,
+    // Only a bay with a rota counts batches against it; a bay printing one
+    // config forever would otherwise carry a meaningless ever-growing number
+    // into every save.
+    queueBatches: slot.queue.length > NONE ? slot.queueBatches + FULL : NONE,
   });
+  const rotated = rotateQueue(idle, content, index, run.remainingMs, emit);
+  if (rotated !== null) {
+    // The bay is now purging for the next entry on the rota; the restart
+    // happens on the far side of the changeover, through the same idle path a
+    // stalled slot takes.
+    return rotated;
+  }
   if (!slot.autoRestart) {
     return idle;
   }
   return beginRun(idle, content, index, run.remainingMs, emit, modifiers) ?? idle;
+}
+
+/**
+ * Turn the slot's rota by one entry (spec §5B), or `null` when it should not
+ * turn: no rota, the automation missing or switched off, the current entry
+ * still owed batches, or not enough of the incoming material to be worth the
+ * purge. Rotation goes through `applyChangeover`, so a queued switch costs the
+ * player exactly what a hand-driven one does (spec §3).
+ *
+ * `carryMs` is the (non-positive) overshoot of the batch that just finished,
+ * and the purge starts that much further along — the same rule the restart path
+ * follows, for the same reason: a tick that ends in a rotation must not quietly
+ * lose the fraction of itself that was left over.
+ */
+function rotateQueue(
+  state: GameState,
+  content: Content,
+  index: number,
+  carryMs: number,
+  emit: EventSink | undefined,
+): GameState | null {
+  const slot = state.slots.at(index);
+  if (slot === undefined || !queueEntryDone(slot) || !isQueueRunning(state, content)) {
+    return null;
+  }
+  const entry = nextQueueEntry(slot);
+  if (entry === null) {
+    return null;
+  }
+  const config = resolveSlotConfig(content, {
+    ...slot,
+    materialId: entry.materialId,
+    objectId: entry.objectId,
+  });
+  if (config === null) {
+    return null;
+  }
+  const stock = state.filamentGrams[config.material.id] ?? NONE;
+  if (config.material.id !== slot.materialId && stock < queueStockFloor(state, content)) {
+    return null;
+  }
+  const { state: purged, changeover } = applyChangeover(state, slot, config);
+  emit?.({
+    type: 'SLOT_CONFIGURED',
+    simTimeMs: state.simTimeMs,
+    slotId: slot.id,
+    materialId: config.material.id,
+    objectId: config.object.id,
+    downtimeMs: changeover.downtimeMs,
+    purgedGrams: changeover.purgedGrams,
+    abandonedBatch: NONE,
+  });
+  return withSlot(purged, index, {
+    ...changeover.slot,
+    changeoverMs: Math.max(changeover.slot.changeoverMs + carryMs, NONE),
+    autoRestart: true,
+    queueIndex: (slot.queueIndex + FULL) % slot.queue.length,
+    queueBatches: NONE,
+  });
 }
 
 /**

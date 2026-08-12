@@ -127,22 +127,5 @@
         "value": 0.7
       }
     ]
-  },
-  {
-    "id": "config-slot-2",
-    "name": "Second config slot",
-    "tree": "farm",
-    "maxLevel": 1,
-    "costCurveId": "slot-cost",
-    "costResource": "parts",
-    "requiresUpgradeIds": [],
-    "unlockPhaseId": "studio",
-    "effects": [
-      {
-        "type": "configSlots",
-        "combine": "add",
-        "value": 1
-      }
-    ]
   }
 ]

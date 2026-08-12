@@ -70,6 +70,18 @@ export const RISK_HEIGHT = 2;
 
 export const CORNER_RADIUS = 4;
 
+/**
+ * How much bigger the Goliath is than one bay of the rack (spec §5B). Big
+ * enough that "the fleet became one machine" reads at a glance, small enough
+ * that the whole thing still fits the same column the rack occupied.
+ */
+export const GOLIATH_SCALE = 2.2;
+
+/** The rota strip drawn under a bay's label when a print queue is loaded. */
+export const QUEUE_Y = BAY_HEIGHT - 6;
+export const QUEUE_PIP_R = 3;
+export const QUEUE_PIP_GAP = 10;
+
 /** Total drawing width for `capacity` bays laid out in a row. */
 export function workshopWidth(capacity: number): number {
   return capacity * BAY_WIDTH + Math.max(capacity - 1, 0) * BAY_GAP;

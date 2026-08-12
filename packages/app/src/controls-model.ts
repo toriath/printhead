@@ -58,6 +58,10 @@ export interface BuyPrinterControl {
 
 export interface ControlModel {
   readonly slotId: string;
+  /** Every bay the workshop is running, so the panel can target one (spec §4). */
+  readonly slots: readonly ControlOption[];
+  /** The rota is the auto-changeover automation's feature (spec §5B). */
+  readonly canQueue: boolean;
   readonly materials: readonly ControlOption[];
   readonly objects: readonly ControlOption[];
   readonly allows: (action: GatedActionType) => boolean;
@@ -85,10 +89,12 @@ export function buildControlModel(
   state: GameState,
   content: Content,
   visual: VisualState,
+  /** Which bay the panel is pointed at; defaults to the first. */
+  targetSlotId?: string,
 ): ControlModel {
   const phase = getPhase(content.pacing.phases, visual.phaseId);
   const allows = (action: GatedActionType): boolean => phase.allowedActions.includes(action);
-  const slot = visual.slots[0];
+  const slot = visual.slots.find((bay) => bay.slotId === targetSlotId) ?? visual.slots[0];
   const slotId = slot?.slotId ?? '';
 
   const materials = unlocked(content.materials, content, visual.phaseId);
@@ -133,6 +139,13 @@ export function buildControlModel(
 
   return {
     slotId,
+    slots: visual.slots.map((bay) => ({
+      id: bay.slotId,
+      name: bay.materialName === null ? bay.slotId : `${bay.slotId} · ${bay.materialName}`,
+    })),
+    canQueue:
+      allows('SET_SLOT_QUEUE') &&
+      visual.automation.some((row) => row.behavior === 'auto-changeover' && row.installed),
     materials,
     objects,
     allows,
@@ -160,7 +173,14 @@ export function buildControlModel(
             name: printer.name,
             cost: cost.amount,
             resource: cost.resource,
-            enabled: cost.resource !== 'filament' && state.resources[cost.resource] >= cost.amount,
+            // A bay holds only so many machines (spec §4). Offering the button
+            // for a full bay would be offering a purchase the reducer refuses;
+            // the fleet panel is where the answer to a full rack lives.
+            enabled:
+              cost.resource !== 'filament' &&
+              state.resources[cost.resource] >= cost.amount &&
+              slot !== undefined &&
+              slot.printerCount < slot.printerCapacity,
           },
   };
 }

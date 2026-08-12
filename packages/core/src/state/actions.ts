@@ -1,4 +1,5 @@
 import type { GatedActionType } from '../content/schema.js';
+import type { SlotQueueEntry } from './game-state.js';
 
 /**
  * Command pattern (spec §15): every state change is an Action fed to the single
@@ -82,6 +83,33 @@ export interface RecycleScrapAction {
   readonly grams: number | null;
 }
 
+/** Buy the next config slot (spec §4). Bays are bought in content order. */
+export interface BuySlotAction {
+  readonly type: 'BUY_SLOT';
+  readonly unlockId: string;
+}
+
+/** Move machines between bays (spec §4). `count` is clamped to the source. */
+export interface AssignPrinterAction {
+  readonly type: 'ASSIGN_PRINTER';
+  readonly fromSlotId: string;
+  readonly toSlotId: string;
+  readonly count: number;
+}
+
+/** Rewrite a slot's print rota (spec §5B); an empty list clears it. */
+export interface SetSlotQueueAction {
+  readonly type: 'SET_SLOT_QUEUE';
+  readonly slotId: string;
+  readonly entries: readonly SlotQueueEntry[];
+}
+
+/** Commit to Farm or Goliath for this run (spec §5B). One choice, forever. */
+export interface ChooseForkAction {
+  readonly type: 'CHOOSE_FORK';
+  readonly forkId: string;
+}
+
 export type Action =
   | TickAction
   | AdvancePhaseAction
@@ -95,7 +123,11 @@ export type Action =
   | BuyUpgradeAction
   | BuyAutomationAction
   | SetAutomationAction
-  | RecycleScrapAction;
+  | RecycleScrapAction
+  | BuySlotAction
+  | AssignPrinterAction
+  | SetSlotQueueAction
+  | ChooseForkAction;
 
 export type ActionType = Action['type'];
 
@@ -152,3 +184,14 @@ export const recycleScrap = (
   materialId,
   grams,
 });
+export const buySlot = (unlockId: string): BuySlotAction => ({ type: 'BUY_SLOT', unlockId });
+export const assignPrinter = (
+  fromSlotId: string,
+  toSlotId: string,
+  count: number,
+): AssignPrinterAction => ({ type: 'ASSIGN_PRINTER', fromSlotId, toSlotId, count });
+export const setSlotQueue = (
+  slotId: string,
+  entries: readonly SlotQueueEntry[],
+): SetSlotQueueAction => ({ type: 'SET_SLOT_QUEUE', slotId, entries });
+export const chooseFork = (forkId: string): ChooseForkAction => ({ type: 'CHOOSE_FORK', forkId });

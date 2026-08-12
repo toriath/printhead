@@ -143,6 +143,64 @@ describe('the control model', () => {
     );
   });
 
+  it('stops offering a printer once the bay is full (spec §4)', () => {
+    const ceiling = content.start.printersPerSlot;
+    const rich = {
+      ...freshState,
+      phaseId: 'bench',
+      printers: { 'bench-mk1': ceiling },
+      resources: { ...freshState.resources, parts: 100_000 },
+      partsValue: 100_000,
+      slots: freshState.slots.map((slot) => ({ ...slot, printerCount: ceiling })),
+    };
+    // The ledger can pay; the rack cannot house it. The answer is another bay,
+    // which is the fleet panel's job — so the button here goes dark.
+    expect(buildControlModel(rich, content, toVisualState(rich, content)).buyPrinter?.enabled).toBe(
+      false,
+    );
+    const roomy = { ...rich, slots: rich.slots.map((slot) => ({ ...slot, printerCount: 0 })) };
+    expect(
+      buildControlModel(roomy, content, toVisualState(roomy, content)).buyPrinter?.enabled,
+    ).toBe(true);
+  });
+
+  it('points the panel at the bay it is asked about', () => {
+    const bareSlot = freshState.slots[0];
+    if (bareSlot === undefined) {
+      throw new Error('a fresh save always has one bay');
+    }
+    const racked = {
+      ...freshState,
+      phaseId: 'farm',
+      printers: { 'bench-mk1': 2 },
+      slots: ['slot-1', 'slot-2'].map((id) => ({ ...bareSlot, id, printerCount: 1 })),
+    };
+    const visual = toVisualState(racked, content);
+    expect(buildControlModel(racked, content, visual).slotId).toBe('slot-1');
+    expect(buildControlModel(racked, content, visual, 'slot-2').slotId).toBe('slot-2');
+    expect(buildControlModel(racked, content, visual).slots.map((o) => o.id)).toEqual([
+      'slot-1',
+      'slot-2',
+    ]);
+    // An unknown bay falls back to the first rather than producing an empty id.
+    expect(buildControlModel(racked, content, visual, 'ghost').slotId).toBe('slot-1');
+  });
+
+  it('offers the rota only once the auto-changeover unit is installed', () => {
+    const farm = { ...freshState, phaseId: 'farm' };
+    expect(buildControlModel(farm, content, toVisualState(farm, content)).canQueue).toBe(false);
+    const rota = content.automation.find((def) => def.behavior === 'auto-changeover');
+    const equipped = {
+      ...farm,
+      automation: {
+        [rota?.id ?? '']: { level: 1, enabled: true, threshold: 0, cooldownMs: 0 },
+      },
+    };
+    expect(buildControlModel(equipped, content, toVisualState(equipped, content)).canQueue).toBe(
+      true,
+    );
+  });
+
   it('sizes a filament purchase to what the money buys, capped at a restock', () => {
     const bench = {
       ...freshState,

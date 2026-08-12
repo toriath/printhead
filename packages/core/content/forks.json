@@ -1,0 +1,54 @@
+[
+  {
+    "id": "farm-path",
+    "name": "The Farm",
+    "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+    "visual": "rack",
+    "costCurveId": "fork-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "studio",
+    "requiresUpgradeIds": [],
+    "requires": [],
+    "slotCapacity": null,
+    "printersPerSlot": null,
+    "requiredForFinalPrint": false,
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "combine": "multiply",
+        "value": 1.6
+      },
+      {
+        "type": "partsYieldMultiplier",
+        "combine": "multiply",
+        "value": 1.35
+      }
+    ]
+  },
+  {
+    "id": "goliath",
+    "name": "Goliath",
+    "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+    "visual": "goliath",
+    "costCurveId": "fork-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "studio",
+    "requiresUpgradeIds": [],
+    "requires": [],
+    "slotCapacity": 1,
+    "printersPerSlot": 64,
+    "requiredForFinalPrint": true,
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "combine": "multiply",
+        "value": 0.8
+      },
+      {
+        "type": "partsYieldMultiplier",
+        "combine": "multiply",
+        "value": 3.2
+      }
+    ]
+  }
+]

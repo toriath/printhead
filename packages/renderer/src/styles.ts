@@ -42,6 +42,10 @@ export const WORKSHOP_CSS = `
 .ph-risk-track { fill: var(--ph-bay-edge); }
 .ph-risk-fill { fill: var(--ph-warn); }
 
+/* --- print rota (spec §5B) ---------------------------------------------- */
+.ph-queue-pip { fill: var(--ph-bay-edge); }
+.ph-queue-pip--current { fill: var(--ph-accent); }
+
 /* --- frame tiers (spec §5A) --------------------------------------------- */
 .printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
 .printer--frame-aluminium { --ph-frame: #c9d3dd; --ph-frame-fill: rgba(201, 211, 221, 0.16); }

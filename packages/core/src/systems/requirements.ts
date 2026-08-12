@@ -41,8 +41,12 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.resources.scrap;
     case 'money':
       return state.resources.money;
+    case 'plates':
+      return state.resources.plates;
     case 'printers':
       return countPrinters(state);
+    case 'slots':
+      return state.slots.length;
     case 'partsProduced':
       return state.stats.partsProduced;
     case 'partsSold':

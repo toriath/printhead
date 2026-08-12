@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-1 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="4" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="5" data-phase="farm" data-slot-capacity="1" data-layout="rack" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -30,6 +30,10 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 .ph-progress-fill--purge { fill: var(--ph-dim); }
 .ph-risk-track { fill: var(--ph-bay-edge); }
 .ph-risk-fill { fill: var(--ph-warn); }
+
+/* --- print rota (spec §5B) ---------------------------------------------- */
+.ph-queue-pip { fill: var(--ph-bay-edge); }
+.ph-queue-pip--current { fill: var(--ph-accent); }
 
 /* --- frame tiers (spec §5A) --------------------------------------------- */
 .printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
@@ -98,7 +102,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-2 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="4" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="5" data-phase="farm" data-slot-capacity="1" data-layout="rack" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -127,6 +131,10 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 .ph-progress-fill--purge { fill: var(--ph-dim); }
 .ph-risk-track { fill: var(--ph-bay-edge); }
 .ph-risk-fill { fill: var(--ph-warn); }
+
+/* --- print rota (spec §5B) ---------------------------------------------- */
+.ph-queue-pip { fill: var(--ph-bay-edge); }
+.ph-queue-pip--current { fill: var(--ph-accent); }
 
 /* --- frame tiers (spec §5A) --------------------------------------------- */
 .printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
@@ -195,7 +203,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-3 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="4" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="5" data-phase="farm" data-slot-capacity="1" data-layout="rack" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -224,6 +232,10 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 .ph-progress-fill--purge { fill: var(--ph-dim); }
 .ph-risk-track { fill: var(--ph-bay-edge); }
 .ph-risk-fill { fill: var(--ph-warn); }
+
+/* --- print rota (spec §5B) ---------------------------------------------- */
+.ph-queue-pip { fill: var(--ph-bay-edge); }
+.ph-queue-pip--current { fill: var(--ph-accent); }
 
 /* --- frame tiers (spec §5A) --------------------------------------------- */
 .printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }

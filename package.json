@@ -29,6 +29,7 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@playwright/test": "1.49.1",
+    "@printhead/balance": "workspace:*",
     "@printhead/core": "workspace:*",
     "@types/node": "22.20.1",
     "dependency-cruiser": "16.10.4",

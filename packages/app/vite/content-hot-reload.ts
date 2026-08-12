@@ -22,6 +22,8 @@ export const CONTENT_FILES = [
   'objects',
   'printers',
   'upgrades',
+  'slots',
+  'forks',
   'designs',
   'market',
   'automation',

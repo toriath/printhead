@@ -1,27 +1,74 @@
 {
-  "version": 4,
+  "version": 5,
   "phaseId": "bench",
   "phaseName": "Bench",
-  "simTimeMs": 7505000,
+  "simTimeMs": 3743000,
   "slotCapacity": 4,
+  "goliath": false,
   "slots": [
     {
       "slotId": "slot-1",
       "index": 0,
-      "materialId": "pla",
-      "materialName": "PLA",
+      "materialId": "petg",
+      "materialName": "PETG",
       "objectId": "bracket",
       "objectName": "Bracket",
       "machineTier": 2,
-      "printerCount": 1,
+      "printerCount": 4,
+      "printerCapacity": 8,
       "phaseOffset": 0,
       "occupied": true,
-      "running": true,
-      "progress": 0.9166666666666666,
-      "batch": 1,
-      "changingOver": false,
-      "changeoverProgress": 0,
-      "failureRisk": 0.7200000000000027
+      "running": false,
+      "progress": 0,
+      "batch": 0,
+      "changingOver": true,
+      "changeoverProgress": 0.1111111111111111,
+      "failureRisk": 0,
+      "queue": [],
+      "queueBatches": 0
+    }
+  ],
+  "fleet": {
+    "printers": 4,
+    "assigned": 4,
+    "slotsOwned": 1,
+    "slotsActive": 1,
+    "slotsMaximum": 4,
+    "printerCapacity": 8
+  },
+  "slotUnlock": {
+    "unlockId": "slot-2",
+    "name": "Second config slot",
+    "available": false,
+    "affordable": false,
+    "cost": 400,
+    "costResource": "parts",
+    "blockedReason": "locked"
+  },
+  "forks": [
+    {
+      "forkId": "farm-path",
+      "name": "The Farm",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "layout": "rack",
+      "chosen": false,
+      "available": false,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": false
+    },
+    {
+      "forkId": "goliath",
+      "name": "Goliath",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "layout": "goliath",
+      "chosen": false,
+      "available": false,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": true
     }
   ],
   "assembly": {
@@ -43,11 +90,11 @@
     "complete": true
   },
   "ledger": {
-    "parts": 40,
-    "money": 66,
-    "scrap": 172,
+    "parts": 3,
+    "money": 0,
+    "scrap": 280,
     "filamentGrams": {
-      "pla": 208,
+      "pla": 1758,
       "petg": 0,
       "resin": 0,
       "metal": 0
@@ -63,16 +110,16 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 208
+      "heldGrams": 1758
     },
     {
       "materialId": "petg",
       "materialName": "PETG",
       "tradeable": true,
       "available": true,
-      "buyPerGram": 0.054954147978879146,
-      "sellPerGram": 0.04671102578204727,
-      "priceMultiplier": 0.6869268497359893,
+      "buyPerGram": 0.05838535440814687,
+      "sellPerGram": 0.04962755124692484,
+      "priceMultiplier": 0.7298169301018359,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -81,9 +128,9 @@
       "materialName": "Resin (SLA)",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 0.3792438647730753,
-      "sellPerGram": 0.32235728505711403,
-      "priceMultiplier": 1.0835538993516438,
+      "buyPerGram": 0.4652618708382841,
+      "sellPerGram": 0.39547259021254144,
+      "priceMultiplier": 1.329319630966526,
       "stockGrams": 2400,
       "heldGrams": 0
     },
@@ -92,9 +139,9 @@
       "materialName": "Sintered metal",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 1.6543495202096898,
-      "sellPerGram": 1.4061970921782363,
-      "priceMultiplier": 1.181678228721207,
+      "buyPerGram": 1.6627444162422313,
+      "sellPerGram": 1.4133327538058966,
+      "priceMultiplier": 1.1876745830301654,
       "stockGrams": 800,
       "heldGrams": 0
     }
@@ -108,18 +155,18 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 130,
+      "cost": 169,
       "costResource": "parts"
     },
     {
       "upgradeId": "recycler",
       "name": "Scrap recycler",
       "tree": "machine",
-      "level": 0,
+      "level": 1,
       "maxLevel": 1,
-      "available": true,
+      "available": false,
       "affordable": false,
-      "cost": 81,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -130,7 +177,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -141,7 +188,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -174,19 +221,8 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 80.9012295,
+      "cost": 105.172,
       "costResource": "money"
-    },
-    {
-      "upgradeId": "config-slot-2",
-      "name": "Second config slot",
-      "tree": "farm",
-      "level": 0,
-      "maxLevel": 1,
-      "available": false,
-      "affordable": false,
-      "cost": 400,
-      "costResource": "parts"
     }
   ],
   "automation": [
@@ -200,7 +236,7 @@
       "threshold": 40,
       "available": false,
       "affordable": false,
-      "cost": 419,
+      "cost": 696,
       "costResource": "parts"
     },
     {
@@ -213,7 +249,7 @@
       "threshold": 400,
       "available": true,
       "affordable": false,
-      "cost": 200,
+      "cost": 332,
       "costResource": "parts"
     },
     {
@@ -226,14 +262,27 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 199.34029440000003,
+      "cost": 331.303,
       "costResource": "money"
+    },
+    {
+      "automationId": "auto-changeover",
+      "name": "Auto-changeover rota",
+      "behavior": "auto-changeover",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 60,
+      "available": false,
+      "affordable": false,
+      "cost": 332,
+      "costResource": "parts"
     }
   ],
   "recycler": {
-    "installed": false,
-    "scrapGrams": 172,
-    "yieldGrams": 0,
-    "yieldMaterialId": "pla"
+    "installed": true,
+    "scrapGrams": 280,
+    "yieldGrams": 104.99999999999973,
+    "yieldMaterialId": "petg"
   }
 }

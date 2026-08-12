@@ -1,7 +1,7 @@
 {
   "printerId": "bench-mk1",
   "slotCount": 1,
-  "maxSlotCount": 4,
+  "printersPerSlot": 8,
   "slotIdPrefix": "slot",
   "startingResources": {
     "parts": 0,

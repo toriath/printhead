@@ -16,7 +16,10 @@ pnpm tsx scripts/make-save-fixture.ts   # writes save-v<SAVE_SCHEMA_VERSION>.jso
 
 The generator plays the intro and part of the bench loop through the real
 reducer — and, since v3, goes on to install a machine node, run the recycler
-and buy an automation — so the fixture is a save the game actually produces
+and buy an automation. Since v4 it then hands the wheel to the reference
+balance bot until the phase where the Farm/Goliath fork unlocks, and makes the
+M4 decisions (a second bay, a fleet spread across it, a print rota, the fork)
+through that same reducer, so the fixture is a save the game actually produces
 rather than a hand-written guess. Its exact numbers depend on the content set at the time of
 generation, which is fine and expected — the fixture records one historical
 save, not the current balance.

@@ -192,9 +192,14 @@ describe('AutomationPanel', () => {
 describe('RecyclerPanel', () => {
   it('appears only once the machine node is installed', () => {
     const { store } = stubStore();
-    const { container } = render(<RecyclerPanel store={store} visual={economy} />);
-    expect(economy.recycler.installed).toBe(false);
+    const { container, unmount } = render(<RecyclerPanel store={store} visual={fresh} />);
+    expect(fresh.recycler.installed).toBe(false);
     expect(container.innerHTML).toBe('');
+    unmount();
+
+    render(<RecyclerPanel store={store} visual={economy} />);
+    expect(economy.recycler.installed).toBe(true);
+    expect(screen.queryByTestId('recycler')).not.toBeNull();
   });
 
   it('quotes what the bin would return, and recycles into the loaded material', () => {

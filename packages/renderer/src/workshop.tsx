@@ -1,16 +1,20 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
-import { BAY_HEIGHT, bayX, workshopWidth } from './geometry.js';
+import { BAY_HEIGHT, GOLIATH_SCALE, bayX, workshopWidth } from './geometry.js';
 import { Slot } from './slot.js';
 import { WORKSHOP_CSS } from './styles.js';
 
 /**
- * The workshop (spec §16: `renderer/` = Printer, Slot, Workshop, …).
+ * The workshop (spec §16: `renderer/` = Printer, Slot, Workshop, Goliath, …).
  *
  * The renderer is a **pure function of `VisualState`** (spec §1, §15): same
  * projection in, same markup out, no state, no clock, no content lookups and
  * no imports from the reducer. `workshop.test.tsx` asserts exactly that by
  * rendering the same fixture twice and comparing the HTML.
+ *
+ * Two layouts, chosen by data rather than by an id the renderer recognises: the
+ * **rack** of up to four bays (spec §4) and the **Goliath** — one giant printer
+ * that replaces the rack when the run's fork says so (spec §5B).
  */
 export interface WorkshopProps {
   readonly visual: VisualState;
@@ -33,6 +37,9 @@ function lockedBay(index: number, capacity: number): SlotVisual {
     objectName: null,
     machineTier: 0,
     printerCount: 0,
+    // A bay that does not exist yet holds nothing; the schema wants a positive
+    // ceiling, and one is the smallest honest answer for "not bought".
+    printerCapacity: 1,
     phaseOffset: capacity > 0 ? index / capacity : 0,
     occupied: false,
     running: false,
@@ -41,6 +48,8 @@ function lockedBay(index: number, capacity: number): SlotVisual {
     changingOver: false,
     changeoverProgress: 0,
     failureRisk: 0,
+    queue: [],
+    queueBatches: 0,
   };
 }
 
@@ -52,9 +61,28 @@ export function bays(visual: VisualState): readonly SlotVisual[] {
   );
 }
 
+/**
+ * The Goliath layout (spec §5B): the rack is gone and one machine fills the
+ * frame. It is the same `Slot` component at a larger scale — the giant printer
+ * is the *same printer*, which is exactly the joke the fork is making — so the
+ * badge, the progress bar and the pity meter all keep working.
+ */
+function Goliath({ visual }: WorkshopProps): ReactElement | null {
+  const slot = visual.slots[0];
+  if (slot === undefined) {
+    return null;
+  }
+  return (
+    <g data-testid="goliath" transform={`scale(${GOLIATH_SCALE})`}>
+      <Slot slot={slot} />
+    </g>
+  );
+}
+
 export function Workshop({ visual }: WorkshopProps): ReactElement {
   const rack = bays(visual);
-  const width = workshopWidth(rack.length);
+  const width = visual.goliath ? workshopWidth(1) * GOLIATH_SCALE : workshopWidth(rack.length);
+  const height = visual.goliath ? BAY_HEIGHT * GOLIATH_SCALE : BAY_HEIGHT;
   // During the intro the first bay holds the machine being built: the pieces
   // the player has clicked on, drawn on the printer that will keep them
   // company for the rest of the game (spec §6 phase 0).
@@ -68,20 +96,25 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
       data-visual-version={visual.version}
       data-phase={visual.phaseId}
       data-slot-capacity={visual.slotCapacity}
-      viewBox={`0 0 ${width} ${BAY_HEIGHT}`}
+      data-layout={visual.goliath ? 'goliath' : 'rack'}
+      viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{`PRINTHEAD — ${visual.phaseName}`}</title>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant stylesheet, never user input */}
       <style dangerouslySetInnerHTML={{ __html: WORKSHOP_CSS }} />
-      {rack.map((slot, index) => (
-        <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
-          <Slot
-            slot={slot}
-            {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
-          />
-        </g>
-      ))}
+      {visual.goliath ? (
+        <Goliath visual={visual} />
+      ) : (
+        rack.map((slot, index) => (
+          <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
+            <Slot
+              slot={slot}
+              {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
+            />
+          </g>
+        ))
+      )}
     </svg>
   );
 }

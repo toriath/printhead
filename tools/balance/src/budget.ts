@@ -1,4 +1,5 @@
 import {
+  type Content,
   MS_PER_HOUR,
   MS_PER_MINUTE,
   type PaceMapping,
@@ -83,6 +84,27 @@ export function checkPhaseBudgets(
     }
   }
   return violations;
+}
+
+/**
+ * A phase whose only gate is the clock has no mechanics behind it yet — it is a
+ * placeholder waiting for a later milestone (spec §18). The distinction is read
+ * from `advanceWhen` rather than from a list of phase ids, so a phase stops
+ * being a placeholder the moment content gives it something to gate on, and no
+ * tool has to be told.
+ *
+ * It matters because the wait-wall detector is *right* to report a dead zone in
+ * a phase where the player has nothing to buy. Raising those budgets to make
+ * the report green would hide the fact; scoping the gate records it.
+ */
+export function isPlaceholderPhase(phase: PhaseDef): boolean {
+  return phase.advanceWhen.every((requirement) => requirement.metric === 'phaseDesignMinutes');
+}
+
+export function gatedPhaseIds(content: Content): readonly string[] {
+  return content.pacing.phases
+    .filter((phase) => !isPlaceholderPhase(phase))
+    .map((phase) => phase.id);
 }
 
 export const designMinutesOf = (simTimeMs: number): number => simTimeMs / MS_PER_MINUTE;

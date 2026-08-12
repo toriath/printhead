@@ -1,5 +1,5 @@
 import type { Content } from '@printhead/core';
-import { type BudgetTable, buildBudgetTable, checkPhaseBudgets } from './budget.js';
+import { type BudgetTable, buildBudgetTable, checkPhaseBudgets, gatedPhaseIds } from './budget.js';
 import type { RunLog } from './harness.js';
 import { type BarRow, barChart, lineChart } from './svg.js';
 import { checkWaitWalls, longestWallByPhase } from './waitwall.js';
@@ -100,9 +100,23 @@ function summaryTable(table: BudgetTable, logs: readonly RunLog[]): string {
 
 function verdict(content: Content, log: RunLog): string {
   const budgets = checkPhaseBudgets(buildBudgetTable(content.pacing), log.phaseDurations);
-  const walls = checkWaitWalls(content, log.waitWalls);
+  const gated = new Set(gatedPhaseIds(content));
+  const allWalls = checkWaitWalls(content, log.waitWalls);
+  /*
+   * A dead zone in a phase that has no mechanics yet is a fact about the
+   * roadmap, not a balance regression — there is genuinely nothing to buy in
+   * the studio until M5 builds it. Those walls are reported as a *note* so they
+   * stay visible, while the verdict is decided by the phases the game actually
+   * gates. See `isPlaceholderPhase`.
+   */
+  const walls = allWalls.filter((wall) => gated.has(wall.phaseId));
+  const pending = allWalls.length - walls.length;
+  const note =
+    pending === 0
+      ? ''
+      : `\n\n_${pending} further wait wall(s) sit in phases that are still time-gated placeholders; they become real when the milestones that fill those phases land._`;
   if (budgets.length === 0 && walls.length === 0) {
-    return '**PASS** — every phase inside its window, no wait wall over budget.';
+    return `**PASS** — every phase inside its window, no wait wall over budget.${note}`;
   }
   const lines = [
     ...budgets.map(
@@ -114,7 +128,7 @@ function verdict(content: Content, log: RunLog): string {
         `- \`${wall.phaseId}\` wait wall ${wall.durationDesignMinutes.toFixed(1)} design-min from ${wall.startDesignMinutes.toFixed(1)} (budget ${wall.budgetDesignMinutes})`,
     ),
   ];
-  return `**FAIL** — ${lines.length} violation(s):\n\n${lines.join('\n')}`;
+  return `**FAIL** — ${lines.length} violation(s):\n\n${lines.join('\n')}${note}`;
 }
 
 export function buildReport(input: ReportInput): readonly ReportFile[] {

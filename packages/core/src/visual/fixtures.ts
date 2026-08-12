@@ -2,7 +2,9 @@ import assembled from './__fixtures__/assembled.json' with { type: 'json' };
 import assembling from './__fixtures__/assembling.json' with { type: 'json' };
 import economy from './__fixtures__/economy.json' with { type: 'json' };
 import fresh from './__fixtures__/fresh.json' with { type: 'json' };
+import goliath from './__fixtures__/goliath.json' with { type: 'json' };
 import printing from './__fixtures__/printing.json' with { type: 'json' };
+import rack from './__fixtures__/rack.json' with { type: 'json' };
 import showcase from './__fixtures__/showcase.json' with { type: 'json' };
 import type { VisualState } from './schema.js';
 import { validateVisualState } from './schema.js';
@@ -44,6 +46,16 @@ const RAW_FIXTURES: readonly { name: string; describes: string; raw: unknown }[]
     name: 'economy',
     describes: 'the M3 workshop: a machine node installed, an automation running, scrap in the bin',
     raw: economy,
+  },
+  {
+    name: 'rack',
+    describes: 'the M4 rack: two bays, the fleet split between them, a print rota on the second',
+    raw: rack,
+  },
+  {
+    name: 'goliath',
+    describes: 'the Farm/Goliath fork taken the other way: one giant printer, no rack',
+    raw: goliath,
   },
   {
     name: 'showcase',

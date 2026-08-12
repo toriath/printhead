@@ -267,3 +267,72 @@ describe('the intro assembly (spec §6 phase 0)', () => {
     expect(screen.queryByTestId('print-in-progress')).toBeNull();
   });
 });
+
+/**
+ * The Goliath path (spec §5B): "the Goliath path replaces them with one large
+ * printer". The renderer never learns the fork's id — it switches on the
+ * `goliath` flag the projection derives from the branch's own `visual` field.
+ */
+describe('the Goliath layout (spec §5B)', () => {
+  const goliath = visualFixture('goliath');
+  const rack = visualFixture('rack');
+
+  it('draws one machine instead of the rack', () => {
+    render(<Workshop visual={goliath} />);
+    expect(screen.getByTestId('goliath')).not.toBeNull();
+    expect(screen.getAllByTestId(/^bay-/)).toHaveLength(1);
+    expect(screen.getByRole('img').getAttribute('data-layout')).toBe('goliath');
+  });
+
+  it('draws it larger than a bay of the rack', () => {
+    const { container } = render(<Workshop visual={goliath} />);
+    const box = container.querySelector('svg')?.getAttribute('viewBox') ?? '';
+    const [, , width, height] = box.split(' ').map(Number);
+    expect(width).toBeGreaterThan(workshopWidth(1));
+    expect(height).toBeGreaterThan(BAY_HEIGHT);
+  });
+
+  it('keeps the count badge, so "one machine" still says how many it is', () => {
+    render(<Workshop visual={goliath} />);
+    const badge = screen.queryByTestId('count-badge');
+    expect(goliath.slots[0]?.printerCount).toBeGreaterThan(1);
+    expect(badge).not.toBeNull();
+  });
+
+  it('goes back to the rack for a Farm run', () => {
+    render(<Workshop visual={rack} />);
+    expect(screen.queryByTestId('goliath')).toBeNull();
+    expect(screen.getByRole('img').getAttribute('data-layout')).toBe('rack');
+  });
+
+  it('draws nothing rather than crashing if the projection has no bay', () => {
+    const empty: VisualState = { ...goliath, slots: [] };
+    render(<Workshop visual={empty} />);
+    expect(screen.queryByTestId('goliath')).toBeNull();
+  });
+});
+
+/** Print rotas (spec §5B) are drawn on the bay they belong to. */
+describe('the rota strip', () => {
+  const rack = visualFixture('rack');
+
+  it('draws one pip per rota entry, filling the loaded one', () => {
+    render(<Workshop visual={rack} />);
+    const queued = rack.slots.find((slot) => slot.queue.length > 1);
+    if (queued === undefined) {
+      throw new Error('the rack fixture must carry a rota');
+    }
+    const strip = screen.getByTestId(`queue-${queued.slotId}`);
+    expect(strip.getAttribute('data-queue-length')).toBe(String(queued.queue.length));
+    expect(strip.querySelectorAll('.ph-queue-pip--current')).toHaveLength(1);
+  });
+
+  it('draws nothing for a bay printing a single configuration', () => {
+    render(<Workshop visual={rack} />);
+    const plain = rack.slots.find((slot) => slot.queue.length <= 1);
+    if (plain === undefined) {
+      throw new Error('the rack fixture must have a bay without a rota');
+    }
+    expect(screen.queryByTestId(`queue-${plain.slotId}`)).toBeNull();
+  });
+});

@@ -134,6 +134,38 @@ export interface PrinterBuiltEvent extends EventBase {
   readonly paid: number;
 }
 
+/** A new config slot came online (spec §4: 1 → 2 → 3 → 4). */
+export interface SlotUnlockedEvent extends EventBase {
+  readonly type: 'SLOT_UNLOCKED';
+  readonly unlockId: string;
+  readonly slotId: string;
+  readonly slotCount: number;
+  readonly paid: number;
+}
+
+/** Machines moved between bays (spec §4 fleet allocation). */
+export interface PrintersAssignedEvent extends EventBase {
+  readonly type: 'PRINTERS_ASSIGNED';
+  readonly fromSlotId: string;
+  readonly toSlotId: string;
+  readonly moved: number;
+}
+
+/** A slot's print rota was rewritten (spec §5B). */
+export interface SlotQueueSetEvent extends EventBase {
+  readonly type: 'SLOT_QUEUE_SET';
+  readonly slotId: string;
+  readonly entries: number;
+}
+
+/** The irreversible Farm/Goliath commitment (spec §5B). */
+export interface ForkChosenEvent extends EventBase {
+  readonly type: 'FORK_CHOSEN';
+  readonly forkId: string;
+  readonly slotCapacity: number | null;
+  readonly paid: number;
+}
+
 export interface PhaseAdvancedEvent extends EventBase {
   readonly type: 'PHASE_ADVANCED';
   readonly fromPhaseId: string;
@@ -150,6 +182,8 @@ export type ActionRejectedReason =
   | 'insufficient-resources'
   | 'slot-busy'
   | 'slot-idle'
+  /** The bay already holds all the machines it can (spec §4). */
+  | 'slot-full'
   | 'max-level'
   | 'missing-prerequisite'
   | 'no-recycler'
@@ -179,6 +213,10 @@ export type DomainEvent =
   | AutomationInstalledEvent
   | AutomationConfiguredEvent
   | AutomationFiredEvent
+  | SlotUnlockedEvent
+  | PrintersAssignedEvent
+  | SlotQueueSetEvent
+  | ForkChosenEvent
   | PhaseAdvancedEvent
   | ActionRejectedEvent;
 
@@ -201,6 +239,10 @@ export const DOMAIN_EVENT_TYPES = [
   'AUTOMATION_INSTALLED',
   'AUTOMATION_CONFIGURED',
   'AUTOMATION_FIRED',
+  'SLOT_UNLOCKED',
+  'PRINTERS_ASSIGNED',
+  'SLOT_QUEUE_SET',
+  'FORK_CHOSEN',
   'PHASE_ADVANCED',
   'ACTION_REJECTED',
 ] as const satisfies readonly DomainEventType[];

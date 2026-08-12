@@ -82,12 +82,36 @@ function migrateV2ToV3(payload: unknown): unknown {
 }
 
 /**
+ * v3 (M3) predates the slot rack, the fleet allocator and the Farm/Goliath
+ * fork. A v3 save is a one-bay workshop that has made no commitment: every slot
+ * gets an empty rota and the run's fork is still open. The bays it *owns* are
+ * whatever it already had — slot progression is read off `slots.length`, so a
+ * save from before the mechanic existed describes itself correctly.
+ */
+function migrateV3ToV4(payload: unknown): unknown {
+  const v3 = payload as Record<string, unknown>;
+  const slots = Array.isArray(v3.slots) ? v3.slots : [];
+  return {
+    ...v3,
+    saveVersion: 4,
+    forkId: null,
+    slots: slots.map((slot) => ({
+      ...(slot as Record<string, unknown>),
+      queue: [],
+      queueIndex: 0,
+      queueBatches: 0,
+    })),
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
 export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
+  3: migrateV3ToV4,
 };
 
 export class SaveMigrationError extends Error {

@@ -37,15 +37,20 @@ jobs:
             pnpm e2e
 
   # Mutation testing is a separate job on purpose (spec §13, §17). A full run is
-  # ~45 minutes: 1600 mutants, a fifth of them "static" (their line also runs
-  # while a test module is being imported, so Stryker cannot attribute them per
-  # test and has to replay the whole suite for each one). Left in the main job
-  # it would hold the fast feedback — lint, types, tests, E2E — hostage to it.
-  # Green here is still required before a merge; it simply arrives later.
+  # long — well over an hour on a four-core box — because a fifth of the mutants
+  # are "static": their line also runs while a test module is being imported, so
+  # Stryker cannot attribute them per test and replays the whole suite for each
+  # one, and that suite now includes the fast-check properties. Left in the main
+  # job it would hold the fast feedback — lint, types, tests, E2E — hostage to
+  # it. Green here is still required before a merge; it simply arrives later.
+  #
+  # If this starts timing out, the lever is the static mutants: most of them
+  # come from test files computing their fixtures at module scope. Making those
+  # lazy would cut the run substantially.
   mutation:
     name: stryker (core systems + curves + projection)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
 

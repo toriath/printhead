@@ -1,21 +1,32 @@
 import {
   type Action,
   type AutomationDef,
+  type BuySlotAction,
+  type ChooseForkAction,
   type Content,
   type CurveRegistry,
+  type ForkDef,
   type GameState,
   type MaterialDef,
   type ObjectDef,
+  type SlotState,
   type UpgradeDef,
   affordableBatch,
+  assignPrinter,
   attachPiece,
   automationAvailability,
   buyAutomation,
   buyFilament,
   buyPrinter,
+  buySlot,
   buyUpgrade,
+  chooseFork,
   createCurveRegistry,
+  effectiveSlotCapacity,
+  forkAvailability,
+  forkCost,
   hasRecycler,
+  isForkChosen,
   isMaterialAvailable,
   isPhaseReached,
   isPieceReady,
@@ -23,13 +34,19 @@ import {
   nextAutomationCost,
   nextPiece,
   nextPrinterCost,
+  nextSlotCost,
+  nextSlotUnlock,
   nextUpgradeCost,
+  printersPerSlot,
   quoteFor,
   recycleScrap,
   resolveSlotConfig,
   sellParts,
   setAutomation,
   setSlotConfig,
+  setSlotQueue,
+  slotUnlockAvailability,
+  slotWithRoom,
   startPrint,
   unitPartValue,
   upgradeAvailability,
@@ -222,12 +239,26 @@ function affordableUpgrade(
   return best?.def;
 }
 
+/**
+ * The cheapest automation on offer, in content order — unless the player is the
+ * sort who is not there to watch. `preferRota` puts the auto-changeover unit at
+ * the front of the queue, which is what an inattentive player would actually
+ * buy first: it is the one automation that keeps the workshop *varying* what it
+ * makes while nobody is looking.
+ */
 function affordableAutomation(
   state: GameState,
   content: Content,
   curves: CurveRegistry,
+  preferRota = false,
 ): AutomationDef | undefined {
-  for (const def of content.automation) {
+  const ordered = preferRota
+    ? [...content.automation].sort((a, b) => {
+        const rank = (def: AutomationDef): number => (def.behavior === 'auto-changeover' ? 0 : 1);
+        return rank(a) - rank(b);
+      })
+    : content.automation;
+  for (const def of ordered) {
     if (automationAvailability(state, content, def.id) !== null) {
       continue;
     }
@@ -249,11 +280,7 @@ function affordableAutomation(
  * A spender that waits for a full order it cannot afford is a deadlock, not a
  * strategy, so it always buys as much as the till covers, down to one print.
  */
-function restockMoves(state: GameState, content: Content, slotIndex: number): readonly Action[] {
-  const slot = state.slots[slotIndex];
-  if (slot === undefined) {
-    return [];
-  }
+function restockMoves(state: GameState, content: Content, slot: SlotState): readonly Action[] {
   const config = resolveSlotConfig(content, slot);
   if (config === null) {
     return [];
@@ -311,6 +338,50 @@ function restockMoves(state: GameState, content: Content, slotIndex: number): re
  */
 const THRESHOLD_DRIFT = 0.1;
 
+/**
+ * What the workshop is currently saving up for, in Parts.
+ *
+ * This is the float the auto-seller must leave behind, and getting it wrong is
+ * a silent softlock rather than a slow game: once the rack is full the next
+ * useful purchase is a *config slot* costing hundreds of Parts, and an
+ * auto-seller still floating at the price of a printer will cash in every Part
+ * above a dozen or so. Found exactly that way — the balanced bot sat in farm
+ * for 392 design-minutes with eight printers, £18k in the bank and 31 Parts,
+ * because the thing it needed could only be bought with Parts it kept selling.
+ */
+function savingTargetParts(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): number | null {
+  const printer = unlocked(content.printers, content, state.phaseId)[0];
+  const printerCost =
+    printer === undefined ? null : nextPrinterCost(state, content, curves, printer.id);
+  if (slotWithRoom(state, content) !== null) {
+    return printerCost !== null && printerCost.resource === 'parts' ? printerCost.amount : null;
+  }
+  const unlock = nextSlotUnlock(state, content);
+  const slotCost =
+    unlock !== null && slotUnlockAvailability(state, content, unlock.id) === null
+      ? nextSlotCost(content, curves, unlock.id)
+      : null;
+  if (slotCost !== null && slotCost.resource === 'parts') {
+    return slotCost.amount;
+  }
+  // Nowhere to put a machine and no bay to buy: the fork is the next thing
+  // worth Parts, and after that there is nothing left but the tree.
+  for (const def of content.forks) {
+    if (forkAvailability(state, content, def.id) !== null) {
+      continue;
+    }
+    const cost = forkCost(content, curves, def.id);
+    if (cost !== null && cost.resource === 'parts') {
+      return cost.amount;
+    }
+  }
+  return printerCost !== null && printerCost.resource === 'parts' ? printerCost.amount : null;
+}
+
 function retuneAutoSell(
   state: GameState,
   content: Content,
@@ -319,11 +390,11 @@ function retuneAutoSell(
   if (!phaseAllows(state, content, 'SET_AUTOMATION')) {
     return [];
   }
-  const printer = unlocked(content.printers, content, state.phaseId)[0];
-  const target = printer === undefined ? null : nextPrinterCost(state, content, curves, printer.id);
-  if (target === null || target.resource !== 'parts') {
+  const amount = savingTargetParts(state, content, curves);
+  if (amount === null) {
     return [];
   }
+  const target = { amount };
   const moves: Action[] = [];
   for (const def of content.automation) {
     if (def.behavior !== 'sell-parts') {
@@ -373,22 +444,44 @@ export interface PolicyOptions {
   readonly reserveBatches: number;
   /** Pick the highest-margin material rather than the cheapest one. */
   readonly chaseMargin: boolean;
+  /**
+   * Which branch of the per-run fork this player commits to (spec §5B).
+   * `throughput` takes whichever branch multiplies output hardest; `flexibility`
+   * keeps the rack, and with it the ability to run several configurations at
+   * once. Both branches therefore get bot coverage rather than one of them
+   * being dead content.
+   */
+  readonly preferFork: 'throughput' | 'flexibility';
+  /**
+   * Buy the auto-changeover unit and write a rota onto each bay (spec §5B).
+   *
+   * Only worth it for a player who is not there to reconfigure by hand: an
+   * attentive bot re-loads a slot the moment the margin moves, and a rota would
+   * just add purges it did not ask for. That is why `idle-heavy` uses it and
+   * the twitchier strategies do not — the mechanic is exercised by the player
+   * it was designed for.
+   */
+  readonly useQueues: boolean;
 }
 
-/** What one batch of filament costs at today's price. */
+/** What one batch of filament costs at today's price, across every bay. */
 function batchCostOf(
   state: GameState,
   content: Content,
-  slotIndex: number,
 ): { readonly grams: number; readonly money: number } {
-  const slot = state.slots[slotIndex];
-  const config = slot === undefined ? null : resolveSlotConfig(content, slot);
-  if (slot === undefined || config === null) {
-    return { grams: 0, money: 0 };
+  let grams = 0;
+  let money = 0;
+  for (const slot of activeSlots(state, content)) {
+    const config = resolveSlotConfig(content, slot);
+    if (config === null) {
+      continue;
+    }
+    const slotGrams = config.object.filamentGrams * Math.max(slot.printerCount, 1);
+    const quote = quoteFor(state, content, config.material.id);
+    grams += slotGrams;
+    money += slotGrams * (quote?.buyPerGram ?? 0);
   }
-  const grams = config.object.filamentGrams * Math.max(slot.printerCount, 1);
-  const quote = quoteFor(state, content, config.material.id);
-  return { grams, money: grams * (quote?.buyPerGram ?? 0) };
+  return { grams, money };
 }
 
 /**
@@ -398,16 +491,15 @@ function batchCostOf(
 function staysSolvent(
   state: GameState,
   content: Content,
-  slotIndex: number,
   partsSpent: number,
   reserveBatches: number,
 ): boolean {
-  const slot = state.slots[slotIndex];
+  const slot = activeSlots(state, content)[0];
   const config = slot === undefined ? null : resolveSlotConfig(content, slot);
   if (slot === undefined || config === null) {
     return true;
   }
-  const batch = batchCostOf(state, content, slotIndex);
+  const batch = batchCostOf(state, content);
   const stocked = state.filamentGrams[config.material.id] ?? 0;
   if (stocked >= batch.grams * (reserveBatches + 1)) {
     return true;
@@ -417,6 +509,163 @@ function staysSolvent(
   const capital = state.resources.money + partsLeft * partValue;
   return capital >= batch.money * (reserveBatches + 1);
 }
+
+// --- slots, fleet and the fork (spec §4, §5B) --------------------------------
+
+/** The bays the workshop is actually running — a Goliath run has exactly one. */
+function activeSlots(state: GameState, content: Content): readonly SlotState[] {
+  return state.slots.slice(0, effectiveSlotCapacity(state, content));
+}
+
+/**
+ * Buy the next bay when the rack is the thing holding the fleet back.
+ *
+ * A bay is only worth its price once the machines it would house have nowhere
+ * else to stand (spec §4), so the bot waits until every existing bay is full
+ * rather than buying capacity it cannot fill. That is also what makes the
+ * purchase legible in a balance report: a slot appears exactly when the fleet
+ * hits its ceiling.
+ */
+function slotMove(state: GameState, content: Content, curves: CurveRegistry): BuySlotAction | null {
+  if (!phaseAllows(state, content, 'BUY_SLOT') || slotWithRoom(state, content) !== null) {
+    return null;
+  }
+  const unlock = nextSlotUnlock(state, content);
+  if (unlock === null || slotUnlockAvailability(state, content, unlock.id) !== null) {
+    return null;
+  }
+  const cost = nextSlotCost(content, curves, unlock.id);
+  if (cost === null || cost.resource === 'filament') {
+    return null;
+  }
+  return state.resources[cost.resource] >= cost.amount ? buySlot(unlock.id) : null;
+}
+
+/**
+ * Spread the fleet evenly. Machines only earn while their bay has a config and
+ * filament, so a bay left empty next to a full one is pure waste; the bot moves
+ * one machine per check-in, which converges without thrashing a running batch.
+ */
+function fleetMove(state: GameState, content: Content): Action | null {
+  if (!phaseAllows(state, content, 'ASSIGN_PRINTER')) {
+    return null;
+  }
+  const bays = activeSlots(state, content);
+  if (bays.length < 2) {
+    return null;
+  }
+  const fullest = bays.reduce((best, slot) =>
+    slot.printerCount > best.printerCount ? slot : best,
+  );
+  const emptiest = bays.reduce((best, slot) =>
+    slot.printerCount < best.printerCount ? slot : best,
+  );
+  if (fullest.id === emptiest.id || fullest.printerCount - emptiest.printerCount < 2) {
+    return null;
+  }
+  if (emptiest.printerCount >= printersPerSlot(state, content)) {
+    return null;
+  }
+  return assignPrinter(fullest.id, emptiest.id, 1);
+}
+
+/** How hard a branch multiplies raw output — speed × yield, folded from data. */
+function forkOutput(def: ForkDef): number {
+  return def.effects.reduce((total, effect) => {
+    const scales = effect.type === 'printSpeedMultiplier' || effect.type === 'partsYieldMultiplier';
+    return scales && effect.combine === 'multiply' ? total * effect.value : total;
+  }, 1);
+}
+
+/**
+ * Commit to Farm or Goliath (spec §5B). The choice is read off the fork defs
+ * rather than off their ids: a `throughput` player takes whichever branch
+ * multiplies output hardest, a `flexibility` player takes whichever keeps the
+ * most bays. Content can therefore rename or re-balance the branches without
+ * touching a bot.
+ */
+function forkMove(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  prefer: PolicyOptions['preferFork'],
+): ChooseForkAction | null {
+  if (isForkChosen(state) || !phaseAllows(state, content, 'CHOOSE_FORK')) {
+    return null;
+  }
+  const affordable = content.forks.filter((def) => {
+    if (forkAvailability(state, content, def.id) !== null) {
+      return false;
+    }
+    const cost = forkCost(content, curves, def.id);
+    return (
+      cost !== null && cost.resource !== 'filament' && state.resources[cost.resource] >= cost.amount
+    );
+  });
+  const best = affordable.reduce<ForkDef | undefined>((winner, def) => {
+    if (winner === undefined) {
+      return def;
+    }
+    if (prefer === 'throughput') {
+      return forkOutput(def) > forkOutput(winner) ? def : winner;
+    }
+    const bays = def.slotCapacity ?? Number.POSITIVE_INFINITY;
+    const winnerBays = winner.slotCapacity ?? Number.POSITIVE_INFINITY;
+    return bays > winnerBays ? def : winner;
+  }, undefined);
+  return best === undefined ? null : chooseFork(best.id);
+}
+
+/**
+ * Write a rota onto a bay that has none (spec §5B). Two entries: what the bay
+ * already prints, and the runner-up material — the point of a queue is that the
+ * workshop keeps producing a mix while nobody is watching.
+ */
+function queueMoves(
+  state: GameState,
+  content: Content,
+  object: ObjectDef,
+  primary: MaterialDef,
+): readonly Action[] {
+  // The rota is the auto-changeover unit's feature (spec §5B): asking for one
+  // before buying the unit is an action the reducer refuses, and a bot that
+  // spends its check-ins on refused actions is not modelling a player.
+  const owned = content.automation.some(
+    (def) => def.behavior === 'auto-changeover' && (state.automation[def.id]?.level ?? 0) > 0,
+  );
+  if (!owned || !phaseAllows(state, content, 'SET_SLOT_QUEUE')) {
+    return [];
+  }
+  const alternatives = availableMaterials(state, content).filter(
+    (material) => material.id !== primary.id,
+  );
+  const second = alternatives.reduce<MaterialDef | undefined>(
+    (best, material) =>
+      best === undefined ||
+      marginOf(state, content, material, object) > marginOf(state, content, best, object)
+        ? material
+        : best,
+    undefined,
+  );
+  if (second === undefined) {
+    return [];
+  }
+  const target = activeSlots(state, content).find(
+    (slot) => slot.queue.length === 0 && slot.materialId === primary.id,
+  );
+  if (target === undefined) {
+    return [];
+  }
+  return [
+    setSlotQueue(target.id, [
+      { materialId: primary.id, objectId: object.id, batches: QUEUE_BATCHES_PER_ENTRY },
+      { materialId: second.id, objectId: object.id, batches: QUEUE_BATCHES_PER_ENTRY },
+    ]),
+  ];
+}
+
+/** Batches a rota entry prints before the bay rotates on. */
+const QUEUE_BATCHES_PER_ENTRY = 12;
 
 /**
  * One policy, three parameterisations. Writing the strategies as knobs on a
@@ -435,9 +684,9 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         return [intro];
       }
 
-      const slotIndex = 0;
-      const slot = state.slots[slotIndex];
-      if (slot === undefined) {
+      const bays = activeSlots(state, content);
+      const first = bays[0];
+      if (first === undefined) {
         return [];
       }
       const object = bestObject(content, state.phaseId);
@@ -445,7 +694,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         return [];
       }
       const material = options.chaseMargin
-        ? (bestMaterial(state, content, object, slot.materialId) ??
+        ? (bestMaterial(state, content, object, first.materialId) ??
           cheapestMaterial(state, content))
         : cheapestMaterial(state, content);
       if (material === undefined) {
@@ -465,17 +714,39 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         moves.push(sellParts(null));
       }
 
-      // Load the slot. Changing material costs a changeover (spec §3), so the
-      // bot only does it when the *material* is genuinely different.
-      if (slot.materialId !== material.id || slot.objectId !== object.id) {
-        if (slot.run === null && slot.changeoverMs <= 0) {
-          moves.push(setSlotConfig(slot.id, material.id, object.id));
+      /*
+       * Load every bay. A bay the fork left behind, or one just bought, is a
+       * bay standing idle, so the rack is configured before anything is bought
+       * — otherwise the bot would buy machines for a slot that prints nothing.
+       * Changing material costs a changeover (spec §3), so a *loaded* bay is
+       * only re-loaded when the material is genuinely different, and a bay with
+       * a rota is left to the rota.
+       */
+      const misconfigured = bays.find(
+        (slot) =>
+          slot.queue.length === 0 &&
+          (slot.materialId !== material.id || slot.objectId !== object.id),
+      );
+      if (misconfigured !== undefined) {
+        if (misconfigured.run === null && misconfigured.changeoverMs <= 0) {
+          moves.push(setSlotConfig(misconfigured.id, material.id, object.id));
         }
         return moves;
       }
 
       moves.push(...recycleMoves(state, content));
       moves.push(...retuneAutoSell(state, content, curves));
+      if (options.useQueues) {
+        // Before the shopping, not after: a rota is set once per bay and costs
+        // nothing, and a bot that only gets to it when there is nothing left to
+        // buy never gets to it at all.
+        moves.push(...queueMoves(state, content, object, material));
+      }
+
+      const rebalance = fleetMove(state, content);
+      if (rebalance !== null) {
+        moves.push(rebalance);
+      }
 
       const printer = unlocked(content.printers, content, state.phaseId)[0];
       const printerCost =
@@ -485,13 +756,16 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         staysSolvent(
           state,
           content,
-          slotIndex,
           cost.resource === 'parts' ? cost.amount : 0,
           options.reserveBatches,
         );
 
+      // Where the next machine would stand. No room anywhere means the rack is
+      // the bottleneck, and `slotMove` is what answers that.
+      const housing = slotWithRoom(state, content);
       const canBuyPrinter =
         printer !== undefined &&
+        housing !== null &&
         printerCost !== null &&
         printerCost.resource !== 'filament' &&
         phaseAllows(state, content, 'BUY_PRINTER') &&
@@ -507,7 +781,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
           ? upgradeCandidate
           : undefined;
       const automationCandidate = phaseAllows(state, content, 'BUY_AUTOMATION')
-        ? affordableAutomation(state, content, curves)
+        ? affordableAutomation(state, content, curves, options.useQueues)
         : undefined;
       const automation =
         automationCandidate !== undefined &&
@@ -515,37 +789,55 @@ export function createPolicyBot(options: PolicyOptions): Bot {
           ? automationCandidate
           : undefined;
 
-      const investments: readonly Action[] = options.capacityFirst
-        ? [
-            ...(canBuyPrinter && printer !== undefined ? [buyPrinter(printer.id, slot.id)] : []),
-            ...(upgrade === undefined ? [] : [buyUpgrade(upgrade.id)]),
-            ...(automation === undefined ? [] : [buyAutomation(automation.id)]),
-          ]
-        : [
-            ...(upgrade === undefined ? [] : [buyUpgrade(upgrade.id)]),
-            ...(automation === undefined ? [] : [buyAutomation(automation.id)]),
-            ...(canBuyPrinter && printer !== undefined ? [buyPrinter(printer.id, slot.id)] : []),
-          ];
+      const slotPurchase = slotMove(state, content, curves);
+      const slotBuy =
+        slotPurchase !== null && solvent(nextSlotCost(content, curves, slotPurchase.unlockId))
+          ? slotPurchase
+          : null;
+      const fork = forkMove(state, content, curves, options.preferFork);
+      const forkBuy =
+        fork !== null && solvent(forkCost(content, curves, fork.forkId)) ? fork : null;
+
+      const capacityMoves: readonly Action[] = [
+        ...(canBuyPrinter && printer !== undefined
+          ? [buyPrinter(printer.id, housing?.id ?? '')]
+          : []),
+        ...(slotBuy === null ? [] : [slotBuy]),
+      ];
+      const treeMoves: readonly Action[] = [
+        ...(upgrade === undefined ? [] : [buyUpgrade(upgrade.id)]),
+        ...(automation === undefined ? [] : [buyAutomation(automation.id)]),
+      ];
+      // The fork is the one purchase that is never postponed: it is the run's
+      // defining commitment (spec §5B) and everything after it is shaped by it.
+      const investments: readonly Action[] =
+        forkBuy !== null
+          ? [forkBuy]
+          : options.capacityFirst
+            ? [...capacityMoves, ...treeMoves]
+            : [...treeMoves, ...capacityMoves];
       const investment = investments[0];
       if (investment !== undefined) {
         moves.push(investment);
         return moves;
       }
 
-      // Parts are the currency of capacity, so they are *hoarded*, never
-      // dumped: the only sale a bot makes is the one `restockMoves` needs to
-      // fund the next spool. A bot that banked its surplus every check-in
-      // would never save up for anything (found the hard way — the balanced
-      // bot sat in bench for 415 design-minutes with one printer).
-      moves.push(...restockMoves(state, content, slotIndex));
+      for (const slot of bays) {
+        // Parts are the currency of capacity, so they are *hoarded*, never
+        // dumped: the only sale a bot makes is the one `restockMoves` needs to
+        // fund the next spool. A bot that banked its surplus every check-in
+        // would never save up for anything (found the hard way — the balanced
+        // bot sat in bench for 415 design-minutes with one printer).
+        moves.push(...restockMoves(state, content, slot));
 
-      // Only ask for a print the reducer would actually accept: an idle slot,
-      // out of changeover, with filament for at least one of its printers.
-      const config = resolveSlotConfig(content, slot);
-      const stocked = config === null ? 0 : (state.filamentGrams[config.material.id] ?? 0);
-      const feedable = config !== null && affordableBatch(config, slot.printerCount, stocked) > 0;
-      if (slot.run === null && slot.changeoverMs <= 0 && feedable) {
-        moves.push(startPrint(slot.id));
+        // Only ask for a print the reducer would actually accept: an idle slot,
+        // out of changeover, with filament for at least one of its printers.
+        const config = resolveSlotConfig(content, slot);
+        const stocked = config === null ? 0 : (state.filamentGrams[config.material.id] ?? 0);
+        const feedable = config !== null && affordableBatch(config, slot.printerCount, stocked) > 0;
+        if (slot.run === null && slot.changeoverMs <= 0 && feedable) {
+          moves.push(startPrint(slot.id));
+        }
       }
       return moves;
     },
@@ -563,6 +855,8 @@ export const greedySpenderBot = createPolicyBot({
   capacityFirst: true,
   reserveBatches: 0,
   chaseMargin: false,
+  preferFork: 'throughput',
+  useQueues: false,
 });
 
 /**
@@ -576,6 +870,10 @@ export const balancedBot = createPolicyBot({
   capacityFirst: false,
   reserveBatches: 3,
   chaseMargin: true,
+  // The reference player keeps its rack: `greedy-spender` takes the other
+  // branch, so between them the roster exercises both sides of the fork.
+  preferFork: 'flexibility',
+  useQueues: false,
 });
 
 /**
@@ -589,6 +887,8 @@ export const idleHeavyBot = createPolicyBot({
   capacityFirst: false,
   reserveBatches: 12,
   chaseMargin: true,
+  preferFork: 'flexibility',
+  useQueues: true,
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];
