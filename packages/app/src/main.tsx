@@ -7,6 +7,7 @@ import './app.css';
 import { bootGame } from './boot.js';
 import { connectContentHotReload } from './dev/content-hot-reload.js';
 import { installDevHooks, readBootOverrides } from './dev/hooks.js';
+import { mountEditor } from './dev/mount-editor.js';
 
 /**
  * Shell entry point (spec §16).
@@ -55,6 +56,15 @@ async function start(): Promise<void> {
       ? `Your save could not be read (${game.load.message}); starting a new workshop.`
       : null;
 
+  /*
+   * The dev Editor panel (spec §14) is loaded from a *dynamic* import inside a
+   * `import.meta.env.DEV` branch. Vite replaces that flag with `false` in a
+   * production build, so the branch — and with it the whole `@printhead/editor`
+   * chunk — is eliminated rather than merely unreachable. `e2e/tests/
+   * smoke.prod.spec.ts` checks the shipped bundle for its absence.
+   */
+  const editor = import.meta.env.DEV ? await mountEditor({ game, contentSource }) : null;
+
   createRoot(container as HTMLElement).render(
     <StrictMode>
       <App
@@ -63,6 +73,7 @@ async function start(): Promise<void> {
         subscribeOffline={game.subscribeOffline}
         loadWarning={loadWarning}
       />
+      {editor}
     </StrictMode>,
   );
 }

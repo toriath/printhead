@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { contentHotReload } from './vite/content-hot-reload.js';
+import { contentWriteBack } from './vite/content-write-back.js';
 
 const contentDir = fileURLToPath(new URL('../core/content', import.meta.url));
 
@@ -18,6 +19,7 @@ export default defineConfig({
   plugins: [
     react(),
     contentHotReload({ contentDir }),
+    contentWriteBack({ contentDir }),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',

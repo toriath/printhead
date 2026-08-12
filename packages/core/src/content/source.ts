@@ -29,16 +29,25 @@ export function createStaticContentSource(raw: RawContent = RAW_CONTENT): Conten
 }
 
 export interface MutableContentSource extends ContentSource {
+  /**
+   * The *raw* documents behind the validated set. The editor (spec §14) edits
+   * JSON, not the parsed model: a zod schema may coerce or strip, so writing
+   * the parsed form back to disk would slowly rewrite the content files into
+   * something their author never typed.
+   */
+  raw(): RawContent;
   /** Replace the content set; invalid input is rejected and current content kept. */
   replace(raw: RawContent): ContentValidation;
 }
 
 export function createMutableContentSource(raw: RawContent = RAW_CONTENT): MutableContentSource {
   let content = loadContent(raw);
+  let current = raw;
   const listeners = new Set<ContentListener>();
   return {
     id: 'mutable',
     get: () => content,
+    raw: () => current,
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -49,6 +58,7 @@ export function createMutableContentSource(raw: RawContent = RAW_CONTENT): Mutab
       const validation = validateContent(next);
       if (validation.ok) {
         content = validation.content;
+        current = next;
         for (const listener of listeners) {
           listener(content);
         }
