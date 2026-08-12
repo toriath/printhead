@@ -7,6 +7,8 @@ import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
 import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
+import { validateVisualState } from '../visual/schema.js';
+import { toVisualState } from '../visual/visual-state.js';
 import {
   FIRST_MATERIAL_ID,
   FIRST_OBJECT_ID,
@@ -111,12 +113,34 @@ function trading(seed: number): GameState {
 }
 
 /**
+ * A workshop with the full rack staffed. `start.slotCount` is 1 until M4, so no
+ * amount of play reaches this shape yet — but the projection has to be right
+ * for it before the mechanic lands, not after.
+ */
+function fullRack(seed: number): GameState {
+  const base = trading(seed);
+  const capacity = content.start.maxSlotCount;
+  return {
+    ...base,
+    printers: { [printerId]: capacity },
+    slots: Array.from({ length: capacity }, (_unused, index) => ({
+      id: `${content.start.slotIdPrefix}-${index + 1}`,
+      materialId: FIRST_MATERIAL_ID,
+      objectId: FIRST_OBJECT_ID,
+      printerCount: 1,
+      autoRestart: false,
+      run: null,
+    })),
+  };
+}
+
+/**
  * Start states that actually unlock the actions under test. Fuzzing from a
  * fresh save alone is close to vacuous: the phase FSM gates every economy
  * action behind an intro that random input will never complete.
  */
 const startStates = (): fc.Arbitrary<GameState> =>
-  fc.constantFrom(createInitialState(content, { seed: 4 }), assembled(4), trading(4));
+  fc.constantFrom(createInitialState(content, { seed: 4 }), assembled(4), trading(4), fullRack(4));
 
 describe('property: resources are never negative', () => {
   it('holds for arbitrary action sequences from any reachable state', () => {
@@ -308,5 +332,80 @@ describe('property: saves round-trip exactly', () => {
       b = apply(b, tick(TICK_MS));
     }
     expect(b).toEqual(a);
+  });
+});
+
+/**
+ * The projection is the contract every renderer reads (spec §15), and the
+ * renderer has no way to defend itself: a `progress` of 1.4 or a slot the
+ * schema does not describe becomes a broken picture, not an exception. So the
+ * guarantee has to hold for *any* reachable state, not just the fixtures.
+ */
+describe('property: the VisualState projection is always valid', () => {
+  it('emits a schema-valid document from any reachable state', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 0, maxLength: 60 }),
+        (start, actions) => {
+          let state = start;
+          for (const action of actions) {
+            state = apply(state, action);
+          }
+          const visual = toVisualState(state, content);
+          const validation = validateVisualState(visual);
+          expect(validation.issues).toEqual([]);
+          expect(validation.ok).toBe(true);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('projects exactly one entry per slot, never more, never fewer', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 0, maxLength: 40 }),
+        (start, actions) => {
+          let state = start;
+          for (const action of actions) {
+            state = apply(state, action);
+          }
+          const visual = toVisualState(state, content);
+          expect(visual.slots).toHaveLength(state.slots.length);
+          expect(visual.slots.map((slot) => slot.slotId)).toEqual(
+            state.slots.map((slot) => slot.id),
+          );
+          expect(visual.slotCapacity).toBeGreaterThanOrEqual(visual.slots.length);
+        },
+      ),
+      { numRuns: 40 },
+    );
+  });
+
+  it('keeps every fraction it publishes inside 0..1', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 0, maxLength: 60 }),
+        (start, actions) => {
+          let state = start;
+          for (const action of actions) {
+            state = apply(state, action);
+          }
+          const visual = toVisualState(state, content);
+          for (const slot of visual.slots) {
+            expect(slot.progress).toBeGreaterThanOrEqual(0);
+            expect(slot.progress).toBeLessThanOrEqual(1);
+            expect(slot.phaseOffset).toBeGreaterThanOrEqual(0);
+            expect(slot.phaseOffset).toBeLessThan(1);
+          }
+          expect(visual.assembly.progress).toBeGreaterThanOrEqual(0);
+          expect(visual.assembly.progress).toBeLessThanOrEqual(1);
+        },
+      ),
+      { numRuns: 40 },
+    );
   });
 });

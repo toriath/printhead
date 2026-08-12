@@ -3,8 +3,6 @@ packages:
   - tools/*
   - e2e
 
-# One pinned version per dependency across the whole monorepo (spec §17:
-# dev == CI, bit-for-bit).
 catalog:
   '@playwright/test': 1.49.1
   '@testing-library/react': 16.3.2

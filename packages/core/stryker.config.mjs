@@ -3,7 +3,8 @@ import { dirname, join } from 'node:path';
 
 /**
  * Mutation gate for the simulation's decision-making code (spec §13): the
- * content interpreters in `systems/` and the curve library must score >= 80 %.
+ * content interpreters in `systems/`, the curve library and the `VisualState`
+ * projection must score >= 80 %.
  *
  * The plugin is resolved to an absolute path on purpose: pnpm's isolated
  * `node_modules` hides sibling packages from Stryker's own directory, so the
@@ -21,7 +22,15 @@ export default {
   testRunner: 'vitest',
   plugins: [vitestRunner],
   vitest: { configFile: 'vitest.config.ts' },
-  mutate: ['src/systems/**/*.ts', 'src/curves/**/*.ts', '!**/*.test.ts'],
+  mutate: [
+    'src/systems/**/*.ts',
+    'src/curves/**/*.ts',
+    // M2 adds the projection: it is the contract every renderer reads, so it
+    // is held to the same bar as the interpreters that feed it.
+    'src/visual/**/*.ts',
+    '!**/*.test.ts',
+    '!**/__fixtures__/**',
+  ],
   ignorePatterns: ['**/node_modules/**', '**/dist/**', 'reports/**'],
   concurrency: 2,
   coverageAnalysis: 'perTest',
