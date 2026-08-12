@@ -8,20 +8,20 @@
  */
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { Action, GameState } from '@printhead/core';
 import {
   RAW_CONTENT,
   SAVE_SCHEMA_VERSION,
+  TICK_MS,
   createInitialState,
   loadContent,
   reduce,
   restoreRng,
   toSaveFile,
-} from '../packages/core/src/index.js';
-import type { Action, GameState } from '../packages/core/src/index.js';
+} from '@printhead/core';
 
 const content = loadContent(RAW_CONTENT);
 const SAVED_AT_MS = 1_723_420_800_000;
-const TICK_MS = 100;
 
 let state: GameState = createInitialState(content, { seed: 20260812 });
 
