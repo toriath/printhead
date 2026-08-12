@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, createInitialState } from '../state/game-state.js';
-import { assignPrinters, fleetCapacity, printersPerSlot, slotRoom, slotWithRoom } from './fleet.js';
+import {
+  assignPrinters,
+  fleetCapacity,
+  isActiveSlot,
+  printersPerSlot,
+  slotRoom,
+  slotWithRoom,
+} from './fleet.js';
 import { chosenFork, commitFork, consolidateSlots, forkAvailability, forkCost } from './forks.js';
 import {
   effectiveSlotCapacity,
@@ -275,6 +282,27 @@ describe('the Farm/Goliath fork (spec §5B)', () => {
     const choice = commitFork(rack, content, curves, FARM);
     expect(choice?.state.slots).toHaveLength(2);
     expect(effectiveSlotCapacity(choice?.state as GameState, content)).toBe(2);
+  });
+
+  /**
+   * The bays the melt-down emptied are not merely hidden: nothing may be put
+   * back into them. Without this the projection would draw one machine while
+   * the reducer quietly housed the next purchase in a bay nobody can see.
+   */
+  it('closes the bays it melted down to any new machine', () => {
+    const rack = studio({
+      printers: { [printerId]: 4 },
+      slots: [
+        testSlot({ id: 'slot-1', materialId, objectId, printerCount: 2 }),
+        testSlot({ id: 'slot-2', materialId, objectId, printerCount: 2 }),
+      ],
+    });
+    const after = commitFork(rack, content, curves, GOLIATH)?.state as GameState;
+    expect(isActiveSlot(after, content, 'slot-1')).toBe(true);
+    expect(isActiveSlot(after, content, 'slot-2')).toBe(false);
+    expect(slotRoom(after, content, after.slots[1] as never)).toBe(0);
+    expect(slotWithRoom(after, content)?.id).toBe('slot-1');
+    expect(assignPrinters(after, content, 'slot-1', 'slot-2', 1)).toBe('slot-full');
   });
 
   it('consolidates nothing when the rack already fits', () => {

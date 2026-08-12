@@ -1,6 +1,7 @@
 import type { Content } from '../content/schema.js';
 import type { GameState, SlotState } from '../state/game-state.js';
 import { chosenFork } from './forks.js';
+import { effectiveSlotCapacity } from './slots.js';
 
 /**
  * Fleet allocation (spec §4/§5B): "printers are **assigned to slots**; all
@@ -43,8 +44,25 @@ export function printersPerSlot(state: GameState, content: Content): number {
   return chosenFork(state, content)?.printersPerSlot ?? content.start.printersPerSlot;
 }
 
-/** Room left in a bay for another machine. */
+/**
+ * Bays the workshop is actually running. A fork can cap the rack below what the
+ * save owns (spec §5B), and the bays past that cap are inert — the fork emptied
+ * them — so nothing may be put back into one.
+ */
+export function isActiveSlot(state: GameState, content: Content, slotId: string): boolean {
+  const index = state.slots.findIndex((slot) => slot.id === slotId);
+  return index >= NONE && index < effectiveSlotCapacity(state, content);
+}
+
+/**
+ * Room left in a bay for another machine — always none in a bay the run's fork
+ * has closed, so a machine can never be housed somewhere the workshop no longer
+ * draws or ticks.
+ */
 export function slotRoom(state: GameState, content: Content, slot: SlotState): number {
+  if (!isActiveSlot(state, content, slot.id)) {
+    return NONE;
+  }
   return Math.max(printersPerSlot(state, content) - slot.printerCount, NONE);
 }
 

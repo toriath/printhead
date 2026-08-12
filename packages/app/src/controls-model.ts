@@ -173,7 +173,14 @@ export function buildControlModel(
             name: printer.name,
             cost: cost.amount,
             resource: cost.resource,
-            enabled: cost.resource !== 'filament' && state.resources[cost.resource] >= cost.amount,
+            // A bay holds only so many machines (spec §4). Offering the button
+            // for a full bay would be offering a purchase the reducer refuses;
+            // the fleet panel is where the answer to a full rack lives.
+            enabled:
+              cost.resource !== 'filament' &&
+              state.resources[cost.resource] >= cost.amount &&
+              slot !== undefined &&
+              slot.printerCount < slot.printerCapacity,
           },
   };
 }
