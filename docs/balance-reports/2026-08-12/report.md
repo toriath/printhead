@@ -39,7 +39,7 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Studio | 6.5 | 5 | 24 |
 | Prestige runs 1-2 | 6.5 | 6 | 27 |
 | The Absurd | 7.0 | 6 | 25 |
-| The End | 6.3 | 8 | 258 |
+| The End | 6.3 | 8 | 257 |
 
 ## Resource curves
 
@@ -58,7 +58,7 @@ magnitude and a shared axis would flatten one of them into the floor.
 |---|---|---|---|---|---|---|
 | idle | 42 | 0 | 0 | 0 | — | intro |
 | greedy-spender | 5040 | 875 | 21507 | 2129 | 9.0 % | end |
-| balanced | 5040 | 980 | 3019 | 149 | 4.7 % | end |
+| balanced | 5040 | 982 | 3018 | 150 | 4.7 % | end |
 | idle-heavy | 42 | 67 | 985 | 55 | 5.3 % | farm |
 
 ---

@@ -31,7 +31,7 @@
     "id": "slot-cost",
     "name": "Config slot cost",
     "type": "exponential",
-    "base": 399.782,
+    "base": 400,
     "growth": 6
   },
   {
