@@ -1,0 +1,27 @@
+{
+  "model": {
+    "strategy": "sine-noise-supply",
+    "periodDesignMinutes": 20,
+    "sineAmplitude": 0.25,
+    "noiseAmplitude": 0.08,
+    "supplyResponse": 0.15,
+    "minPriceMultiplier": 0.5,
+    "maxPriceMultiplier": 1.8
+  },
+  "listings": [
+    {
+      "materialId": "petg",
+      "basePricePerGram": 0.08,
+      "stockGrams": 2000,
+      "restockGramsPerDesignMinute": 40,
+      "unlockPhaseId": "farm"
+    },
+    {
+      "materialId": "resin",
+      "basePricePerGram": 0.35,
+      "stockGrams": 800,
+      "restockGramsPerDesignMinute": 12,
+      "unlockPhaseId": "studio"
+    }
+  ]
+}

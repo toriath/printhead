@@ -1,0 +1,13 @@
+[
+  {
+    "id": "bench-mk1",
+    "name": "Bench Mk1",
+    "machineTier": 1,
+    "speedMultiplier": 1,
+    "failureChargeMultiplier": 1,
+    "costCurveId": "printer-cost-tier1",
+    "costResource": "parts",
+    "degradationPerDesignHour": 0.02,
+    "unlockPhaseId": "intro"
+  }
+]

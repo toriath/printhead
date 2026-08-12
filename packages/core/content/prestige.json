@@ -1,0 +1,9 @@
+{
+  "requiredDesignId": "money-plate",
+  "plateCurveId": "prestige-plates",
+  "moneyPrintCurveId": "money-print-rate",
+  "meltdownDesignSeconds": 30,
+  "retainedResources": ["designs", "plates"],
+  "plateInputResource": "money",
+  "plateInputScale": 0.001
+}

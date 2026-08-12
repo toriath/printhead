@@ -1,0 +1,57 @@
+[
+  {
+    "id": "printer-cost-tier1",
+    "name": "Bench printer cost",
+    "type": "exponential",
+    "base": 12,
+    "growth": 1.18
+  },
+  {
+    "id": "upgrade-cost-machine",
+    "name": "Machine upgrade cost",
+    "type": "exponential",
+    "base": 25,
+    "growth": 1.6
+  },
+  {
+    "id": "automation-cost",
+    "name": "Automation upgrade cost",
+    "type": "exponential",
+    "base": 120,
+    "growth": 2.1
+  },
+  {
+    "id": "slot-cost",
+    "name": "Config slot cost",
+    "type": "exponential",
+    "base": 400,
+    "growth": 6
+  },
+  {
+    "id": "design-level-value",
+    "name": "Design value by level",
+    "type": "power",
+    "base": 1,
+    "exponent": 1.35
+  },
+  {
+    "id": "prestige-plates",
+    "name": "Plates granted at melt-down",
+    "type": "power",
+    "base": 0.4,
+    "exponent": 0.5
+  },
+  {
+    "id": "money-print-rate",
+    "name": "Money printed per design-second per plate",
+    "type": "linear",
+    "base": 0,
+    "step": 2.5
+  },
+  {
+    "id": "no-op",
+    "name": "Identity multiplier",
+    "type": "constant",
+    "value": 1
+  }
+]
