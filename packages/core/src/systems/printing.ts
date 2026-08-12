@@ -358,7 +358,7 @@ function completeRun(
     // into every save.
     queueBatches: slot.queue.length > NONE ? slot.queueBatches + FULL : NONE,
   });
-  const rotated = rotateQueue(idle, content, index, emit);
+  const rotated = rotateQueue(idle, content, index, run.remainingMs, emit);
   if (rotated !== null) {
     // The bay is now purging for the next entry on the rota; the restart
     // happens on the far side of the changeover, through the same idle path a
@@ -377,11 +377,17 @@ function completeRun(
  * still owed batches, or not enough of the incoming material to be worth the
  * purge. Rotation goes through `applyChangeover`, so a queued switch costs the
  * player exactly what a hand-driven one does (spec §3).
+ *
+ * `carryMs` is the (non-positive) overshoot of the batch that just finished,
+ * and the purge starts that much further along — the same rule the restart path
+ * follows, for the same reason: a tick that ends in a rotation must not quietly
+ * lose the fraction of itself that was left over.
  */
 function rotateQueue(
   state: GameState,
   content: Content,
   index: number,
+  carryMs: number,
   emit: EventSink | undefined,
 ): GameState | null {
   const slot = state.slots.at(index);
@@ -417,6 +423,7 @@ function rotateQueue(
   });
   return withSlot(purged, index, {
     ...changeover.slot,
+    changeoverMs: Math.max(changeover.slot.changeoverMs + carryMs, NONE),
     autoRestart: true,
     queueIndex: (slot.queueIndex + FULL) % slot.queue.length,
     queueBatches: NONE,

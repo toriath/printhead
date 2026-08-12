@@ -208,6 +208,33 @@ describe('the print loop turning the rota (spec §5B)', () => {
     expect(thrice.slots[0]?.queueIndex).toBe(1);
   });
 
+  /**
+   * The tick that finished the batch usually overshoots it. That overshoot is
+   * spent on the purge, exactly as the restart path spends it on the next run —
+   * otherwise every rotation would silently swallow a fraction of a tick and
+   * the loop would stop being time-additive.
+   */
+  it('starts the purge as far along as the batch overshot', () => {
+    const overshoot = 400;
+    const base = world();
+    const slot = base.slots[0];
+    if (slot === undefined) {
+      throw new Error('expected a slot');
+    }
+    const purgeMs =
+      (content.materials.find((m) => m.id === petg)?.changeoverDesignSeconds ?? 0) * 1000;
+    const after = tickSlots(
+      {
+        ...base,
+        slots: [{ ...slot, run: { remainingMs: RUN_MS, totalMs: RUN_MS, batch: 1 } }],
+      },
+      content,
+      RUN_MS + overshoot,
+      undefined,
+    );
+    expect(after.slots[0]?.changeoverMs).toBe(purgeMs - overshoot);
+  });
+
   it('leaves a bay with no rota counting nothing', () => {
     const plain = world({
       slots: [
