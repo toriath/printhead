@@ -14,7 +14,7 @@ jobs:
   check:
     name: pnpm check (devcontainer)
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +33,30 @@ jobs:
             # The §12.6 budget gate also runs inside `pnpm check` (vitest);
             # this prints the timeline and the blockers when it fails.
             pnpm balance:sim
-            pnpm mutation
             pnpm exec playwright install chromium
             pnpm e2e
+
+  # Mutation testing is a separate job on purpose (spec §13, §17). A full run is
+  # ~45 minutes: 1600 mutants, a fifth of them "static" (their line also runs
+  # while a test module is being imported, so Stryker cannot attribute them per
+  # test and has to replay the whole suite for each one). Left in the main job
+  # it would hold the fast feedback — lint, types, tests, E2E — hostage to it.
+  # Green here is still required before a merge; it simply arrives later.
+  mutation:
+    name: stryker (core systems + curves + projection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the devcontainer and run the mutation gate
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/${{ github.repository }}/devcontainer
+          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
+          push: never
+          runCmd: |
+            set -euo pipefail
+            corepack enable
+            pnpm install --frozen-lockfile
+            pnpm mutation

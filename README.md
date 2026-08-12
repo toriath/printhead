@@ -32,7 +32,9 @@ pnpm check          # the single verification entrypoint
 | Tests | `vitest run` | every package (§13) |
 | Coverage | `vitest run --coverage` (core) | ≥ 90 % line/branch on the simulation (§13, §17) |
 
-Other scripts: `pnpm mutation` (Stryker on `systems/`, `curves/` and `visual/`),
+Other scripts: `pnpm mutation` (Stryker on `systems/`, `curves/` and `visual/`
+— a full run is ~45 minutes, so CI gives it [its own job](.github/workflows/ci.yml)
+rather than holding the fast feedback behind it),
 `pnpm balance:sim [botId]`, `pnpm balance:sweep`, `pnpm balance:tune`,
 `pnpm balance:report` (see [Balancing](#balancing)),
 `pnpm e2e` (Playwright; run `pnpm exec playwright install chromium` once),
