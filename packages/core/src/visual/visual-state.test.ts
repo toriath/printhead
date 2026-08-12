@@ -10,7 +10,7 @@ import {
 } from '../state/__fixtures__/sim.js';
 import { setSlotConfig, startPrint, tick } from '../state/actions.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
-import { VISUAL_STATE_FIXTURES, visualFixture } from './fixtures.js';
+import { visualFixture, visualStateFixtures } from './fixtures.js';
 import { VISUAL_STATE_VERSION, VisualStateSchema, validateVisualState } from './schema.js';
 import { occupiedSlots, toVisualState } from './visual-state.js';
 
@@ -42,6 +42,9 @@ describe('toVisualState', () => {
           running: false,
           progress: 0,
           batch: 0,
+          changingOver: false,
+          changeoverProgress: 0,
+          failureRisk: 0,
         },
       ],
       assembly: {
@@ -60,7 +63,32 @@ describe('toVisualState', () => {
         scrap: 0,
         filamentGrams: state.filamentGrams,
       },
+      // The offers are projected too, so the shell holds no content table and
+      // cannot disagree with the reducer about what is buyable (spec §15).
+      market: toVisualState(state, content).market,
+      upgrades: toVisualState(state, content).upgrades,
+      automation: toVisualState(state, content).automation,
+      recycler: { installed: false, scrapGrams: 0, yieldGrams: 0, yieldMaterialId: 'pla' },
     });
+  });
+
+  it('offers every material, node and automation, each marked available or not', () => {
+    const visual = toVisualState(state, content);
+    expect(visual.market.map((row) => row.materialId)).toEqual(
+      content.materials.map((material) => material.id),
+    );
+    expect(visual.upgrades.map((row) => row.upgradeId)).toEqual(
+      content.upgrades.map((def) => def.id),
+    );
+    expect(visual.automation.map((row) => row.automationId)).toEqual(
+      content.automation.map((def) => def.id),
+    );
+    // A fresh save is in the intro: PLA only, and nothing purchasable yet.
+    expect(visual.market.filter((row) => row.available).map((row) => row.materialId)).toEqual([
+      'pla',
+    ]);
+    expect(visual.upgrades.every((row) => !row.available)).toBe(true);
+    expect(visual.automation.every((row) => !row.installed)).toBe(true);
   });
 
   it('is a pure function of GameState', () => {
@@ -220,8 +248,8 @@ describe('the frozen VisualState contract (spec §15)', () => {
   });
 
   it('accepts every shipped fixture — that is what freezing means', () => {
-    expect(VISUAL_STATE_FIXTURES.length).toBeGreaterThan(0);
-    for (const fixture of VISUAL_STATE_FIXTURES) {
+    expect(visualStateFixtures().length).toBeGreaterThan(0);
+    for (const fixture of visualStateFixtures()) {
       expect(validateVisualState(fixture.visual), fixture.name).toMatchObject({ ok: true });
       expect(fixture.visual.version, fixture.name).toBe(VISUAL_STATE_VERSION);
     }
@@ -265,14 +293,22 @@ describe('the frozen VisualState contract (spec §15)', () => {
   });
 
   it('covers the states the renderer has to draw', () => {
-    const byName = new Map(VISUAL_STATE_FIXTURES.map((f) => [f.name, f.visual]));
+    const byName = new Map(visualStateFixtures().map((f) => [f.name, f.visual]));
     expect([...byName.keys()]).toEqual([
       'fresh',
       'assembling',
       'assembled',
       'printing',
+      'economy',
       'showcase',
     ]);
+    // The M3 states the renderer newly has to draw.
+    const economy = byName.get('economy');
+    expect(economy?.upgrades.some((row) => row.level > 0)).toBe(true);
+    expect(economy?.automation.some((row) => row.installed)).toBe(true);
+    expect(economy?.ledger.scrap).toBeGreaterThan(0);
+    expect(economy?.slots.some((slot) => slot.failureRisk > 0)).toBe(true);
+    expect(byName.get('showcase')?.slots.some((slot) => slot.changingOver)).toBe(true);
     // Machine-tier variants and count badges only exist in the showcase until
     // the sim can produce multiple slots and printer tiers (M4).
     const showcase = byName.get('showcase');

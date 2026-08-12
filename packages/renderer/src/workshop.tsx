@@ -38,6 +38,9 @@ function lockedBay(index: number, capacity: number): SlotVisual {
     running: false,
     progress: 0,
     batch: 0,
+    changingOver: false,
+    changeoverProgress: 0,
+    failureRisk: 0,
   };
 }
 

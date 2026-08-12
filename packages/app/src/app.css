@@ -221,3 +221,60 @@ button:disabled {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* --- economy panels (M3) ------------------------------------------------- */
+
+.app__panels {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel__name {
+  font-size: 13px;
+}
+
+.panel__note {
+  color: var(--dim);
+}
+
+.panel__actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* The pity timer, drawn on the bay it belongs to (spec §7.1). */
+.slot__risk {
+  fill: var(--warn);
+}

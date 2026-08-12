@@ -18,10 +18,14 @@ import { z } from 'zod';
  * History:
  * - v1 (M0) — draft: phase id and a slot list, no renderer to speak of.
  * - v2 (M1) — draft: run progress, the intro assembly and the HUD ledger.
- * - v3 (M2) — **frozen**: every slot is projected (empty bays included) so the
+ * - v3 (M2) — frozen: every slot is projected (empty bays included) so the
  *   renderer can draw the "max 4, faint outline" rule from data alone.
+ * - v4 (M3) — **frozen**: the economy becomes visible. Slots carry their
+ *   changeover and their pity charge; the market board, the machine tree and
+ *   the automation rack are projected as lists, so the shell can offer every
+ *   purchase without a content table of its own.
  */
-export const VISUAL_STATE_VERSION = 3;
+export const VISUAL_STATE_VERSION = 4;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -54,6 +58,78 @@ export const SlotVisualSchema = z
     /** 0..1 through the current batch. */
     progress: Unit,
     batch: NonNegativeInt,
+    /** Purging for a material change (spec §3) — nothing prints meanwhile. */
+    changingOver: z.boolean(),
+    /** 0..1 through that purge; 0 when there is none. */
+    changeoverProgress: Unit,
+    /**
+     * 0..1 towards the next guaranteed failure (spec §7.1). The pity timer is
+     * deterministic, so this is a promise to the player, not a probability.
+     */
+    failureRisk: Unit,
+  })
+  .strict();
+
+/** One row of the market board (spec §7.2). */
+export const MarketVisualSchema = z
+  .object({
+    materialId: NonEmpty,
+    materialName: NonEmpty,
+    /** Listed materials can be sold back; the rest are shelf-price only. */
+    tradeable: z.boolean(),
+    /** Whether the phase and the machine tree have opened this material. */
+    available: z.boolean(),
+    buyPerGram: NonNegative,
+    sellPerGram: NonNegative,
+    /** Price relative to the listing's base — 1 is "normal". */
+    priceMultiplier: NonNegative,
+    /** Grams on the shelf; unlisted materials are unlimited and report 0. */
+    stockGrams: NonNegative,
+    heldGrams: NonNegative,
+  })
+  .strict();
+
+/** One node of the upgrade trees (spec §5), ready to be offered or greyed out. */
+export const UpgradeVisualSchema = z
+  .object({
+    upgradeId: NonEmpty,
+    name: NonEmpty,
+    tree: NonEmpty,
+    level: NonNegativeInt,
+    maxLevel: z.number().int().positive(),
+    /** Unlocked, prerequisites met and not yet maxed. */
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
+  })
+  .strict();
+
+/** One automation (spec §5C): what it costs, or what it is set to. */
+export const AutomationVisualSchema = z
+  .object({
+    automationId: NonEmpty,
+    name: NonEmpty,
+    behavior: NonEmpty,
+    level: NonNegativeInt,
+    installed: z.boolean(),
+    enabled: z.boolean(),
+    threshold: NonNegative,
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
+  })
+  .strict();
+
+/** The consolation loop (spec §2): what the scrap bin is worth right now. */
+export const RecyclerVisualSchema = z
+  .object({
+    installed: z.boolean(),
+    scrapGrams: NonNegative,
+    /** Grams the bin would return if fed into the loaded material. */
+    yieldGrams: NonNegative,
+    yieldMaterialId: NonEmpty.nullable(),
   })
   .strict();
 
@@ -95,6 +171,10 @@ export const VisualStateSchema = z
     slots: z.array(SlotVisualSchema),
     assembly: AssemblyVisualSchema,
     ledger: LedgerVisualSchema,
+    market: z.array(MarketVisualSchema),
+    upgrades: z.array(UpgradeVisualSchema),
+    automation: z.array(AutomationVisualSchema),
+    recycler: RecyclerVisualSchema,
   })
   .strict();
 
@@ -109,6 +189,10 @@ export type DeepReadonly<T> = T extends (infer U)[]
     : T;
 
 export type SlotVisual = DeepReadonly<z.infer<typeof SlotVisualSchema>>;
+export type MarketVisual = DeepReadonly<z.infer<typeof MarketVisualSchema>>;
+export type UpgradeVisual = DeepReadonly<z.infer<typeof UpgradeVisualSchema>>;
+export type AutomationVisual = DeepReadonly<z.infer<typeof AutomationVisualSchema>>;
+export type RecyclerVisual = DeepReadonly<z.infer<typeof RecyclerVisualSchema>>;
 export type AssemblyVisual = DeepReadonly<z.infer<typeof AssemblyVisualSchema>>;
 export type LedgerVisual = DeepReadonly<z.infer<typeof LedgerVisualSchema>>;
 export type VisualState = DeepReadonly<z.infer<typeof VisualStateSchema>>;

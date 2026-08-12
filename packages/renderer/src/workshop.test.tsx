@@ -1,4 +1,4 @@
-import { VISUAL_STATE_FIXTURES, type VisualState, visualFixture } from '@printhead/core';
+import { type VisualState, visualFixture, visualStateFixtures } from '@printhead/core';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BAY_HEIGHT, workshopWidth } from './geometry.js';
@@ -13,7 +13,7 @@ const showcase = visualFixture('showcase');
 
 describe('Workshop', () => {
   it('renders every VisualState fixture (spec §13)', () => {
-    for (const fixture of VISUAL_STATE_FIXTURES) {
+    for (const fixture of visualStateFixtures()) {
       cleanup();
       render(<Workshop visual={fixture.visual} />);
       const svg = screen.getByRole('img');
@@ -127,7 +127,31 @@ describe('slots (spec §4: once per slot, never once per printer)', () => {
     const full = Number(track?.getAttribute('width'));
     expect(widthOf('slot-1')).toBeCloseTo(full * 0.5);
     expect(widthOf('slot-2')).toBeCloseTo(full * 0.125);
-    expect(widthOf('slot-3')).toBe(0);
+    // slot-3 is mid-purge: the bar tracks the changeover, not a print, because
+    // the bay is busy either way and an empty bar would read as "idle".
+    expect(widthOf('slot-3')).toBeCloseTo(full * 0.4);
+    const purging = screen.getByTestId('slot-slot-3').querySelector('[data-purging="true"]');
+    expect(purging).not.toBeNull();
+  });
+
+  it('draws the pity meter only where the charge has started building', () => {
+    render(<Workshop visual={showcase} />);
+    // Bays 1 and 2 carry charge; the purged bay was reset and the empty one
+    // has no machine at all (spec §7.1).
+    expect(
+      screen.getByTestId('slot-slot-1').querySelector('[data-testid="risk-meter"]'),
+    ).not.toBeNull();
+    expect(
+      screen.getByTestId('slot-slot-3').querySelector('[data-testid="risk-meter"]'),
+    ).toBeNull();
+    expect(
+      screen.getByTestId('slot-slot-4').querySelector('[data-testid="risk-meter"]'),
+    ).toBeNull();
+  });
+
+  it('says what a purging bay is purging towards', () => {
+    render(<Workshop visual={showcase} />);
+    expect(screen.getByTestId('label-slot-3').textContent).toMatch(/^purging →/);
   });
 
   it('gives an empty bay no progress bar at all', () => {

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "phaseId": "farm",
   "phaseName": "Farm",
   "simTimeMs": 4620000,
@@ -18,7 +18,10 @@
       "occupied": true,
       "running": true,
       "progress": 0.5,
-      "batch": 7
+      "batch": 7,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0.85
     },
     {
       "slotId": "slot-2",
@@ -33,7 +36,10 @@
       "occupied": true,
       "running": true,
       "progress": 0.125,
-      "batch": 3
+      "batch": 3,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0.4
     },
     {
       "slotId": "slot-3",
@@ -48,7 +54,10 @@
       "occupied": true,
       "running": false,
       "progress": 0,
-      "batch": 0
+      "batch": 0,
+      "changingOver": true,
+      "changeoverProgress": 0.4,
+      "failureRisk": 0
     },
     {
       "slotId": "slot-4",
@@ -63,7 +72,10 @@
       "occupied": false,
       "running": false,
       "progress": 0,
-      "batch": 0
+      "batch": 0,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0
     }
   ],
   "assembly": {
@@ -93,5 +105,188 @@
       "petg": 310,
       "resin": 88
     }
+  },
+  "market": [
+    {
+      "materialId": "pla",
+      "materialName": "PLA",
+      "tradeable": false,
+      "available": true,
+      "buyPerGram": 0.05,
+      "sellPerGram": 0,
+      "priceMultiplier": 1,
+      "stockGrams": 0,
+      "heldGrams": 208
+    },
+    {
+      "materialId": "petg",
+      "materialName": "PETG",
+      "tradeable": true,
+      "available": true,
+      "buyPerGram": 0.054954147978879146,
+      "sellPerGram": 0.04671102578204727,
+      "priceMultiplier": 0.6869268497359893,
+      "stockGrams": 6000,
+      "heldGrams": 0
+    },
+    {
+      "materialId": "resin",
+      "materialName": "Resin (SLA)",
+      "tradeable": true,
+      "available": false,
+      "buyPerGram": 0.3792438647730753,
+      "sellPerGram": 0.32235728505711403,
+      "priceMultiplier": 1.0835538993516438,
+      "stockGrams": 2400,
+      "heldGrams": 0
+    },
+    {
+      "materialId": "metal",
+      "materialName": "Sintered metal",
+      "tradeable": true,
+      "available": false,
+      "buyPerGram": 1.6543495202096898,
+      "sellPerGram": 1.4061970921782363,
+      "priceMultiplier": 1.181678228721207,
+      "stockGrams": 800,
+      "heldGrams": 0
+    }
+  ],
+  "upgrades": [
+    {
+      "upgradeId": "heated-bed",
+      "name": "Heated bed",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 130,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "recycler",
+      "name": "Scrap recycler",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 81,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "hardened-nozzle",
+      "name": "Hardened nozzle",
+      "tree": "machine",
+      "level": 3,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 81,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "enclosure",
+      "name": "Enclosure",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 81,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sla-unit",
+      "name": "SLA unit",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 900,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sintering-head",
+      "name": "Sintering head",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 900,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "broker-licence",
+      "name": "Broker licence",
+      "tree": "automation",
+      "level": 2,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 80.9012295,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "config-slot-2",
+      "name": "Second config slot",
+      "tree": "farm",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 400,
+      "costResource": "parts"
+    }
+  ],
+  "automation": [
+    {
+      "automationId": "auto-sell",
+      "name": "Auto-sell parts",
+      "behavior": "sell-parts",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 40,
+      "available": false,
+      "affordable": false,
+      "cost": 419,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-buy-filament",
+      "name": "Auto-buy filament",
+      "behavior": "buy-filament",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 400,
+      "available": false,
+      "affordable": false,
+      "cost": 200,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-trade",
+      "name": "Auto-trading desk",
+      "behavior": "trade-filament",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 250,
+      "available": false,
+      "affordable": false,
+      "cost": 199.34029440000003,
+      "costResource": "money"
+    }
+  ],
+  "recycler": {
+    "installed": true,
+    "scrapGrams": 420,
+    "yieldGrams": 210,
+    "yieldMaterialId": "petg"
   }
 }

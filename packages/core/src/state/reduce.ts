@@ -218,17 +218,28 @@ function applySetSlotConfig(
   if (availability !== null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', availability);
   }
-  if (slot.run !== null || slot.changeoverMs > 0) {
-    // A print in flight (or a purge already running) has to finish first.
+  if (slot.changeoverMs > 0) {
+    // A purge cannot be interrupted; the nozzle is already half-flushed.
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
   }
   const config = resolveSlotConfig(ctx.content, { ...slot, materialId, objectId });
   if (config === null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
   }
-  // Changeover: a new material costs downtime and purges the outgoing spool
-  // (spec §3). Swapping only the object is free — the nozzle never changes.
-  const { state: purged, changeover } = applyChangeover(state, slot, config);
+  /*
+   * A run in flight is *abandoned*, not refused.
+   *
+   * Refusing looked right until the slot loop was actually played: a printing
+   * slot re-arms itself the instant a batch lands, so `run === null` is a state
+   * the player essentially never catches, and "you may only reconfigure an idle
+   * slot" quietly meant "you may never reconfigure". Abandoning has a real
+   * price — the batch's filament was consumed at the start of the run and is
+   * simply gone — which is exactly the friction spec §3 asks a changeover to
+   * carry, and it leaves the decision with the player instead of the scheduler.
+   */
+  const abandonedBatch = slot.run?.batch ?? 0;
+  const idle = withSlot(state, index, { ...slot, run: null });
+  const { state: purged, changeover } = applyChangeover(idle, { ...slot, run: null }, config);
   ctx.emit?.({
     type: 'SLOT_CONFIGURED',
     simTimeMs: state.simTimeMs,
@@ -237,6 +248,7 @@ function applySetSlotConfig(
     objectId,
     downtimeMs: changeover.downtimeMs,
     purgedGrams: changeover.purgedGrams,
+    abandonedBatch,
   });
   return withSlot(purged, index, changeover.slot);
 }

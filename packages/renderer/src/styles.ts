@@ -19,6 +19,7 @@ export const WORKSHOP_CSS = `
   --ph-bay: #10151b;
   --ph-bay-edge: #263141;
   --ph-accent: #4cc2ff;
+    --ph-warn: #ffb454;
   --ph-hot: #ff8a3d;
   --ph-sweep: 3.4s;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -37,6 +38,9 @@ export const WORKSHOP_CSS = `
 
 .ph-progress-track { fill: var(--ph-bay-edge); }
 .ph-progress-fill { fill: var(--ph-accent); }
+.ph-progress-fill--purge { fill: var(--ph-dim); }
+.ph-risk-track { fill: var(--ph-bay-edge); }
+.ph-risk-fill { fill: var(--ph-warn); }
 
 /* --- frame tiers (spec §5A) --------------------------------------------- */
 .printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }

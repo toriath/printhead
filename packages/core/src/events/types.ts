@@ -29,6 +29,8 @@ export interface SlotConfiguredEvent extends EventBase {
   /** Changeover cost the switch incurred (spec §3); zero for a free swap. */
   readonly downtimeMs: number;
   readonly purgedGrams: number;
+  /** Prints thrown away because the switch interrupted them. */
+  readonly abandonedBatch: number;
 }
 
 export interface PrintStartedEvent extends EventBase {
