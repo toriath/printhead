@@ -22,6 +22,61 @@ export const ResourceKindSchema = z.enum([
   'plates',
 ]);
 
+/**
+ * Filament is tracked per material (spec §2), so it is not part of the flat
+ * resource ledger; everything else is a single scalar balance.
+ */
+export const SCALAR_RESOURCE_KINDS = [
+  'parts',
+  'scrap',
+  'money',
+  'designs',
+  'products',
+  'plates',
+] as const;
+
+export const ScalarResourceKindSchema = z.enum(SCALAR_RESOURCE_KINDS);
+
+/**
+ * Actions the phase FSM gates (spec §15). `TICK` and `ADVANCE_PHASE` are engine
+ * concerns and are never gated; everything a player can click is listed per
+ * phase in `pacing.json`, so unlocking a mechanic is a data edit.
+ */
+export const GatedActionTypeSchema = z.enum([
+  'ATTACH_PIECE',
+  'SET_SLOT_CONFIG',
+  'START_PRINT',
+  'SELL_PARTS',
+  'BUY_FILAMENT',
+  'BUY_PRINTER',
+]);
+
+/**
+ * Named readings of the game state that content may gate on. The interpreter
+ * lives in `systems/requirements.ts`; adding a metric here plus a case there is
+ * all a new phase gate needs.
+ */
+export const MetricSchema = z.enum([
+  'parts',
+  'scrap',
+  'money',
+  'printers',
+  'partsProduced',
+  'partsSold',
+  'printsCompleted',
+  'piecesAttached',
+  'assemblyProgress',
+  'phaseDesignMinutes',
+  'totalDesignMinutes',
+]);
+
+export const RequirementSchema = z
+  .object({
+    metric: MetricSchema,
+    atLeast: NonNegative,
+  })
+  .strict();
+
 // --- pacing.json ------------------------------------------------------------
 
 export const PhaseDefSchema = z
@@ -30,6 +85,10 @@ export const PhaseDefSchema = z
     name: z.string().min(1),
     budgetDesignMinutes: Positive,
     waitWallBudgetDesignMinutes: NonNegative,
+    /** Which player actions this phase permits (cumulative lists, authored per phase). */
+    allowedActions: z.array(GatedActionTypeSchema),
+    /** All of these must hold before the FSM moves on to the next phase. */
+    advanceWhen: z.array(RequirementSchema).min(1),
   })
   .strict();
 
@@ -40,6 +99,48 @@ export const PacingFileSchema = z
     offlineCapHours: Positive,
     phaseBudgetTolerance: Fraction,
     phases: z.array(PhaseDefSchema).min(1),
+  })
+  .strict();
+
+// --- start.json -------------------------------------------------------------
+
+export const AssemblyPieceSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    /** Design-seconds of bench work before this piece can be attached. */
+    attachDesignSeconds: NonNegative,
+  })
+  .strict();
+
+export const StartingFilamentSchema = z
+  .object({
+    materialId: IdSchema,
+    grams: NonNegative,
+  })
+  .strict();
+
+export const StartingResourcesSchema = z
+  .object({
+    parts: NonNegative,
+    scrap: NonNegative,
+    money: NonNegative,
+    designs: NonNegative,
+    products: NonNegative,
+    plates: NonNegative,
+  })
+  .strict();
+
+export const StartFileSchema = z
+  .object({
+    /** The printer the intro assembly produces (spec §6 phase 0). */
+    printerId: IdSchema,
+    slotCount: z.number().int().positive(),
+    slotIdPrefix: IdSchema,
+    startingResources: StartingResourcesSchema,
+    startingFilament: z.array(StartingFilamentSchema),
+    /** 6–8 pieces, attached in order — one click each (spec §6 phase 0). */
+    assemblyPieces: z.array(AssemblyPieceSchema).min(1),
   })
   .strict();
 
@@ -210,6 +311,7 @@ export const PrestigeFileSchema = z
 export const ContentSchema = z
   .object({
     pacing: PacingFileSchema,
+    start: StartFileSchema,
     curves: CurvesFileSchema,
     materials: MaterialsFileSchema,
     objects: ObjectsFileSchema,
@@ -225,6 +327,7 @@ export const ContentSchema = z
 /** File name (without extension) → schema, used by the validator and editor. */
 export const CONTENT_FILE_SCHEMAS = {
   pacing: PacingFileSchema,
+  start: StartFileSchema,
   curves: CurvesFileSchema,
   materials: MaterialsFileSchema,
   objects: ObjectsFileSchema,
@@ -241,8 +344,15 @@ export type ContentFileName = keyof typeof CONTENT_FILE_SCHEMAS;
 export const CONTENT_FILE_NAMES = Object.keys(CONTENT_FILE_SCHEMAS) as readonly ContentFileName[];
 
 export type ResourceKind = z.infer<typeof ResourceKindSchema>;
+export type ScalarResourceKind = z.infer<typeof ScalarResourceKindSchema>;
+export type GatedActionType = z.infer<typeof GatedActionTypeSchema>;
+export type Metric = z.infer<typeof MetricSchema>;
+export type Requirement = z.infer<typeof RequirementSchema>;
 export type PhaseDef = z.infer<typeof PhaseDefSchema>;
 export type PacingContent = z.infer<typeof PacingFileSchema>;
+export type AssemblyPieceDef = z.infer<typeof AssemblyPieceSchema>;
+export type StartingFilament = z.infer<typeof StartingFilamentSchema>;
+export type StartContent = z.infer<typeof StartFileSchema>;
 export type MaterialDef = z.infer<typeof MaterialDefSchema>;
 export type ObjectDef = z.infer<typeof ObjectDefSchema>;
 export type PrinterDef = z.infer<typeof PrinterDefSchema>;

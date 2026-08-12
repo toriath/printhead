@@ -1,4 +1,4 @@
-import type { PhaseDef } from '../content/schema.js';
+import type { GatedActionType, PhaseDef } from '../content/schema.js';
 
 /**
  * Phase FSM (spec §15) as a generic interpreter over `pacing.phases`.
@@ -56,6 +56,23 @@ export function isPhaseReached(
     throw new RangeError(`unknown phase id: ${requiredPhaseId}`);
   }
   return current >= required;
+}
+
+export function getPhase(phases: readonly PhaseDef[], phaseId: string): PhaseDef {
+  const phase = phases.find((candidate) => candidate.id === phaseId);
+  if (phase === undefined) {
+    throw new RangeError(`unknown phase id: ${phaseId}`);
+  }
+  return phase;
+}
+
+/** The FSM gate: content decides which player actions a phase permits (spec §15). */
+export function isActionAllowed(
+  phases: readonly PhaseDef[],
+  phaseId: string,
+  actionType: GatedActionType,
+): boolean {
+  return getPhase(phases, phaseId).allowedActions.includes(actionType);
 }
 
 /** Cumulative design-minute budget up to and including `phaseId` (spec §6). */

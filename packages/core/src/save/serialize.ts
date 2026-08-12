@@ -1,6 +1,6 @@
 import type { GameState } from '../state/game-state.js';
 import { migrateToCurrent } from './migrations.js';
-import { GameStateV1Schema, type SaveFile, SaveFileSchema } from './schema.js';
+import { GameStateSchema, type SaveFile, SaveFileSchema } from './schema.js';
 import { SAVE_SCHEMA_VERSION } from './version.js';
 
 export class SaveLoadError extends Error {
@@ -24,7 +24,7 @@ export function fromSaveFile(raw: unknown): GameState {
     throw new SaveLoadError(`malformed save file: ${file.error.issues[0]?.message ?? 'unknown'}`);
   }
   const migrated = migrateToCurrent(file.data.state, file.data.version);
-  const state = GameStateV1Schema.safeParse(migrated);
+  const state = GameStateSchema.safeParse(migrated);
   if (!state.success) {
     const issue = state.error.issues[0];
     throw new SaveLoadError(

@@ -15,3 +15,10 @@ export const MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR;
 
 /** Safety valve: never run more than this many ticks in one `advance` call. */
 export const MAX_TICKS_PER_ADVANCE = 10_000;
+
+/**
+ * Safety valve for the auto-restarting print loop: however short a run becomes,
+ * one tick may only close this many of them. Prevents a degenerate content
+ * value (a zero-length print) from spinning the reducer forever.
+ */
+export const MAX_RUN_COMPLETIONS_PER_TICK = 64;

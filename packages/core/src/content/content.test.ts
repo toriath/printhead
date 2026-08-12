@@ -32,6 +32,9 @@ describe('bundled content', () => {
         'pacing',
         'prestige',
         'printers',
+        // Not in the spec §11 list, but the same rule applies: the starting kit
+        // and the intro assembly are numbers, so they are data too.
+        'start',
         'upgrades',
       ].sort(),
     );

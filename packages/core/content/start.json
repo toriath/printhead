@@ -1,0 +1,56 @@
+{
+  "printerId": "bench-mk1",
+  "slotCount": 1,
+  "slotIdPrefix": "slot",
+  "startingResources": {
+    "parts": 0,
+    "scrap": 0,
+    "money": 0,
+    "designs": 0,
+    "products": 0,
+    "plates": 0
+  },
+  "startingFilament": [
+    {
+      "materialId": "pla",
+      "grams": 40
+    }
+  ],
+  "assemblyPieces": [
+    {
+      "id": "frame",
+      "name": "Frame",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "gantry",
+      "name": "Gantry",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "bed",
+      "name": "Print bed",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "extruder",
+      "name": "Extruder",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "hotend",
+      "name": "Hotend",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "spool-holder",
+      "name": "Spool holder",
+      "attachDesignSeconds": 34
+    },
+    {
+      "id": "controller",
+      "name": "Controller board",
+      "attachDesignSeconds": 34
+    }
+  ]
+}

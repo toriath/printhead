@@ -1,32 +1,43 @@
 import {
   type Action,
+  type Content,
   type ContentSource,
+  type DomainEvent,
+  type EventBus,
   type GameState,
+  type OfflineSummary,
   type ReduceContext,
   type VisualState,
   advance,
+  createEventBus,
   createInitialState,
   createPaceMapping,
   createRng,
   createStaticContentSource,
   reduce,
   restoreRng,
+  runOfflineCatchUp,
   toVisualState,
 } from '@printhead/core';
 import { type Clock, createSystemClock } from '@printhead/platform';
 
 /**
  * Store bridge (spec §10/§15): "the sim is the store". React subscribes here;
- * everything else — pace, ticking, projection — is core's job. The bridge owns
- * no gameplay logic, only wiring.
+ * everything else — pace, ticking, projection, offline catch-up — is core's
+ * job. The bridge owns no gameplay logic, only wiring.
  */
 export interface GameStore {
   getState(): GameState;
   getVisualState(): VisualState;
+  getContent(): Content;
   dispatch(action: Action): void;
   /** Feed wall-clock milliseconds in; the engine turns them into fixed ticks. */
   advanceWallClock(wallDtMs: number): number;
+  /** Deterministic chunked catch-up through the same reducer (spec §7.4). */
+  applyOffline(wallElapsedMs: number): OfflineSummary;
   subscribe(listener: () => void): () => void;
+  /** Domain events (Observer, spec §15) — for sound, flourishes, achievements. */
+  onEvent(listener: (event: DomainEvent) => void): () => void;
 }
 
 export interface GameStoreOptions {
@@ -40,17 +51,19 @@ const DEFAULT_SEED = 20260812;
 export function createGameStore(options: GameStoreOptions = {}): GameStore {
   const contentSource = options.contentSource ?? createStaticContentSource();
   const clock: Clock = options.clock ?? createSystemClock();
+  const bus: EventBus = createEventBus({ buffer: false });
   let content = contentSource.get();
   let pace = createPaceMapping(content.pacing);
   let state = createInitialState(content, { seed: options.seed ?? DEFAULT_SEED });
   // Cached so `useSyncExternalStore` sees a stable snapshot per state.
-  let visual = toVisualState(state);
+  let visual = toVisualState(state, content);
   let carrySimMs = 0;
   const listeners = new Set<() => void>();
 
   contentSource.subscribe((next) => {
     content = next;
     pace = createPaceMapping(next.pacing);
+    visual = toVisualState(state, content);
     notify();
   });
 
@@ -61,7 +74,7 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
   }
 
   function context(): ReduceContext {
-    return { content, nowMs: clock.nowMs(), rng: restoreRng(state.rng) };
+    return { content, nowMs: clock.nowMs(), rng: restoreRng(state.rng), emit: bus.emit };
   }
 
   function setState(next: GameState): void {
@@ -69,12 +82,13 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
       return;
     }
     state = next;
-    visual = toVisualState(next);
+    visual = toVisualState(next, content);
   }
 
   return {
     getState: () => state,
     getVisualState: () => visual,
+    getContent: () => content,
     dispatch(action) {
       setState(reduce(state, action, context()));
       notify();
@@ -86,7 +100,8 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
         carrySimMs,
         wallDtMs,
         pace,
-        tick: (current, simDtMs) => reduce(current, { type: 'TICK', simDtMs }, ctx),
+        tick: (current, simDtMs) =>
+          reduce(current, { type: 'TICK', simDtMs }, { ...ctx, rng: restoreRng(current.rng) }),
       });
       setState(result.state);
       carrySimMs = result.carrySimMs;
@@ -95,11 +110,30 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
       }
       return result.ticks;
     },
+    applyOffline(wallElapsedMs) {
+      const result = runOfflineCatchUp({
+        state,
+        content,
+        wallElapsedMs,
+        nowMs: clock.nowMs(),
+        carrySimMs,
+      });
+      for (const event of result.events) {
+        bus.emit(event);
+      }
+      setState(result.state);
+      carrySimMs = result.carrySimMs;
+      notify();
+      return result.summary;
+    },
     subscribe(listener) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
       };
+    },
+    onEvent(listener) {
+      return bus.subscribe(listener);
     },
   };
 }
