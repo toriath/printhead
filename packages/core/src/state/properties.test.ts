@@ -275,6 +275,10 @@ function forking(seed: number): GameState {
   return {
     ...base,
     phaseId: 'studio',
+    // The enclosure is the third bay's prerequisite, so this workshop can buy
+    // one — without it the only state that could reach `BUY_SLOT` at all would
+    // be `scaled`, and the coverage check below would depend on the draw.
+    upgrades: { ...base.upgrades, enclosure: 1 },
     resources: { ...base.resources, parts: 9000 },
     partsValue: 9000,
   };
@@ -949,7 +953,9 @@ describe('the M4 properties are not vacuous', () => {
           }
         },
       ),
-      { numRuns: 80 },
+      // A fixed seed: this test asserts *coverage*, and a coverage claim that
+      // depends on today's dice is not a claim at all.
+      { numRuns: 80, seed: 20260812 },
     );
     expect(reached).toEqual({
       BUY_SLOT: true,

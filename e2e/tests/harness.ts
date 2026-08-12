@@ -32,7 +32,7 @@ interface DevHooksShape {
   saveNow(): Promise<void>;
   pause(): void;
   resume(): void;
-  game: { store: { getContent(): ContentShape } };
+  game: { store: { getContent(): ContentShape; replaceState(state: unknown): void } };
 }
 
 declare global {
@@ -117,4 +117,22 @@ export async function assemblePrinter(page: Page): Promise<void> {
     await warp(page, seconds * MS_PER_SECOND);
     await page.getByTestId('attach').click();
   }
+}
+
+/**
+ * Replace the simulation state wholesale.
+ *
+ * A dev-only power the shell already has (`store.replaceState`, the same one
+ * the editor's save-import uses), borrowed here to *place* a test in the
+ * mid-game rather than to skip anything it is testing. The farm phase is an
+ * eighty-minute grind; a browser test that played it would be measuring the
+ * economy, not the fleet UI. Everything the test then does goes through the
+ * real buttons and the real reducer.
+ */
+export async function replaceState(page: Page, patch: (state: never) => unknown): Promise<void> {
+  const before = await snapshot(page);
+  const next = patch(before as never);
+  await page.evaluate((state) => {
+    window.__PRINTHEAD__?.game.store.replaceState(state as never);
+  }, next);
 }

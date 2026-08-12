@@ -114,8 +114,7 @@ function verdict(content: Content, log: RunLog): string {
   const note =
     pending === 0
       ? ''
-      : `\n\n_${pending} further wait wall(s) sit in phases that are still time-gated ` +
-        'placeholders; they become real when the milestones that fill those phases land._';
+      : `\n\n_${pending} further wait wall(s) sit in phases that are still time-gated placeholders; they become real when the milestones that fill those phases land._`;
   if (budgets.length === 0 && walls.length === 0) {
     return `**PASS** — every phase inside its window, no wait wall over budget.${note}`;
   }
