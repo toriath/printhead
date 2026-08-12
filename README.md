@@ -56,6 +56,14 @@ tunePhase(
 The result ships as a **data diff** in `packages/core/content/`, never as a
 constant in code. Sweep, wait-wall detection and the report generator are M3.
 
+> **Read the green light correctly.** Only `intro` and `bench` are gated on real
+> mechanics so far (assemble + print + sell, then own 4 printers). Phases
+> `farm`…`end` advance on `phaseDesignMinutes` alone, so they sit on budget by
+> construction and will stay green no matter what the economy does. They become
+> meaningful gates as M3–M6 add the mechanics behind them. The last phase also
+> absorbs any drift from the earlier ones, because the run stops at the total
+> budget rather than at a gate of its own.
+
 ## Layout
 
 ```
