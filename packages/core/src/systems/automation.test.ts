@@ -351,3 +351,141 @@ describe('tickAutomation', () => {
     });
   });
 });
+
+/**
+ * The defensive branches. A machine acting on the player's behalf must never
+ * make a move the player could not make, and must never make a *nonsense* move
+ * — buying zero grams, selling stock it does not hold, trading a material the
+ * market does not list. Driven through the real system rather than the reducer,
+ * because these are the paths a whole-game run never happens to reach.
+ */
+describe('automation refuses the moves that would be nonsense', () => {
+  const inFarm = (over: Partial<GameState> = {}): GameState => ({
+    ...base,
+    phaseId: 'farm',
+    ...over,
+  });
+  const fire = (state: GameState, id: string, defs: Content = content): GameState =>
+    tickAutomation(state, defs, defOf(id).intervalDesignSeconds * MS_PER_SECOND, undefined);
+
+  it('ignores an entry that exists at level zero', () => {
+    const shell = inBench({
+      resources: { ...base.resources, parts: 1000 },
+      partsValue: 1000,
+      automation: {
+        [AUTO_SELL]: { level: 0, enabled: true, threshold: 0, cooldownMs: 0 },
+      },
+    });
+    expect(automationLevel(shell, AUTO_SELL)).toBe(0);
+    expect(isAutomationActive(shell, AUTO_SELL)).toBe(false);
+    expect(fire(shell, AUTO_SELL).resources.parts).toBe(1000);
+  });
+
+  describe('auto-buy filament', () => {
+    const loaded = (over: Partial<GameState> = {}): GameState =>
+      inBench({
+        resources: { ...base.resources, money: 1000 },
+        slots: [testSlot({ materialId: 'pla', objectId: 'bracket', printerCount: 1 })],
+        automation: installed(AUTO_BUY),
+        ...over,
+      });
+
+    it('skips a slot with nothing loaded in it', () => {
+      const empty = loaded({ slots: [testSlot()] });
+      expect(fire(empty, AUTO_BUY).resources.money).toBe(1000);
+    });
+
+    it('skips a material that costs nothing — there is nothing to buy', () => {
+      const free: Content = {
+        ...content,
+        materials: content.materials.map((material) =>
+          material.id === 'pla' ? { ...material, costPerGram: 0 } : material,
+        ),
+      };
+      const state = loaded({ filamentGrams: { pla: 0 } });
+      expect(fire(state, AUTO_BUY, free).filamentGrams.pla).toBe(0);
+    });
+
+    it('buys nothing rather than a fraction of a gram', () => {
+      // Enough money for a sliver, not enough for one whole gram.
+      const perGram = content.materials[0]?.costPerGram ?? 1;
+      const state = loaded({
+        resources: { ...base.resources, money: perGram / 2 },
+        filamentGrams: { pla: 0 },
+      });
+      const fired = fire(state, AUTO_BUY);
+      expect(fired.filamentGrams.pla).toBe(0);
+      expect(fired.resources.money).toBe(perGram / 2);
+    });
+
+    it('is capped by the shelf, not only by the wallet', () => {
+      const bedded = inBench({
+        resources: { ...base.resources, money: 1_000_000 },
+        upgrades: { 'heated-bed': 1 },
+        slots: [testSlot({ materialId: 'petg', objectId: 'bracket', printerCount: 1 })],
+        automation: installed(AUTO_BUY),
+        market: { ...base.market, petg: { stockGrams: 5, pressure: 0 } },
+      });
+      expect(fire(bedded, AUTO_BUY).filamentGrams.petg ?? 0).toBeLessThanOrEqual(5);
+    });
+
+    it('tops up every loaded slot, not just the first', () => {
+      const two = inBench({
+        resources: { ...base.resources, money: 1000 },
+        upgrades: { 'heated-bed': 1 },
+        slots: [
+          testSlot({ id: 'slot-1', materialId: 'pla', objectId: 'bracket', printerCount: 1 }),
+          testSlot({ id: 'slot-2', materialId: 'petg', objectId: 'bracket', printerCount: 1 }),
+        ],
+        automation: installed(AUTO_BUY),
+      });
+      const fired = fire(two, AUTO_BUY);
+      expect(fired.filamentGrams.pla ?? 0).toBeGreaterThan(0);
+      expect(fired.filamentGrams.petg ?? 0).toBeGreaterThan(0);
+    });
+  });
+
+  describe('the trading desk', () => {
+    const desk = (over: Partial<GameState> = {}): GameState =>
+      inFarm({
+        upgrades: { 'broker-licence': 1, 'heated-bed': 1 },
+        automation: installed(AUTO_TRADE),
+        ...over,
+      });
+    const cheapMarket = (multiplier: number): Content => ({
+      ...content,
+      market: {
+        ...content.market,
+        model: {
+          ...content.market.model,
+          sineAmplitude: 0,
+          noiseAmplitude: 0,
+          minPriceMultiplier: multiplier,
+          maxPriceMultiplier: multiplier,
+        },
+      },
+    });
+
+    it('buys nothing when the shelf is empty, however cheap it is', () => {
+      const state = desk({
+        resources: { ...base.resources, money: 1_000_000 },
+        market: { ...base.market, petg: { stockGrams: 0, pressure: 0 } },
+      });
+      expect(fire(state, AUTO_TRADE, cheapMarket(0.5)).filamentGrams.petg ?? 0).toBe(0);
+    });
+
+    it('buys nothing when the till is empty', () => {
+      const state = desk({ resources: { ...base.resources, money: 0 } });
+      expect(fire(state, AUTO_TRADE, cheapMarket(0.5)).filamentGrams.petg ?? 0).toBe(0);
+    });
+
+    it('sells nothing when it holds less than a parcel', () => {
+      const def = defOf(AUTO_TRADE);
+      const parcel = def.defaultThreshold;
+      const state = desk({
+        filamentGrams: { ...base.filamentGrams, petg: parcel - 1 },
+      });
+      expect(fire(state, AUTO_TRADE, cheapMarket(1.8)).stats.filamentSoldGrams).toBe(0);
+    });
+  });
+});

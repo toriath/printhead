@@ -119,7 +119,7 @@ describe('tunePhase', () => {
 describe('roundSignificant', () => {
   it('turns an optimiser artefact into a number a reviewer can read', () => {
     expect(roundSignificant(199.34029440000003)).toBe(199.34);
-    expect(roundSignificant(8.029159600000001)).toBe(8.02916);
+    expect(roundSignificant(8.0291596)).toBe(8.02916);
     expect(roundSignificant(0.000123456789)).toBe(0.000123457);
   });
 
