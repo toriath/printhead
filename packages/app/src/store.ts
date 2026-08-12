@@ -31,6 +31,8 @@ export interface GameStore {
   getVisualState(): VisualState;
   getContent(): Content;
   dispatch(action: Action): void;
+  /** Replace the whole state — loading a save, or a dev-tool jump. */
+  replaceState(state: GameState): void;
   /** Feed wall-clock milliseconds in; the engine turns them into fixed ticks. */
   advanceWallClock(wallDtMs: number): number;
   /** Deterministic chunked catch-up through the same reducer (spec §7.4). */
@@ -91,6 +93,16 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
     getContent: () => content,
     dispatch(action) {
       setState(reduce(state, action, context()));
+      notify();
+    },
+    replaceState(next) {
+      // A loaded save carries its own accumulated fraction of a tick with it
+      // only implicitly: whatever was mid-tick when the game closed is gone, so
+      // the carry starts clean rather than applying the old session's remainder
+      // to the new one.
+      carrySimMs = 0;
+      state = next;
+      visual = toVisualState(next, content);
       notify();
     },
     advanceWallClock(wallDtMs) {

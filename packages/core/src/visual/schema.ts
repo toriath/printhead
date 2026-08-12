@@ -40,7 +40,10 @@ export const SlotVisualSchema = z
     /** Position in the workshop, so layout does not depend on array order. */
     index: NonNegativeInt,
     materialId: NonEmpty.nullable(),
+    /** Display name, so the renderer needs no content table (cf. `phaseName`). */
+    materialName: NonEmpty.nullable(),
     objectId: NonEmpty.nullable(),
+    objectName: NonEmpty.nullable(),
     machineTier: NonNegativeInt,
     printerCount: NonNegativeInt,
     /** 0..1 animation offset so identical printers do not move in lockstep. */

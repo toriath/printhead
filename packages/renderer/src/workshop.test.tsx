@@ -82,7 +82,7 @@ describe('slots (spec §4: once per slot, never once per printer)', () => {
 
   it('labels an occupied slot with its config', () => {
     render(<Workshop visual={showcase} />);
-    expect(screen.getByTestId('label-slot-2').textContent).toBe('gearset · petg');
+    expect(screen.getByTestId('label-slot-2').textContent).toBe('Gear set · PETG');
   });
 
   it('distinguishes "no printer" from "no config" from "empty"', () => {
@@ -93,13 +93,20 @@ describe('slots (spec §4: once per slot, never once per printer)', () => {
           return { ...slot, occupied: false, printerCount: 0 };
         }
         if (slot.slotId === 'slot-2') {
-          return { ...slot, occupied: false, materialId: null, objectId: null };
+          return {
+            ...slot,
+            occupied: false,
+            materialId: null,
+            materialName: null,
+            objectId: null,
+            objectName: null,
+          };
         }
         return slot;
       }),
     };
     render(<Workshop visual={mixed} />);
-    expect(screen.getByTestId('label-slot-1').textContent).toBe('bracket · pla (no printer)');
+    expect(screen.getByTestId('label-slot-1').textContent).toBe('Bracket · PLA (no printer)');
     expect(screen.getByTestId('label-slot-2').textContent).toBe('no config loaded');
     expect(screen.getByTestId('label-slot-4').textContent).toBe('empty bay');
   });
@@ -214,7 +221,7 @@ describe('the intro assembly (spec §6 phase 0)', () => {
     render(<Workshop visual={printing} />);
     const figure = screen.getByTestId('printer-figure');
     expect(figure.querySelector('[data-part="controller"]')).not.toBeNull();
-    expect(screen.getByTestId('label-slot-1').textContent).toBe('bracket · pla');
+    expect(screen.getByTestId('label-slot-1').textContent).toBe('Bracket · PLA');
   });
 
   it('degrades gracefully when content renames a piece', () => {

@@ -6,7 +6,13 @@ import fixtureV1 from './__fixtures__/save-v1.json' with { type: 'json' };
 import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
-import { SaveLoadError, deserializeSave, fromSaveFile, serializeSave } from './serialize.js';
+import {
+  SaveLoadError,
+  deserializeSave,
+  fromSaveFile,
+  parseSave,
+  serializeSave,
+} from './serialize.js';
 import { SAVE_SCHEMA_VERSION, SUPPORTED_SAVE_VERSIONS } from './version.js';
 
 const content = loadContent(RAW_CONTENT);
@@ -21,6 +27,19 @@ describe('save round-trip', () => {
     const parsed = JSON.parse(serializeSave(state, 4242)) as { version: number; savedAtMs: number };
     expect(parsed.version).toBe(SAVE_SCHEMA_VERSION);
     expect(parsed.savedAtMs).toBe(4242);
+  });
+
+  it('hands back the wall-clock stamp, which is what offline catch-up needs', () => {
+    const loaded = parseSave(serializeSave(state, 4242));
+    expect(loaded).toEqual({
+      state,
+      savedAtMs: 4242,
+      fromVersion: SAVE_SCHEMA_VERSION,
+    });
+  });
+
+  it('reports the version a migrated save came from', () => {
+    expect(parseSave(JSON.stringify(fixtureV1)).fromVersion).toBe(1);
   });
 });
 

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="PRINTHEAD">
+  <rect width="512" height="512" rx="96" fill="#05090d"/>
+  <g fill="none" stroke="#4cc2ff" stroke-width="22" stroke-linecap="round">
+    <rect x="112" y="104" width="288" height="264" rx="12"/>
+    <line x1="128" y1="192" x2="384" y2="192"/>
+    <line x1="152" y1="336" x2="360" y2="336"/>
+  </g>
+  <rect x="212" y="164" width="88" height="60" rx="8" fill="#2b3542" stroke="#4cc2ff" stroke-width="10"/>
+  <polygon points="238,224 274,224 256,262" fill="#ff8a3d"/>
+  <rect x="216" y="272" width="80" height="60" fill="#4cc2ff" opacity="0.85"/>
+  <rect x="96" y="380" width="320" height="36" rx="10" fill="#1b232d" stroke="#4cc2ff" stroke-width="10"/>
+</svg>

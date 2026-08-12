@@ -75,11 +75,12 @@ function ProgressBar({ progress }: { progress: number }): ReactElement {
 }
 
 export function slotLabel(slot: SlotVisual): string {
+  const config = `${slot.objectName ?? slot.objectId} · ${slot.materialName ?? slot.materialId}`;
   if (slot.occupied) {
-    return `${slot.objectId} · ${slot.materialId}`;
+    return config;
   }
   if (slot.materialId !== null) {
-    return `${slot.objectId} · ${slot.materialId} (no printer)`;
+    return `${config} (no printer)`;
   }
   return slot.printerCount > 0 ? 'no config loaded' : 'empty bay';
 }
