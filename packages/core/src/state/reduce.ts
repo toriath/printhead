@@ -576,7 +576,11 @@ function applySetSlotQueue(
     entries: action.entries.length,
   });
   const head = action.entries.at(0);
-  if (head === undefined) {
+  // A bay mid-purge cannot be re-loaded (the nozzle is already half-flushed),
+  // so the rota is written and the head entry waits for the rotation that
+  // follows the current batch. Attempting the load anyway would emit a
+  // `SET_SLOT_CONFIG` rejection for an action nobody asked for.
+  if (head === undefined || slot.changeoverMs > 0) {
     return queued;
   }
   return applySetSlotConfig(queued, action.slotId, head.materialId, head.objectId, ctx);

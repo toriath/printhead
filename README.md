@@ -3,14 +3,15 @@
 A finite idle game about a 3D printer that eventually prints everything.
 The binding specification is [`docs/printhead-spec-v0.4.md`](docs/printhead-spec-v0.4.md).
 
-> **Status:** M3 — economy, tooling v2, editor v1. The game is playable in a
-> browser through phases 0–2: assemble printer #1 piece by piece, load the slot,
-> print, watch the pity timer fill and a print fail, recycle the scrap, climb the
-> machine tree, unlock PETG behind the heated bed, trade filament on a moving
-> market and buy your way out of the friction with tier-1 automation. It installs
-> as a PWA, autosaves to IndexedDB and shows a "welcome back" summary.
-> `VisualState` is frozen at v4; saves are at v3. Slots 2–4 land in M4, designs
-> and prestige in M5.
+> **Status:** M4 — slots and scale. The game is playable in a browser through
+> phases 0–2: assemble printer #1 piece by piece, load the slot, print, watch the
+> pity timer fill and a print fail, recycle the scrap, climb the machine tree,
+> unlock PETG behind the heated bed, trade filament on a moving market, buy your
+> way out of the friction with automation — and then outgrow your first bay,
+> buy a second, spread the fleet across the rack, put a bay on a print rota and
+> commit the run to Farm or Goliath. It installs as a PWA, autosaves to
+> IndexedDB and shows a "welcome back" summary. `VisualState` is frozen at v5;
+> saves are at v4. Designs and prestige land in M5.
 
 ## Quick start (inside the devcontainer)
 
@@ -54,11 +55,15 @@ and watch the game speed up mid-print.
 
 The renderer is a **pure function of `VisualState`**: same projection in, same
 markup out, no state, no clock, no content lookups. The projection is frozen at
-v4 by a strict zod schema plus the fixture corpus in
+v5 by a strict zod schema plus the fixture corpus in
 `packages/core/src/visual/__fixtures__/`, which the renderer's own tests render.
 
 - one animated machine **per slot**, never per printer, with an `×N` badge;
-- empty and locked bays as faint outlines, up to `start.maxSlotCount` (§4);
+- empty and locked bays as faint outlines, up to the hard maximum of four (§4);
+- the **Goliath** layout replaces the whole rack with one large printer (§5B).
+  The renderer never learns the fork's id: the projection publishes a `goliath`
+  flag derived from the branch's own drawing instruction in `forks.json`;
+- a bay's print rota is a strip of pips beneath it, the loaded entry filled in;
 - machine tiers change the SVG — frame acrylic/aluminium/steel, nozzle
   brass/hardened/glowing, bed tape/heated/auto-level (§5A), snapshot-tested;
 - the idle print-head sweep is CSS keyframes desynchronised by the projection's
@@ -88,6 +93,36 @@ v4 by a strict zod schema plus the fixture corpus in
 - **Changing a slot's configuration costs time and a purge** (§3) — and
   abandons the batch in flight, because an auto-restarting slot is never idle
   and "only when idle" would have meant "never".
+
+### Slots and scale (spec §4, §5B)
+
+- **Bays hold a fixed number of machines** (`start.printersPerSlot`). This is
+  what makes a config slot worth buying: a batch's duration does not depend on
+  how many printers run it, so without a ceiling a second bay would only be a
+  second recipe and splitting the same fleet across two bays would produce
+  exactly the same parts per minute. With a ceiling, bays *are* fleet capacity,
+  and "how do I allocate my fleet across slots?" has an answer.
+- **Slots go 1 → 2 → 3 → 4 and stop.** The list lives in `slots.json`, one entry
+  per bay with its price, its phase and its gates; the hard maximum is derived
+  from that list plus `start.slotCount`, so the cap and the unlocks that reach
+  it can never disagree. Slot 3 wants an enclosure and slot 4 wants a Plate —
+  which nothing before M5 can mint, so it is prestige-gated in the literal sense.
+- **`ASSIGN_PRINTER` conserves the fleet.** Machines walk between bays; the sum
+  across bays always equals the machines owned, asserted as a property. Pulling
+  machines out of a running bay *shrinks its batch* rather than refunding it —
+  the filament was spent when the batch started.
+- **Print rotas are the auto-changeover automation's feature** (§5B/§5C). A rota
+  is a list of `{ material, object, batches }` on a bay; it turns when a batch
+  finishes, through the same changeover a hand-driven switch pays for, and only
+  while the automation is installed *and* switched on. Switch it off and the
+  friction comes back.
+- **Farm or Goliath, once per run** (§5B). Both branches are ordinary content: a
+  price, gates, the same effect records the machine tree uses, a bay cap and a
+  drawing instruction. Goliath is simply the branch that caps the rack at one
+  and lets that single bay hold the whole fleet — committing to it *melts the
+  rack down*, carrying the machines into the first bay and stripping the rest.
+  The reducer only ever writes `forkId` while it is `null`, so exclusivity is a
+  property of the shape rather than a rule someone has to remember.
 
 ### The dev editor panel (spec §14)
 
@@ -150,8 +185,8 @@ pnpm balance:report [--date YYYY-MM-DD] [--sweep sweep.csv]
 ```
 phase           actual   budget   window
 intro             5.0      5.0   4.0..6.0
-bench            29.7     30.0   24.0..36.0
-farm             80.4     80.0   64.0..96.0
+bench            25.9     30.0   24.0..36.0
+farm             80.1     80.0   64.0..96.0
 ```
 
 > **Read the green light correctly.** `intro`, `bench` and `farm` are gated on
@@ -159,15 +194,25 @@ farm             80.4     80.0   64.0..96.0
 > recycler run; fourteen printers, six nodes and three automations. Phases
 > `studio`…`end` still advance on `phaseDesignMinutes` alone, so they sit on
 > budget by construction and will stay green no matter what the economy does.
-> They become meaningful gates as M4–M6 add the mechanics behind them, and the
+> They become meaningful gates as M5–M6 add the mechanics behind them, and the
 > last phase absorbs any drift from the earlier ones because the run stops at
 > the total budget rather than at a gate of its own.
 >
-> The bots disagree, and that is the point: `greedy-spender` buys a printer the
-> instant it can afford one and therefore never saves for the SLA unit the farm
-> gate needs, so it stalls where the balanced player moves on. That is a real
-> finding about the economy, and `harness.test.ts` asserts it so a change that
-> quietly erases the distinction gets noticed.
+> The tools know which is which without being told: a phase whose only
+> requirement is `phaseDesignMinutes` **is** a placeholder (`isPlaceholderPhase`),
+> and the wait-wall gate is scoped to the rest. Once the reference player has
+> bought everything M4 sells, the detector correctly reports dead zones in those
+> empty phases; raising their budgets would make the report green and the game
+> no better, so the overrun is asserted instead and the assertion breaks — on
+> purpose — the moment M5 gives the studio something to do.
+>
+> The bots disagree with each other, and that is the point. `greedy-spender`
+> buys capacity the instant it can afford it; in M3 that stalled it, because
+> printers stayed cheap and it never saved for the SLA unit. Bays now cap the
+> fleet, so its reflex runs into a ceiling, it is *forced* to buy a config slot,
+> and it finishes the arc — in 57 farm-minutes against the reference player's
+> 80, with an order of magnitude more prints. It also takes the other side of
+> the fork, so between the two of them both branches get played.
 
 ## Layout
 

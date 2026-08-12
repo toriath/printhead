@@ -47,6 +47,14 @@ export function resolveSlotConfig(content: Content, slot: SlotState): SlotConfig
  * printer, or better still whatever the machine tree has bolted onto it. A
  * heated bed or an enclosure changes the SVG, so it has to reach the
  * projection, and it does so as a `machineTier` upgrade effect in content.
+ *
+ * It is a property of the *workshop*, not of a bay, and that is deliberate:
+ * machines are an undifferentiated pool the player allocates as counts (see
+ * `systems/fleet.ts`), and the machine tree upgrades all of them at once. Spec
+ * §4 asks a bay to show "the best machine tier among its printers", which under
+ * this model is the same number for every bay. If printers ever become
+ * per-slot — a bay holding *these* machines rather than *this many* — the
+ * projection gains a per-slot tier and this function gains a slot argument.
  */
 export function bestPrinterTier(
   state: GameState,

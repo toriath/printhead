@@ -250,6 +250,12 @@ export const PrinterDefSchema = z
     failureChargeMultiplier: Multiplier,
     costCurveId: IdSchema,
     costResource: ResourceKindSchema,
+    /**
+     * **Stub.** Maintenance and degradation (spec §5C) are not implemented:
+     * nothing in `systems/` reads this field yet. It is authored here so the
+     * shape is settled and the numbers can be balanced when the maintenance
+     * bots land; until then it is inert by design, not by accident.
+     */
     degradationPerDesignHour: NonNegative,
     unlockPhaseId: IdSchema,
   })
