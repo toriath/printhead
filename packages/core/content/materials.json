@@ -5,7 +5,7 @@
     "identity": "cheap-and-infinite",
     "qualityTier": 1,
     "supply": "infinite",
-    "costPerGram": 0,
+    "costPerGram": 0.05,
     "printSpeedMultiplier": 1,
     "failureChargePerPrint": 0.25,
     "scrapRecoveryFraction": 0.5,

@@ -3,11 +3,14 @@ import { loadContent } from '../content/load.js';
 import { RAW_CONTENT } from '../content/raw.js';
 import { createInitialState } from '../state/game-state.js';
 import fixtureV1 from './__fixtures__/save-v1.json' with { type: 'json' };
+import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
+import { GameStateSchema } from './schema.js';
 import { SaveLoadError, deserializeSave, fromSaveFile, serializeSave } from './serialize.js';
-import { SAVE_SCHEMA_VERSION } from './version.js';
+import { SAVE_SCHEMA_VERSION, SUPPORTED_SAVE_VERSIONS } from './version.js';
 
-const state = createInitialState(loadContent(RAW_CONTENT), { seed: 20260812 });
+const content = loadContent(RAW_CONTENT);
+const state = createInitialState(content, { seed: 20260812 });
 
 describe('save round-trip', () => {
   it('serializes and restores an identical state', () => {
@@ -21,16 +24,41 @@ describe('save round-trip', () => {
   });
 });
 
+/**
+ * Every released schema version must load forever (spec §13). These fixtures
+ * are frozen: never edit one to make a test pass — add a migration instead.
+ */
 describe('save fixture corpus', () => {
-  it('loads the released v1 fixture (must hold forever)', () => {
+  it('covers every supported version', () => {
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2]);
+    expect(fixtureV1.version).toBe(1);
+    expect(fixtureV2.version).toBe(2);
+  });
+
+  it('loads the released v1 fixture by migrating it forward', () => {
     const loaded = fromSaveFile(fixtureV1);
-    expect(loaded).toEqual({
-      saveVersion: 1,
-      simTimeMs: 12300,
-      tickCount: 123,
-      phaseId: 'bench',
-      rng: { seed: 20260812, count: 7 },
-    });
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    // v1 predates the economy: its clock and phase survive, the rest starts empty.
+    expect(loaded.simTimeMs).toBe(12300);
+    expect(loaded.tickCount).toBe(123);
+    expect(loaded.phaseId).toBe('bench');
+    expect(loaded.rng).toEqual({ seed: 20260812, count: 7 });
+    expect(loaded.resources.parts).toBe(0);
+    expect(loaded.printers).toEqual({});
+    expect(loaded.assembly.attachedPieceIds).toEqual([]);
+    expect(loaded.slots).toHaveLength(1);
+  });
+
+  it('loads the released v2 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV2);
+    expect(loaded).toEqual(fixtureV2.state);
+    expect(loaded.printers['bench-mk1']).toBe(1);
+    expect(loaded.stats.printsCompleted).toBeGreaterThan(0);
+  });
+
+  it('re-saving a migrated old save produces a current-schema file', () => {
+    const round = deserializeSave(serializeSave(fromSaveFile(fixtureV1), 0));
+    expect(GameStateSchema.safeParse(round).success).toBe(true);
   });
 });
 
@@ -44,6 +72,14 @@ describe('save validation', () => {
     expect(() => fromSaveFile({ version: 1, savedAtMs: 0, state: { saveVersion: 1 } })).toThrow(
       SaveLoadError,
     );
+  });
+
+  it('rejects impossible ledgers', () => {
+    const broken = {
+      ...fixtureV2,
+      state: { ...fixtureV2.state, resources: { ...fixtureV2.state.resources, parts: -1 } },
+    };
+    expect(() => fromSaveFile(broken)).toThrow(SaveLoadError);
   });
 
   it('refuses saves from a newer build', () => {
@@ -68,5 +104,10 @@ describe('migrations', () => {
   it('passes the payload through unchanged at the current version', () => {
     const payload = { saveVersion: SAVE_SCHEMA_VERSION };
     expect(migrateToCurrent(payload, SAVE_SCHEMA_VERSION)).toBe(payload);
+  });
+
+  it('produces a payload the current schema accepts', () => {
+    const migrated = migrateToCurrent(fixtureV1.state, 1);
+    expect(GameStateSchema.safeParse(migrated).success).toBe(true);
   });
 });

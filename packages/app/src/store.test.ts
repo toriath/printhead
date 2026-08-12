@@ -1,8 +1,14 @@
 import {
+  MS_PER_HOUR,
   RAW_CONTENT,
+  TICK_MS,
   advancePhase,
+  attachPiece,
   createMutableContentSource,
   createStaticContentSource,
+  sellParts,
+  setSlotConfig,
+  startPrint,
 } from '@printhead/core';
 import { createManualClock } from '@printhead/platform';
 import { describe, expect, it } from 'vitest';
@@ -57,9 +63,60 @@ describe('game store bridge', () => {
 
   it('dispatches domain actions through the same reducer', () => {
     const store = createGameStore({ clock: createManualClock() });
-    store.dispatch(advancePhase());
+    const content = store.getContent();
+
+    // Play the real intro: attach every piece, print, sell. The phase FSM is
+    // data-gated, so nothing here is a shortcut — the store drives the same
+    // reducer the harness and the tests do.
+    for (const piece of content.start.assemblyPieces) {
+      store.advanceWallClock(piece.attachDesignSeconds * 1000);
+      store.dispatch(attachPiece(piece.id));
+    }
+    expect(store.getState().printers[content.start.printerId]).toBe(1);
+
+    const slotId = `${content.start.slotIdPrefix}-1`;
+    store.dispatch(setSlotConfig(slotId, 'pla', 'bracket'));
+    store.dispatch(startPrint(slotId));
+    store.advanceWallClock((content.objects[0]?.printDesignSeconds ?? 0) * 1000);
+    expect(store.getState().resources.parts).toBeGreaterThan(0);
+
+    store.dispatch(sellParts());
+    store.advanceWallClock(TICK_MS);
     expect(store.getState().phaseId).toBe('bench');
     expect(store.getVisualState().phaseId).toBe('bench');
+  });
+
+  it('refuses an out-of-phase ADVANCE_PHASE instead of skipping content', () => {
+    const store = createGameStore({ clock: createManualClock() });
+    store.dispatch(advancePhase());
+    expect(store.getState().phaseId).toBe('intro');
+  });
+
+  it('replays offline time through the same reducer and summarises it', () => {
+    const store = createGameStore({ clock: createManualClock() });
+    const content = store.getContent();
+    for (const piece of content.start.assemblyPieces) {
+      store.advanceWallClock(piece.attachDesignSeconds * 1000);
+      store.dispatch(attachPiece(piece.id));
+    }
+    const slotId = `${content.start.slotIdPrefix}-1`;
+    store.dispatch(setSlotConfig(slotId, 'pla', 'bracket'));
+    store.dispatch(startPrint(slotId));
+
+    const summary = store.applyOffline(MS_PER_HOUR);
+    expect(summary.appliedWallMs).toBe(MS_PER_HOUR);
+    expect(summary.skippedWallMs).toBe(0);
+    expect(summary.gains.partsProduced).toBeGreaterThan(0);
+    expect(summary.eventCounts.PRINT_COMPLETED).toBeGreaterThan(0);
+  });
+
+  it('caps offline catch-up at the content cap', () => {
+    const store = createGameStore({ clock: createManualClock() });
+    const capHours = store.getContent().pacing.offlineCapHours;
+    const summary = store.applyOffline(MS_PER_HOUR * (capHours + 12));
+    expect(summary.cappedHours).toBe(capHours);
+    expect(summary.appliedWallMs).toBe(MS_PER_HOUR * capHours);
+    expect(summary.skippedWallMs).toBe(MS_PER_HOUR * 12);
   });
 
   it('picks up hot-reloaded content (pace changes live)', () => {

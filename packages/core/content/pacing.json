@@ -8,43 +8,97 @@
       "id": "intro",
       "name": "Intro",
       "budgetDesignMinutes": 5,
-      "waitWallBudgetDesignMinutes": 0.5
+      "waitWallBudgetDesignMinutes": 0.5,
+      "allowedActions": ["ATTACH_PIECE", "SET_SLOT_CONFIG", "START_PRINT", "SELL_PARTS"],
+      "advanceWhen": [
+        { "metric": "assemblyProgress", "atLeast": 1 },
+        { "metric": "printsCompleted", "atLeast": 1 },
+        { "metric": "partsSold", "atLeast": 1 }
+      ]
     },
     {
       "id": "bench",
       "name": "Bench",
       "budgetDesignMinutes": 30,
-      "waitWallBudgetDesignMinutes": 2
+      "waitWallBudgetDesignMinutes": 2,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "printers", "atLeast": 4 }]
     },
     {
       "id": "farm",
       "name": "Farm",
       "budgetDesignMinutes": 80,
-      "waitWallBudgetDesignMinutes": 4
+      "waitWallBudgetDesignMinutes": 4,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 80 }]
     },
     {
       "id": "studio",
       "name": "Studio",
       "budgetDesignMinutes": 75,
-      "waitWallBudgetDesignMinutes": 4
+      "waitWallBudgetDesignMinutes": 4,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 75 }]
     },
     {
       "id": "prestige",
       "name": "Prestige runs 1-2",
       "budgetDesignMinutes": 90,
-      "waitWallBudgetDesignMinutes": 5
+      "waitWallBudgetDesignMinutes": 5,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 90 }]
     },
     {
       "id": "absurd",
       "name": "The Absurd",
       "budgetDesignMinutes": 80,
-      "waitWallBudgetDesignMinutes": 5
+      "waitWallBudgetDesignMinutes": 5,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 80 }]
     },
     {
       "id": "end",
       "name": "The End",
       "budgetDesignMinutes": 60,
-      "waitWallBudgetDesignMinutes": 6
+      "waitWallBudgetDesignMinutes": 6,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "BUY_PRINTER"
+      ],
+      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 60 }]
     }
   ]
 }

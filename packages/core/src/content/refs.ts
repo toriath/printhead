@@ -17,6 +17,7 @@ export const COLLECTION_SINGULARS = [
   'automation',
   'phase',
   'curve',
+  'piece',
 ] as const;
 
 export type CollectionSingular = (typeof COLLECTION_SINGULARS)[number];
@@ -53,6 +54,7 @@ export function collectContentIds(content: Content): ContentIdIndex {
     automation: ids(content.automation),
     phase: ids(content.pacing.phases),
     curve: ids(content.curves),
+    piece: ids(content.start.assemblyPieces),
   };
 }
 
@@ -66,6 +68,7 @@ export function findDuplicateIds(content: Content): ContentDuplicateIssue[] {
     automation: content.automation,
     phase: content.pacing.phases,
     curve: content.curves,
+    piece: content.start.assemblyPieces,
   };
   const issues: ContentDuplicateIssue[] = [];
   for (const singular of COLLECTION_SINGULARS) {

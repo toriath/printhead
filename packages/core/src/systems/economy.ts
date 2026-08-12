@@ -1,0 +1,158 @@
+import { indexById } from '../content/load.js';
+import type { Content, MaterialDef } from '../content/schema.js';
+import type { CurveRegistry } from '../curves/evaluate.js';
+import type { GameState } from '../state/game-state.js';
+import { type Cost, canAfford, nextCost } from './cost.js';
+import { drawParts, removeParts, withFilament, withResource } from './resources.js';
+
+/**
+ * Buying and selling (spec §2). Prices are read from content: filament from
+ * `materials[].costPerGram`, printers from their cost curve (spec §5B), parts
+ * from the value banked in the inventory when they were printed.
+ */
+const NONE = 0;
+const ONE = 1;
+
+export interface SaleResult {
+  readonly state: GameState;
+  readonly parts: number;
+  readonly money: number;
+}
+
+/** Sell `requested` parts (or all of them when `null`) at their banked value. */
+export function sellPartsFrom(state: GameState, requested: number | null): SaleResult | null {
+  const draw = drawParts(state, requested ?? state.resources.parts);
+  if (draw.count <= NONE) {
+    return null;
+  }
+  const afterParts = removeParts(state, draw);
+  return {
+    state: {
+      ...afterParts,
+      resources: withResource(afterParts.resources, 'money', draw.value),
+      stats: {
+        ...afterParts.stats,
+        partsSold: afterParts.stats.partsSold + draw.count,
+        moneyEarned: afterParts.stats.moneyEarned + draw.value,
+      },
+    },
+    parts: draw.count,
+    money: draw.value,
+  };
+}
+
+export function filamentPrice(material: MaterialDef, grams: number): number {
+  return material.costPerGram * grams;
+}
+
+/** How many grams `money` buys — auto-buy bots and the HUD both need this. */
+export function affordableGrams(material: MaterialDef, money: number): number {
+  return material.costPerGram > NONE ? money / material.costPerGram : Number.POSITIVE_INFINITY;
+}
+
+export interface PurchaseResult {
+  readonly state: GameState;
+  readonly cost: number;
+}
+
+/**
+ * PLA is infinite to buy (spec §3); market stock limits arrive with the market
+ * model in M3, so M1 only checks that the money is there.
+ */
+export function purchaseFilament(
+  state: GameState,
+  content: Content,
+  materialId: string,
+  grams: number,
+): PurchaseResult | null {
+  const material = indexById(content.materials).get(materialId);
+  if (material === undefined || grams <= NONE || !Number.isFinite(grams)) {
+    return null;
+  }
+  const cost = filamentPrice(material, grams);
+  if (state.resources.money < cost) {
+    return null;
+  }
+  return {
+    cost,
+    state: {
+      ...state,
+      resources: withResource(state.resources, 'money', -cost),
+      filamentGrams: withFilament(state.filamentGrams, materialId, grams),
+      stats: {
+        ...state.stats,
+        filamentPurchasedGrams: state.stats.filamentPurchasedGrams + grams,
+      },
+    },
+  };
+}
+
+export function ownedPrinters(state: GameState, printerId: string): number {
+  return state.printers[printerId] ?? NONE;
+}
+
+/**
+ * Printer N costs `base × growth^N` (spec §5B), rounded up when it is priced in
+ * a countable resource: you cannot hand over a fraction of a Part.
+ */
+export function nextPrinterCost(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  printerId: string,
+): Cost | null {
+  const printer = indexById(content.printers).get(printerId);
+  if (printer === undefined) {
+    return null;
+  }
+  const cost = nextCost(curves, printer, ownedPrinters(state, printerId));
+  return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
+}
+
+/** Pay a content-priced cost out of the ledger; `null` when it is unaffordable. */
+export function payCost(state: GameState, cost: Cost): GameState | null {
+  if (cost.resource === 'filament') {
+    return null;
+  }
+  if (!canAfford(state.resources[cost.resource], cost)) {
+    return null;
+  }
+  if (cost.resource === 'parts') {
+    return removeParts(state, drawParts(state, cost.amount));
+  }
+  return { ...state, resources: withResource(state.resources, cost.resource, -cost.amount) };
+}
+
+export interface PrinterPurchase {
+  readonly state: GameState;
+  readonly cost: Cost;
+  readonly owned: number;
+}
+
+export function purchasePrinter(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  printerId: string,
+): PrinterPurchase | null {
+  const cost = nextPrinterCost(state, content, curves, printerId);
+  if (cost === null) {
+    return null;
+  }
+  const paid = payCost(state, cost);
+  if (paid === null) {
+    return null;
+  }
+  const owned = ownedPrinters(state, printerId) + ONE;
+  return { cost, owned, state: { ...paid, printers: { ...paid.printers, [printerId]: owned } } };
+}
+
+/** Grant the hand-assembled printer #1 — free, and the only printer never bought. */
+export function grantPrinter(state: GameState, printerId: string): PrinterPurchase {
+  const owned = ownedPrinters(state, printerId) + ONE;
+  return {
+    cost: { resource: 'parts', amount: NONE },
+    owned,
+    state: { ...state, printers: { ...state.printers, [printerId]: owned } },
+  };
+}
