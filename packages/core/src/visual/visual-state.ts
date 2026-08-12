@@ -16,11 +16,15 @@ import { VISUAL_STATE_VERSION } from './schema.js';
  */
 
 const NONE = 0;
-const FULL = 1;
 
-/** Deterministic per-slot animation offset — no rng, no clock (spec §13). */
+/**
+ * Deterministic per-slot animation offset — no rng, no clock (spec §13).
+ * `total` is the slot count and this is only ever called from inside a map over
+ * those slots, so it cannot be zero; no guard, because a guard nothing can
+ * reach is a branch no test can ever justify.
+ */
 function phaseOffsetOf(index: number, total: number): number {
-  return total > NONE ? index / total : NONE;
+  return index / total;
 }
 
 function toSlotVisual(
@@ -64,7 +68,9 @@ function toAssemblyVisual(state: GameState, content: Content): AssemblyVisual {
     nextPieceName: piece?.name ?? null,
     cooldownMs: state.assembly.cooldownMs,
     ready: piece !== null && isPieceReady(state.assembly),
-    progress: pieces.length > NONE ? attached / pieces.length : FULL,
+    // `StartFileSchema` requires at least one assembly piece, so the divisor
+    // cannot be zero and there is nothing to guard against.
+    progress: attached / pieces.length,
     complete: piece === null,
   };
 }

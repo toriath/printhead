@@ -137,6 +137,18 @@ describe('toVisualState', () => {
     });
   });
 
+  it('shows a staffed bay that has no config, but does not call it occupied', () => {
+    // The player has just finished building printer #1. It must be on screen —
+    // and the bay must still read as "not working" until something is loaded.
+    const sim = assemblePrinter(createSim());
+    expect(toVisualState(sim.state, content).slots[0]).toMatchObject({
+      printerCount: 1,
+      machineTier: 1,
+      materialId: null,
+      occupied: false,
+    });
+  });
+
   it('leaves an unstaffed but configured slot empty and tierless', () => {
     const configured: GameState = {
       ...state,
@@ -237,13 +249,16 @@ describe('the frozen VisualState contract (spec §15)', () => {
     expect(validation.issues.map((issue) => issue.path)).toContain('ledger');
   });
 
-  it('rejects an out-of-range progress value', () => {
+  it('rejects an out-of-range progress value, and says where', () => {
     const fixture = visualFixture('printing');
     const broken = {
       ...fixture,
       slots: fixture.slots.map((slot) => ({ ...slot, progress: 1.5 })),
     };
-    expect(validateVisualState(broken).ok).toBe(false);
+    const validation = validateVisualState(broken);
+    expect(validation.ok).toBe(false);
+    // The dotted path is what makes a report actionable for a renderer host.
+    expect(validation.issues.map((issue) => issue.path)).toEqual(['slots.0.progress']);
   });
 
   it('rejects a document from a different version', () => {
