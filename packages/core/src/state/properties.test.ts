@@ -8,6 +8,7 @@ import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
 import { marketStateOf, priceMultiplier, quoteFor } from '../systems/market.js';
+import { hardSlotMaximum } from '../systems/slots.js';
 import { validateVisualState } from '../visual/schema.js';
 import { toVisualState } from '../visual/visual-state.js';
 import {
@@ -138,14 +139,10 @@ function trading(seed: number): GameState {
   return state;
 }
 
-/**
- * A workshop with the full rack staffed. `start.slotCount` is 1 until M4, so no
- * amount of play reaches this shape yet — but the projection has to be right
- * for it before the mechanic lands, not after.
- */
+/** A workshop with the full rack staffed (spec §4's hard maximum). */
 function fullRack(seed: number): GameState {
   const base = trading(seed);
-  const capacity = content.start.maxSlotCount;
+  const capacity = hardSlotMaximum(content);
   return {
     ...base,
     printers: { [printerId]: capacity },

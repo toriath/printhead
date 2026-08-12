@@ -54,6 +54,10 @@ export const GatedActionTypeSchema = z.enum([
   'BUY_AUTOMATION',
   'SET_AUTOMATION',
   'RECYCLE_SCRAP',
+  'BUY_SLOT',
+  'ASSIGN_PRINTER',
+  'SET_SLOT_QUEUE',
+  'CHOOSE_FORK',
 ]);
 
 /**
@@ -65,7 +69,9 @@ export const MetricSchema = z.enum([
   'parts',
   'scrap',
   'money',
+  'plates',
   'printers',
+  'slots',
   'partsProduced',
   'partsSold',
   'printsCompleted',
@@ -145,23 +151,28 @@ export const StartFileSchema = z
   .object({
     /** The printer the intro assembly produces (spec §6 phase 0). */
     printerId: IdSchema,
+    /**
+     * Bays the workshop opens with. The rest are bought one at a time through
+     * `slots.json`, and the hard maximum (spec §4: 1 → 2 → 3 → 4) is this plus
+     * the length of that list — so the cap cannot be misconfigured into
+     * disagreeing with the unlocks that are meant to reach it.
+     */
     slotCount: z.number().int().positive(),
     /**
-     * Config slots go 1 → 2 → 3 → 4 and stop (spec §4, "hard max"). The
-     * renderer draws this many bays, the surplus ones as faint outlines.
+     * Machines one bay can hold (spec §4). This is what makes a config slot
+     * worth buying: a slot is not just a second recipe, it is the only way to
+     * field more printers, so "how do I allocate my fleet across slots?"
+     * becomes a real question instead of a cosmetic one. A fork may override it
+     * — that is precisely what one giant printer means (spec §5B).
      */
-    maxSlotCount: z.number().int().positive(),
+    printersPerSlot: z.number().int().positive(),
     slotIdPrefix: IdSchema,
     startingResources: StartingResourcesSchema,
     startingFilament: z.array(StartingFilamentSchema),
     /** 6–8 pieces, attached in order — one click each (spec §6 phase 0). */
     assemblyPieces: z.array(AssemblyPieceSchema).min(1),
   })
-  .strict()
-  .refine((start) => start.maxSlotCount >= start.slotCount, {
-    message: 'maxSlotCount must be at least slotCount',
-    path: ['maxSlotCount'],
-  });
+  .strict();
 
 // --- materials.json ---------------------------------------------------------
 
@@ -265,7 +276,6 @@ export const UpgradeEffectTypeSchema = z.enum([
   'failureChargeMultiplier',
   'printSpeedMultiplier',
   'partsYieldMultiplier',
-  'configSlots',
   'machineTier',
   'recyclerYieldFraction',
   'marketFeeMultiplier',
@@ -294,6 +304,76 @@ export const UpgradeDefSchema = z
   .strict();
 
 export const UpgradesFileSchema = z.array(UpgradeDefSchema).min(1);
+
+// --- slots.json -------------------------------------------------------------
+
+/**
+ * Config-slot progression (spec §4): **1 → 2 → 3 → 4 and stop**.
+ *
+ * One def per bay the player can buy, in the order they become available. The
+ * hard maximum is `start.slotCount + slots.length`, so the "never unlimited"
+ * rule is a property of the data rather than a constant someone has to remember
+ * to keep in step. Slot 3 is expensive and slot 4 is prestige-gated purely
+ * through the fields below — `costCurveId` shapes the price and `requires` is
+ * the same metric gate the phase FSM uses, so slot 4's
+ * `{ metric: "plates", atLeast: 1 }` locks it until M5 mints the first Plate.
+ */
+export const SlotUnlockDefSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    costCurveId: IdSchema,
+    costResource: ResourceKindSchema,
+    unlockPhaseId: IdSchema,
+    requiresUpgradeIds: z.array(IdSchema),
+    /** Extra state gates — empty for the ones a phase alone opens. */
+    requires: z.array(RequirementSchema),
+  })
+  .strict();
+
+export const SlotsFileSchema = z.array(SlotUnlockDefSchema);
+
+// --- forks.json -------------------------------------------------------------
+
+/**
+ * The per-run fork of spec §5B: **Farm** (throughput) versus **Goliath** (one
+ * giant printer, required for the largest endgame builds). Mutually exclusive
+ * within a run — `GameState.forkId` holds the commitment and the reducer never
+ * lets it be taken back.
+ *
+ * Both branches are ordinary content: a price, some gates, a list of the same
+ * `UpgradeEffect` records the machine tree uses (so `computeModifiers` folds
+ * them without knowing a fork exists), and two fields the rest of the game
+ * reads instead of hard-coding "goliath":
+ *
+ * - `slotCapacity` — `null` keeps the normal slot progression; a number caps
+ *   the workshop at that many bays, which is what makes Goliath *one* machine.
+ * - `visual` — which way the renderer should draw the workshop.
+ */
+export const ForkLayoutSchema = z.enum(['rack', 'goliath']);
+
+export const ForkDefSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    description: z.string().min(1),
+    visual: ForkLayoutSchema,
+    costCurveId: IdSchema,
+    costResource: ResourceKindSchema,
+    unlockPhaseId: IdSchema,
+    requiresUpgradeIds: z.array(IdSchema),
+    requires: z.array(RequirementSchema),
+    /** Bays this branch allows; `null` means "whatever the slots you own". */
+    slotCapacity: z.number().int().positive().nullable(),
+    /** Machines one bay may hold; `null` keeps `start.printersPerSlot`. */
+    printersPerSlot: z.number().int().positive().nullable(),
+    /** Spec §7.3: the Fabricator print needs the giant machine (M6). */
+    requiredForFinalPrint: z.boolean(),
+    effects: z.array(UpgradeEffectSchema),
+  })
+  .strict();
+
+export const ForksFileSchema = z.array(ForkDefSchema).min(2);
 
 // --- designs.json -----------------------------------------------------------
 
@@ -420,10 +500,32 @@ export const TradeFilamentAutomationSchema = z
   })
   .strict();
 
+/**
+ * Auto-changeover (spec §5B/§5C): the slot's **print queue** runs itself. The
+ * player writes a rota of `{ material, object }` entries onto a slot; while this
+ * automation is installed *and* switched on, the slot rotates to the next entry
+ * by itself once the current one has printed its batches. Switch it off and the
+ * rota freezes where it is — the friction comes back, which is the whole design
+ * brief for the automation tree.
+ *
+ * `defaultThreshold` is the stock floor: the rota will not purge into a material
+ * the workshop cannot feed, which is the failure mode this automation would
+ * otherwise cause every time the market ran dry.
+ */
+export const ChangeoverAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('auto-changeover'),
+    /** Grams of the *incoming* material required before the rota advances. */
+    defaultThreshold: NonNegative,
+  })
+  .strict();
+
 export const AutomationDefSchema = z.discriminatedUnion('behavior', [
   SellPartsAutomationSchema,
   BuyFilamentAutomationSchema,
   TradeFilamentAutomationSchema,
+  ChangeoverAutomationSchema,
 ]);
 
 export const AutomationFileSchema = z.array(AutomationDefSchema).min(1);
@@ -487,6 +589,8 @@ export const ContentSchema = z
     objects: ObjectsFileSchema,
     printers: PrintersFileSchema,
     upgrades: UpgradesFileSchema,
+    slots: SlotsFileSchema,
+    forks: ForksFileSchema,
     designs: DesignsFileSchema,
     market: MarketFileSchema,
     automation: AutomationFileSchema,
@@ -504,6 +608,8 @@ export const CONTENT_FILE_SCHEMAS = {
   objects: ObjectsFileSchema,
   printers: PrintersFileSchema,
   upgrades: UpgradesFileSchema,
+  slots: SlotsFileSchema,
+  forks: ForksFileSchema,
   designs: DesignsFileSchema,
   market: MarketFileSchema,
   automation: AutomationFileSchema,
@@ -533,6 +639,9 @@ export type PrinterDef = z.infer<typeof PrinterDefSchema>;
 export type UpgradeEffectType = z.infer<typeof UpgradeEffectTypeSchema>;
 export type UpgradeEffect = z.infer<typeof UpgradeEffectSchema>;
 export type UpgradeDef = z.infer<typeof UpgradeDefSchema>;
+export type SlotUnlockDef = z.infer<typeof SlotUnlockDefSchema>;
+export type ForkLayout = z.infer<typeof ForkLayoutSchema>;
+export type ForkDef = z.infer<typeof ForkDefSchema>;
 export type DesignDef = z.infer<typeof DesignDefSchema>;
 export type MarketListing = z.infer<typeof MarketListingSchema>;
 export type MarketModel = z.infer<typeof MarketModelSchema>;
@@ -542,6 +651,7 @@ export type AutomationBehavior = AutomationDef['behavior'];
 export type SellPartsAutomationDef = z.infer<typeof SellPartsAutomationSchema>;
 export type BuyFilamentAutomationDef = z.infer<typeof BuyFilamentAutomationSchema>;
 export type TradeFilamentAutomationDef = z.infer<typeof TradeFilamentAutomationSchema>;
+export type ChangeoverAutomationDef = z.infer<typeof ChangeoverAutomationSchema>;
 export type FailureContent = z.infer<typeof FailureFileSchema>;
 export type PrestigeContent = z.infer<typeof PrestigeFileSchema>;
 export type Content = z.infer<typeof ContentSchema>;

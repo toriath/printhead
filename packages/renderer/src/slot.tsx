@@ -11,6 +11,9 @@ import {
   LABEL_Y,
   PROGRESS_HEIGHT,
   PROGRESS_Y,
+  QUEUE_PIP_GAP,
+  QUEUE_PIP_R,
+  QUEUE_Y,
   RISK_HEIGHT,
   RISK_Y,
 } from './geometry.js';
@@ -106,6 +109,34 @@ function RiskMeter({ risk }: { risk: number }): ReactElement | null {
   );
 }
 
+/**
+ * The print rota (spec §5B) as a row of pips, the loaded entry filled in. A
+ * queue is a promise about what the bay will do next, so it belongs on the bay
+ * rather than in a panel somewhere else.
+ */
+function QueueStrip({ slot }: { slot: SlotVisual }): ReactElement | null {
+  if (slot.queue.length <= SINGLE) {
+    return null;
+  }
+  const span = (slot.queue.length - SINGLE) * QUEUE_PIP_GAP;
+  const left = (BAY_WIDTH - span) / 2;
+  return (
+    <g data-testid={`queue-${slot.slotId}`} data-queue-length={slot.queue.length}>
+      {slot.queue.map((entry, index) => (
+        <circle
+          key={`${entry.materialId}-${entry.objectId}-${index}`}
+          className={entry.current ? 'ph-queue-pip ph-queue-pip--current' : 'ph-queue-pip'}
+          cx={left + index * QUEUE_PIP_GAP}
+          cy={QUEUE_Y}
+          r={QUEUE_PIP_R}
+        >
+          <title>{`${entry.objectName} · ${entry.materialName} ×${entry.batches}`}</title>
+        </circle>
+      ))}
+    </g>
+  );
+}
+
 export function slotLabel(slot: SlotVisual): string {
   const config = `${slot.objectName ?? slot.objectId} · ${slot.materialName ?? slot.materialId}`;
   if (slot.changingOver) {
@@ -167,6 +198,7 @@ export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
       >
         {assembling ? 'assembling…' : slotLabel(slot)}
       </text>
+      <QueueStrip slot={slot} />
     </g>
   );
 }

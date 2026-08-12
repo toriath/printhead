@@ -1,0 +1,142 @@
+{
+  "version": 4,
+  "savedAtMs": 1723420800000,
+  "state": {
+    "saveVersion": 4,
+    "simTimeMs": 5777000,
+    "tickCount": 57770,
+    "phaseId": "studio",
+    "phaseEnteredAtMs": 4635100,
+    "rng": {
+      "seed": 7,
+      "count": 0
+    },
+    "resources": {
+      "parts": 75.25000000000001,
+      "scrap": 251.7,
+      "money": 0.00044156415028240303,
+      "designs": 0,
+      "products": 0,
+      "plates": 0
+    },
+    "partsValue": 75.3787042492611,
+    "scrapValue": 12.935999999999972,
+    "filamentGrams": {
+      "pla": 2.2000000000000455,
+      "petg": 63.9399999999996,
+      "resin": 0,
+      "metal": 0
+    },
+    "printers": {
+      "bench-mk1": 14
+    },
+    "upgrades": {
+      "heated-bed": 1,
+      "recycler": 1,
+      "hardened-nozzle": 3,
+      "enclosure": 1,
+      "broker-licence": 1
+    },
+    "automation": {
+      "auto-sell": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 1200,
+        "cooldownMs": 3000
+      },
+      "auto-buy-filament": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 400,
+        "cooldownMs": 3000
+      },
+      "auto-changeover": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 60,
+        "cooldownMs": 3000
+      }
+    },
+    "market": {
+      "petg": {
+        "stockGrams": 2129.999999997342,
+        "pressure": -0.38878033116987576
+      },
+      "resin": {
+        "stockGrams": 2400,
+        "pressure": 0
+      },
+      "metal": {
+        "stockGrams": 800,
+        "pressure": 0
+      }
+    },
+    "slots": [
+      {
+        "id": "slot-1",
+        "materialId": "pla",
+        "objectId": "bracket",
+        "printerCount": 8,
+        "autoRestart": true,
+        "run": {
+          "remainingMs": 1435.1113668122725,
+          "totalMs": 4931.371743239913,
+          "batch": 4
+        },
+        "failureCharge": 0.5024000000000016,
+        "changeoverMs": 0,
+        "queue": [],
+        "queueIndex": 0,
+        "queueBatches": 0
+      },
+      {
+        "id": "slot-2",
+        "materialId": "petg",
+        "objectId": "bracket",
+        "printerCount": 6,
+        "autoRestart": true,
+        "run": null,
+        "failureCharge": 0,
+        "changeoverMs": 27100,
+        "queue": [
+          {
+            "materialId": "pla",
+            "objectId": "bracket",
+            "batches": 4
+          },
+          {
+            "materialId": "petg",
+            "objectId": "bracket",
+            "batches": 4
+          }
+        ],
+        "queueIndex": 1,
+        "queueBatches": 0
+      }
+    ],
+    "forkId": "farm-path",
+    "assembly": {
+      "attachedPieceIds": [
+        "frame",
+        "gantry",
+        "bed",
+        "extruder",
+        "hotend",
+        "spool-holder",
+        "controller"
+      ],
+      "cooldownMs": 0
+    },
+    "stats": {
+      "printsCompleted": 2142,
+      "printsFailed": 168,
+      "partsProduced": 4264.25,
+      "partsSold": 919,
+      "moneyEarned": 1545.2261966375975,
+      "filamentPurchasedGrams": 20037,
+      "filamentSoldGrams": 0,
+      "scrapProducedGrams": 727.0999999999997,
+      "scrapRecycledGrams": 475.39999999999975
+    }
+  }
+}

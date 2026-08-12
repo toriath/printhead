@@ -11,6 +11,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { REFERENCE_BOT, runHeadless } from '@printhead/balance';
 import type { Action, GameState, VisualState } from '@printhead/core';
 import {
   RAW_CONTENT,
@@ -23,6 +24,8 @@ import {
 } from '@printhead/core';
 
 const content = loadContent(RAW_CONTENT);
+/** Parts handed to the workshop so the fork fixture can be captured. */
+const FORK_FIXTURE_PARTS = 5000;
 let state: GameState = createInitialState(content, { seed: 20260812 });
 
 const apply = (action: Action): void => {
@@ -109,6 +112,51 @@ apply({ type: 'BUY_FILAMENT', materialId: 'petg', grams: 200 });
 apply({ type: 'SET_SLOT_CONFIG', slotId, materialId: 'petg', objectId });
 tickSeconds(5);
 capture('economy');
+
+/**
+ * 6. The M4 rack: two bays, the fleet split between them, and a print rota on
+ * the second. Reached by handing the wheel to the reference bot until the phase
+ * where the fork unlocks — the farm gate is a grind, not a click, and a fixture
+ * that skipped it would be a hand-written guess again.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'studio', seed: 7 }).finalState;
+for (const slot of state.slots) {
+  apply({ type: 'SET_SLOT_CONFIG', slotId: slot.id, materialId, objectId });
+}
+const rota = content.automation.find((def) => def.behavior === 'auto-changeover');
+const second = state.slots[1];
+if (rota !== undefined && second !== undefined) {
+  apply({
+    type: 'SET_SLOT_QUEUE',
+    slotId: second.id,
+    entries: [
+      { materialId, objectId, batches: 4 },
+      { materialId: 'petg', objectId, batches: 4 },
+    ],
+  });
+}
+tickSeconds(5);
+capture('rack');
+
+/**
+ * 7. The Goliath (spec §5B): the same workshop after the fork melts the rack
+ * into one machine. Captured straight after the commitment so the fixture shows
+ * what the renderer must switch to — a single, much larger printer.
+ */
+const goliath = content.forks.find((def) => def.visual === 'goliath');
+if (goliath !== undefined) {
+  state = {
+    ...state,
+    // The commitment costs Parts the bot has not banked at this exact moment;
+    // granting them is a *fixture* concession, not a rule change — the action
+    // below still goes through the real reducer and the real availability
+    // rules, so the state it produces is one the game can reach.
+    resources: { ...state.resources, parts: state.resources.parts + FORK_FIXTURE_PARTS },
+  };
+  apply({ type: 'CHOOSE_FORK', forkId: goliath.id });
+  tickSeconds(5);
+  capture('goliath');
+}
 
 console.log(`wrote ${written.length} fixtures to ${dir}:`);
 for (const line of written) {

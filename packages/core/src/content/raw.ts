@@ -2,12 +2,14 @@ import automation from '../../content/automation.json' with { type: 'json' };
 import curves from '../../content/curves.json' with { type: 'json' };
 import designs from '../../content/designs.json' with { type: 'json' };
 import failure from '../../content/failure.json' with { type: 'json' };
+import forks from '../../content/forks.json' with { type: 'json' };
 import market from '../../content/market.json' with { type: 'json' };
 import materials from '../../content/materials.json' with { type: 'json' };
 import objects from '../../content/objects.json' with { type: 'json' };
 import pacing from '../../content/pacing.json' with { type: 'json' };
 import prestige from '../../content/prestige.json' with { type: 'json' };
 import printers from '../../content/printers.json' with { type: 'json' };
+import slots from '../../content/slots.json' with { type: 'json' };
 import start from '../../content/start.json' with { type: 'json' };
 import upgrades from '../../content/upgrades.json' with { type: 'json' };
 import type { RawContent } from './schema.js';
@@ -21,6 +23,8 @@ export const RAW_CONTENT: RawContent = {
   objects,
   printers,
   upgrades,
+  slots,
+  forks,
   designs,
   market,
   automation,

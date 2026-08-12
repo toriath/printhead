@@ -1,27 +1,74 @@
 {
-  "version": 4,
+  "version": 5,
   "phaseId": "bench",
   "phaseName": "Bench",
   "simTimeMs": 7505000,
   "slotCapacity": 4,
+  "goliath": false,
   "slots": [
     {
       "slotId": "slot-1",
       "index": 0,
-      "materialId": "pla",
-      "materialName": "PLA",
+      "materialId": "petg",
+      "materialName": "PETG",
       "objectId": "bracket",
       "objectName": "Bracket",
       "machineTier": 2,
       "printerCount": 1,
+      "printerCapacity": 8,
       "phaseOffset": 0,
       "occupied": true,
-      "running": true,
-      "progress": 0.9166666666666666,
-      "batch": 1,
-      "changingOver": false,
-      "changeoverProgress": 0,
-      "failureRisk": 0.7200000000000027
+      "running": false,
+      "progress": 0,
+      "batch": 0,
+      "changingOver": true,
+      "changeoverProgress": 0.1111111111111111,
+      "failureRisk": 0,
+      "queue": [],
+      "queueBatches": 0
+    }
+  ],
+  "fleet": {
+    "printers": 1,
+    "assigned": 1,
+    "slotsOwned": 1,
+    "slotsActive": 1,
+    "slotsMaximum": 4,
+    "printerCapacity": 8
+  },
+  "slotUnlock": {
+    "unlockId": "slot-2",
+    "name": "Second config slot",
+    "available": false,
+    "affordable": false,
+    "cost": 400,
+    "costResource": "parts",
+    "blockedReason": "locked"
+  },
+  "forks": [
+    {
+      "forkId": "farm-path",
+      "name": "The Farm",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "layout": "rack",
+      "chosen": false,
+      "available": false,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": false
+    },
+    {
+      "forkId": "goliath",
+      "name": "Goliath",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "layout": "goliath",
+      "chosen": false,
+      "available": false,
+      "affordable": false,
+      "cost": 1200,
+      "costResource": "parts",
+      "requiredForFinalPrint": true
     }
   ],
   "assembly": {
@@ -47,7 +94,7 @@
     "money": 66,
     "scrap": 172,
     "filamentGrams": {
-      "pla": 208,
+      "pla": 194,
       "petg": 0,
       "resin": 0,
       "metal": 0
@@ -63,7 +110,7 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 208
+      "heldGrams": 194
     },
     {
       "materialId": "petg",
@@ -174,19 +221,8 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 80.9012295,
+      "cost": 80.9012,
       "costResource": "money"
-    },
-    {
-      "upgradeId": "config-slot-2",
-      "name": "Second config slot",
-      "tree": "farm",
-      "level": 0,
-      "maxLevel": 1,
-      "available": false,
-      "affordable": false,
-      "cost": 400,
-      "costResource": "parts"
     }
   ],
   "automation": [
@@ -226,14 +262,27 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 199.34029440000003,
+      "cost": 199.34,
       "costResource": "money"
+    },
+    {
+      "automationId": "auto-changeover",
+      "name": "Auto-changeover rota",
+      "behavior": "auto-changeover",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 60,
+      "available": false,
+      "affordable": false,
+      "cost": 200,
+      "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": false,
     "scrapGrams": 172,
     "yieldGrams": 0,
-    "yieldMaterialId": "pla"
+    "yieldMaterialId": "petg"
   }
 }

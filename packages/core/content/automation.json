@@ -38,5 +38,17 @@
     "buyBelowMultiplier": 0.85,
     "sellAboveMultiplier": 1.25,
     "maxHoldingGrams": 4000
+  },
+  {
+    "id": "auto-changeover",
+    "name": "Auto-changeover rota",
+    "behavior": "auto-changeover",
+    "costCurveId": "automation-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "farm",
+    "requiresUpgradeIds": [],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 15,
+    "defaultThreshold": 60
   }
 ]

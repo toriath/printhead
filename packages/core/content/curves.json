@@ -35,6 +35,12 @@
     "growth": 6
   },
   {
+    "id": "fork-cost",
+    "name": "Farm / Goliath commitment cost",
+    "type": "constant",
+    "value": 1200
+  },
+  {
     "id": "design-level-value",
     "name": "Design value by level",
     "type": "power",

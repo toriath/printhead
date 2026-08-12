@@ -4,6 +4,7 @@ import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
+import { isQueueRunning, nextQueueEntry, queueEntryDone, queueStockFloor } from './queue.js';
 import { addParts, withFilament } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 
@@ -344,11 +345,74 @@ function completeRun(
     ...slot,
     run: null,
     failureCharge: outcome.charge,
+    // Only a bay with a rota counts batches against it; a bay printing one
+    // config forever would otherwise carry a meaningless ever-growing number
+    // into every save.
+    queueBatches: slot.queue.length > NONE ? slot.queueBatches + FULL : NONE,
   });
+  const rotated = rotateQueue(idle, content, index, emit);
+  if (rotated !== null) {
+    // The bay is now purging for the next entry on the rota; the restart
+    // happens on the far side of the changeover, through the same idle path a
+    // stalled slot takes.
+    return rotated;
+  }
   if (!slot.autoRestart) {
     return idle;
   }
   return beginRun(idle, content, index, run.remainingMs, emit, modifiers) ?? idle;
+}
+
+/**
+ * Turn the slot's rota by one entry (spec §5B), or `null` when it should not
+ * turn: no rota, the automation missing or switched off, the current entry
+ * still owed batches, or not enough of the incoming material to be worth the
+ * purge. Rotation goes through `applyChangeover`, so a queued switch costs the
+ * player exactly what a hand-driven one does (spec §3).
+ */
+function rotateQueue(
+  state: GameState,
+  content: Content,
+  index: number,
+  emit: EventSink | undefined,
+): GameState | null {
+  const slot = state.slots.at(index);
+  if (slot === undefined || !queueEntryDone(slot) || !isQueueRunning(state, content)) {
+    return null;
+  }
+  const entry = nextQueueEntry(slot);
+  if (entry === null) {
+    return null;
+  }
+  const config = resolveSlotConfig(content, {
+    ...slot,
+    materialId: entry.materialId,
+    objectId: entry.objectId,
+  });
+  if (config === null) {
+    return null;
+  }
+  const stock = state.filamentGrams[config.material.id] ?? NONE;
+  if (config.material.id !== slot.materialId && stock < queueStockFloor(state, content)) {
+    return null;
+  }
+  const { state: purged, changeover } = applyChangeover(state, slot, config);
+  emit?.({
+    type: 'SLOT_CONFIGURED',
+    simTimeMs: state.simTimeMs,
+    slotId: slot.id,
+    materialId: config.material.id,
+    objectId: config.object.id,
+    downtimeMs: changeover.downtimeMs,
+    purgedGrams: changeover.purgedGrams,
+    abandonedBatch: NONE,
+  });
+  return withSlot(purged, index, {
+    ...changeover.slot,
+    autoRestart: true,
+    queueIndex: (slot.queueIndex + FULL) % slot.queue.length,
+    queueBatches: NONE,
+  });
 }
 
 /**

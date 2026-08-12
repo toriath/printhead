@@ -57,7 +57,16 @@ function foldEffect(current: number | undefined, effect: UpgradeEffect, level: n
   }
 }
 
-/** Fold every installed upgrade into one modifier map (spec §5). */
+/**
+ * Fold every installed upgrade — and the run's Farm/Goliath commitment — into
+ * one modifier map (spec §5, §5B).
+ *
+ * The fork's effects are the same `{ type, combine, value }` records the tree
+ * uses, so it folds in here rather than needing a system of its own. This file
+ * reads `state.forkId` and `content.forks` directly instead of asking
+ * `systems/forks.ts`, because that module needs `isInstalled` from this one and
+ * a cycle between them would be a worse trade than four lines of loop.
+ */
 export function computeModifiers(state: GameState, content: Content): ModifierMap {
   const modifiers = new Map<UpgradeEffectType, number>();
   for (const def of content.upgrades) {
@@ -67,6 +76,14 @@ export function computeModifiers(state: GameState, content: Content): ModifierMa
     }
     for (const effect of def.effects) {
       modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, level));
+    }
+  }
+  for (const fork of content.forks) {
+    if (fork.id !== state.forkId) {
+      continue;
+    }
+    for (const effect of fork.effects) {
+      modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, IDENTITY));
     }
   }
   return modifiers;

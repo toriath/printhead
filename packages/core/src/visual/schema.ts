@@ -20,18 +20,36 @@ import { z } from 'zod';
  * - v2 (M1) — draft: run progress, the intro assembly and the HUD ledger.
  * - v3 (M2) — frozen: every slot is projected (empty bays included) so the
  *   renderer can draw the "max 4, faint outline" rule from data alone.
- * - v4 (M3) — **frozen**: the economy becomes visible. Slots carry their
+ * - v4 (M3) — frozen: the economy becomes visible. Slots carry their
  *   changeover and their pity charge; the market board, the machine tree and
  *   the automation rack are projected as lists, so the shell can offer every
  *   purchase without a content table of its own.
+ * - v5 (M4) — **frozen**: slots and scale. The rack knows how many bays are
+ *   owned, which one is on sale and what it costs; every bay carries its print
+ *   rota and the machines assigned to it; and the run's Farm/Goliath
+ *   commitment is projected as a choice *and* as a drawing instruction, so the
+ *   renderer switches to the one-giant-printer layout from data.
  */
-export const VISUAL_STATE_VERSION = 4;
+export const VISUAL_STATE_VERSION = 5;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
 /** 0..1 — the renderer never has to clamp. */
 const Unit = z.number().finite().min(0).max(1);
 const NonEmpty = z.string().min(1);
+
+/** One entry of a slot's print rota (spec §5B), named for display. */
+export const QueueEntryVisualSchema = z
+  .object({
+    materialId: NonEmpty,
+    materialName: NonEmpty,
+    objectId: NonEmpty,
+    objectName: NonEmpty,
+    batches: z.number().int().positive(),
+    /** The entry the bay is printing right now. */
+    current: z.boolean(),
+  })
+  .strict();
 
 /**
  * One config slot (spec §4 rendering rule): rendered **once per slot**, never
@@ -50,6 +68,8 @@ export const SlotVisualSchema = z
     objectName: NonEmpty.nullable(),
     machineTier: NonNegativeInt,
     printerCount: NonNegativeInt,
+    /** Machines this bay can hold (spec §4) — the fleet-allocation ceiling. */
+    printerCapacity: z.number().int().positive(),
     /** 0..1 animation offset so identical printers do not move in lockstep. */
     phaseOffset: Unit,
     /** Configured *and* staffed: anything else draws as a faint empty bay. */
@@ -67,6 +87,58 @@ export const SlotVisualSchema = z
      * deterministic, so this is a promise to the player, not a probability.
      */
     failureRisk: Unit,
+    /** The rota this bay works through; empty when it prints one config. */
+    queue: z.array(QueueEntryVisualSchema),
+    /** Batches finished on the current rota entry. */
+    queueBatches: NonNegativeInt,
+  })
+  .strict();
+
+/** The next config slot on sale (spec §4), or absent once the rack is full. */
+export const SlotUnlockVisualSchema = z
+  .object({
+    unlockId: NonEmpty,
+    name: NonEmpty,
+    /** Phase reached, prerequisites met, gates satisfied. */
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
+    /** Why it is not on offer — `null` when it is. Renderers show this. */
+    blockedReason: NonEmpty.nullable(),
+  })
+  .strict();
+
+/** One branch of the per-run Farm/Goliath fork (spec §5B). */
+export const ForkVisualSchema = z
+  .object({
+    forkId: NonEmpty,
+    name: NonEmpty,
+    description: NonEmpty,
+    /** How the workshop should be drawn if this branch is taken. */
+    layout: z.enum(['rack', 'goliath']),
+    chosen: z.boolean(),
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
+    requiredForFinalPrint: z.boolean(),
+  })
+  .strict();
+
+/** The fleet as a whole (spec §4): machines, bays, and the hard ceiling. */
+export const FleetVisualSchema = z
+  .object({
+    printers: NonNegativeInt,
+    /** Machines standing in a bay. Equal to `printers` — the invariant, shown. */
+    assigned: NonNegativeInt,
+    slotsOwned: NonNegativeInt,
+    /** Bays in use right now; a Goliath run caps this at one. */
+    slotsActive: NonNegativeInt,
+    /** Spec §4's hard maximum: the rack can never grow past this. */
+    slotsMaximum: NonNegativeInt,
+    /** Machines the active bays can hold in total — the fleet ceiling. */
+    printerCapacity: NonNegativeInt,
   })
   .strict();
 
@@ -166,9 +238,17 @@ export const VisualStateSchema = z
     /** Display name from `pacing.json` — the renderer holds no content table. */
     phaseName: NonEmpty,
     simTimeMs: NonNegative,
-    /** Hard maximum number of bays to draw (spec §4: 1 → 2 → 3 → 4). */
+    /** Bays to draw right now (spec §4: 1 → 2 → 3 → 4; Goliath collapses to 1). */
     slotCapacity: z.number().int().positive(),
+    /**
+     * Draw one giant printer instead of the rack (spec §5B). Derived from the
+     * chosen fork's `visual`, so the renderer never has to know an id.
+     */
+    goliath: z.boolean(),
     slots: z.array(SlotVisualSchema),
+    fleet: FleetVisualSchema,
+    slotUnlock: SlotUnlockVisualSchema.nullable(),
+    forks: z.array(ForkVisualSchema),
     assembly: AssemblyVisualSchema,
     ledger: LedgerVisualSchema,
     market: z.array(MarketVisualSchema),
@@ -188,7 +268,11 @@ export type DeepReadonly<T> = T extends (infer U)[]
     ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T;
 
+export type QueueEntryVisual = DeepReadonly<z.infer<typeof QueueEntryVisualSchema>>;
 export type SlotVisual = DeepReadonly<z.infer<typeof SlotVisualSchema>>;
+export type SlotUnlockVisual = DeepReadonly<z.infer<typeof SlotUnlockVisualSchema>>;
+export type ForkVisual = DeepReadonly<z.infer<typeof ForkVisualSchema>>;
+export type FleetVisual = DeepReadonly<z.infer<typeof FleetVisualSchema>>;
 export type MarketVisual = DeepReadonly<z.infer<typeof MarketVisualSchema>>;
 export type UpgradeVisual = DeepReadonly<z.infer<typeof UpgradeVisualSchema>>;
 export type AutomationVisual = DeepReadonly<z.infer<typeof AutomationVisualSchema>>;

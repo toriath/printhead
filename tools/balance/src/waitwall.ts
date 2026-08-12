@@ -5,15 +5,21 @@ import {
   type PhaseDef,
   affordableBatch,
   automationAvailability,
+  forkAvailability,
+  forkCost,
   hasRecycler,
   isPieceReady,
   maxBuyableGrams,
   nextAutomationCost,
   nextPiece,
   nextPrinterCost,
+  nextSlotCost,
+  nextSlotUnlock,
   nextUpgradeCost,
   quoteFor,
   resolveSlotConfig,
+  slotUnlockAvailability,
+  slotWithRoom,
   upgradeAvailability,
 } from '@printhead/core';
 
@@ -37,6 +43,8 @@ import {
 export type MeaningfulOption =
   | 'attach-piece'
   | 'buy-printer'
+  | 'buy-slot'
+  | 'choose-fork'
   | 'buy-upgrade'
   | 'buy-automation'
   | 'feed-idle-slot'
@@ -75,10 +83,34 @@ export function meaningfulOptions(
     cost.resource !== 'filament' &&
     state.resources[cost.resource as keyof typeof state.resources] >= cost.amount;
 
-  if (allows(content, state.phaseId, 'BUY_PRINTER')) {
+  // A machine you cannot house is not an option: bays hold a fixed number of
+  // printers (spec §4), so a full rack makes "buy a printer" a dead button.
+  if (allows(content, state.phaseId, 'BUY_PRINTER') && slotWithRoom(state, content) !== null) {
     for (const printer of content.printers) {
       if (affordable(nextPrinterCost(state, content, curves, printer.id))) {
         options.push('buy-printer');
+        break;
+      }
+    }
+  }
+
+  const unlock = nextSlotUnlock(state, content);
+  if (
+    allows(content, state.phaseId, 'BUY_SLOT') &&
+    unlock !== null &&
+    slotUnlockAvailability(state, content, unlock.id) === null &&
+    affordable(nextSlotCost(content, curves, unlock.id))
+  ) {
+    options.push('buy-slot');
+  }
+
+  if (allows(content, state.phaseId, 'CHOOSE_FORK')) {
+    for (const fork of content.forks) {
+      if (
+        forkAvailability(state, content, fork.id) === null &&
+        affordable(forkCost(content, curves, fork.id))
+      ) {
+        options.push('choose-fork');
         break;
       }
     }

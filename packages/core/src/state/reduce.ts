@@ -5,12 +5,15 @@ import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, tickAssembly } from '../systems/assembly.js';
 import {
   automationAvailability,
+  automationLevel,
   configureAutomation,
   purchaseAutomation,
   tickAutomation,
 } from '../systems/automation.js';
 import { grantPrinter, purchasePrinter, sellPartsFrom } from '../systems/economy.js';
 import { recycleScrapInto } from '../systems/failure.js';
+import { assignPrinters, slotRoom } from '../systems/fleet.js';
+import { commitFork, forkAvailability } from '../systems/forks.js';
 import { purchaseFilament, sellFilamentToMarket, tickMarket } from '../systems/market.js';
 import { getPhase, isActionAllowed, isPhaseReached, nextPhaseId } from '../systems/phases.js';
 import {
@@ -21,7 +24,9 @@ import {
   tickSlots,
   withSlot,
 } from '../systems/printing.js';
+import { changeoverAutomationDefs, queueEntriesResolve } from '../systems/queue.js';
 import { meetsRequirements } from '../systems/requirements.js';
+import { purchaseSlot, slotUnlockAvailability } from '../systems/slots.js';
 import {
   computeModifiers,
   isMaterialAvailable,
@@ -89,6 +94,14 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applySetAutomation(state, action, ctx);
     case 'RECYCLE_SCRAP':
       return applyRecycleScrap(state, action.materialId, action.grams, ctx);
+    case 'BUY_SLOT':
+      return applyBuySlot(state, action.unlockId, ctx);
+    case 'ASSIGN_PRINTER':
+      return applyAssignPrinter(state, action, ctx);
+    case 'SET_SLOT_QUEUE':
+      return applySetSlotQueue(state, action, ctx);
+    case 'CHOOSE_FORK':
+      return applyChooseFork(state, action.forkId, ctx);
   }
 }
 
@@ -379,6 +392,11 @@ function applyBuyPrinter(
   if (indexById(ctx.content.printers).get(printerId) === undefined) {
     return reject(ctx, state, 'BUY_PRINTER', 'unknown-target');
   }
+  // A bay holds only so many machines (spec §4): growing the fleet past that
+  // means buying another config slot, which is what makes slots cost money.
+  if (slotRoom(state, ctx.content, slot) <= 0) {
+    return reject(ctx, state, 'BUY_PRINTER', 'slot-full');
+  }
   const curves = createCurveRegistry(ctx.content.curves);
   const purchase = purchasePrinter(state, ctx.content, curves, printerId);
   if (purchase === null) {
@@ -466,6 +484,122 @@ function applySetAutomation(
     threshold: owned?.threshold ?? 0,
   });
   return configured;
+}
+
+// --- slots, fleet and the fork (spec §4, §5B) --------------------------------
+
+function applyBuySlot(state: GameState, unlockId: string, ctx: ReduceContext): GameState {
+  const blocked = slotUnlockAvailability(state, ctx.content, unlockId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'BUY_SLOT', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const purchase = purchaseSlot(state, ctx.content, curves, unlockId);
+  if (purchase === null) {
+    return reject(ctx, state, 'BUY_SLOT', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'SLOT_UNLOCKED',
+    simTimeMs: state.simTimeMs,
+    unlockId,
+    slotId: purchase.slotId,
+    slotCount: purchase.state.slots.length,
+    paid: purchase.cost.amount,
+  });
+  return purchase.state;
+}
+
+function applyAssignPrinter(
+  state: GameState,
+  action: Extract<Action, { type: 'ASSIGN_PRINTER' }>,
+  ctx: ReduceContext,
+): GameState {
+  const move = assignPrinters(state, ctx.content, action.fromSlotId, action.toSlotId, action.count);
+  if (typeof move === 'string') {
+    return reject(ctx, state, 'ASSIGN_PRINTER', move);
+  }
+  ctx.emit?.({
+    type: 'PRINTERS_ASSIGNED',
+    simTimeMs: state.simTimeMs,
+    fromSlotId: move.fromSlotId,
+    toSlotId: move.toSlotId,
+    moved: move.moved,
+  });
+  return move.state;
+}
+
+/**
+ * Write a rota onto a slot (spec §5B) and load its first entry.
+ *
+ * Every entry is checked against the same unlock rules a hand-driven
+ * `SET_SLOT_CONFIG` obeys, so a queue can never smuggle in a material the
+ * machine tree has not opened. Loading the head entry immediately is what makes
+ * "set the rota" one decision rather than two.
+ */
+function applySetSlotQueue(
+  state: GameState,
+  action: Extract<Action, { type: 'SET_SLOT_QUEUE' }>,
+  ctx: ReduceContext,
+): GameState {
+  const index = slotIndexOf(state, action.slotId);
+  const slot = state.slots.at(index);
+  if (index < 0 || slot === undefined) {
+    return reject(ctx, state, 'SET_SLOT_QUEUE', 'unknown-target');
+  }
+  if (!queueEntriesResolve(ctx.content, action.entries)) {
+    return reject(ctx, state, 'SET_SLOT_QUEUE', 'unknown-target');
+  }
+  for (const entry of action.entries) {
+    const availability = configAvailability(state, ctx.content, entry.materialId, entry.objectId);
+    if (availability !== null) {
+      return reject(ctx, state, 'SET_SLOT_QUEUE', availability);
+    }
+  }
+  // The rota is the automation's feature, not a free one: without the
+  // auto-changeover unit installed there is nothing to turn the queue.
+  const rotaOwned = changeoverAutomationDefs(ctx.content).some(
+    (def) => automationLevel(state, def.id) > 0,
+  );
+  if (!rotaOwned) {
+    return reject(ctx, state, 'SET_SLOT_QUEUE', 'missing-prerequisite');
+  }
+  const queued = withSlot(state, index, {
+    ...slot,
+    queue: action.entries,
+    queueIndex: 0,
+    queueBatches: 0,
+  });
+  ctx.emit?.({
+    type: 'SLOT_QUEUE_SET',
+    simTimeMs: state.simTimeMs,
+    slotId: action.slotId,
+    entries: action.entries.length,
+  });
+  const head = action.entries.at(0);
+  if (head === undefined) {
+    return queued;
+  }
+  return applySetSlotConfig(queued, action.slotId, head.materialId, head.objectId, ctx);
+}
+
+function applyChooseFork(state: GameState, forkId: string, ctx: ReduceContext): GameState {
+  const blocked = forkAvailability(state, ctx.content, forkId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'CHOOSE_FORK', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const choice = commitFork(state, ctx.content, curves, forkId);
+  if (choice === null) {
+    return reject(ctx, state, 'CHOOSE_FORK', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'FORK_CHOSEN',
+    simTimeMs: state.simTimeMs,
+    forkId: choice.def.id,
+    slotCapacity: choice.def.slotCapacity,
+    paid: choice.cost.amount,
+  });
+  return choice.state;
 }
 
 function applyRecycleScrap(

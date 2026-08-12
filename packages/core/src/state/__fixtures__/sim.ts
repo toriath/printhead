@@ -36,6 +36,9 @@ export function testSlot(over: Partial<SlotState> = {}): SlotState {
     run: null,
     failureCharge: 0,
     changeoverMs: 0,
+    queue: [],
+    queueIndex: 0,
+    queueBatches: 0,
     ...over,
   };
 }

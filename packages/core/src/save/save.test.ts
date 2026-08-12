@@ -5,6 +5,7 @@ import { createInitialState } from '../state/game-state.js';
 import fixtureV1 from './__fixtures__/save-v1.json' with { type: 'json' };
 import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
 import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
+import fixtureV4 from './__fixtures__/save-v4.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -50,10 +51,11 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
+    expect(fixtureV4.version).toBe(4);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -87,10 +89,29 @@ describe('save fixture corpus', () => {
     expect(loaded.stats.printsFailed).toBe(0);
   });
 
-  it('loads the released v3 fixture untouched', () => {
+  it('loads the released v3 fixture by migrating it forward', () => {
     const loaded = fromSaveFile(fixtureV3);
-    expect(loaded).toEqual(fixtureV3.state);
-    expect(loaded.stats.printsCompleted).toBeGreaterThan(0);
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    // Everything v3 knew about survives verbatim...
+    expect(loaded.stats.printsCompleted).toBe(fixtureV3.state.stats.printsCompleted);
+    expect(loaded.upgrades).toEqual(fixtureV3.state.upgrades);
+    expect(loaded.slots).toHaveLength(fixtureV3.state.slots.length);
+    // ...and everything M4 added starts empty: that save had no rota, and the
+    // run it describes never made the Farm/Goliath commitment.
+    expect(loaded.forkId).toBeNull();
+    expect(loaded.slots[0]?.queue).toEqual([]);
+    expect(loaded.slots[0]?.queueIndex).toBe(0);
+    expect(loaded.slots[0]?.queueBatches).toBe(0);
+  });
+
+  it('loads the released v4 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV4);
+    expect(loaded).toEqual(fixtureV4.state);
+    // The M4 shape the fixture exists to pin: a rack, a fleet spread across it,
+    // a print rota and a fork the run has already committed to.
+    expect(loaded.slots.length).toBeGreaterThan(1);
+    expect(loaded.forkId).not.toBeNull();
+    expect(loaded.slots.some((slot) => slot.queue.length > 0)).toBe(true);
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

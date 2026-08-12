@@ -74,10 +74,10 @@ describe('computeModifiers', () => {
 
   it('sums an add effect across levels', () => {
     const defs = withDefs([
-      fixtureDef({ effects: [{ type: 'configSlots', combine: 'add', value: 2 }] }),
+      fixtureDef({ effects: [{ type: 'machineTier', combine: 'add', value: 2 }] }),
     ]);
     const modifiers = computeModifiers(withUpgrades({ 'test-node': 2 }), defs);
-    expect(modifierOf(modifiers, 'configSlots', 0)).toBe(4);
+    expect(modifierOf(modifiers, 'machineTier', 0)).toBe(4);
   });
 
   it('takes the strongest node for a max effect, ignoring level', () => {

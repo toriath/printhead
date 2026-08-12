@@ -7,10 +7,20 @@ import type { GameState, SlotState } from '../state/game-state.js';
 import { assemblyPieces, isPieceReady, nextPiece } from '../systems/assembly.js';
 import { automationAvailability, nextAutomationCost } from '../systems/automation.js';
 import { hasRecycler, recyclerYield } from '../systems/failure.js';
+import { assignedPrinters, fleetCapacity, printersPerSlot } from '../systems/fleet.js';
+import { chosenFork, forkAvailability, forkCost } from '../systems/forks.js';
 import { quoteAll } from '../systems/market.js';
 import { getPhase } from '../systems/phases.js';
 import { bestPrinterTier, resolveSlotConfig, runProgress } from '../systems/printing.js';
+import { countPrinters } from '../systems/requirements.js';
 import { drawScrap } from '../systems/resources.js';
+import {
+  effectiveSlotCapacity,
+  hardSlotMaximum,
+  nextSlotCost,
+  nextSlotUnlock,
+  slotUnlockAvailability,
+} from '../systems/slots.js';
 import {
   type ModifierMap,
   computeModifiers,
@@ -21,9 +31,13 @@ import {
 import type {
   AssemblyVisual,
   AutomationVisual,
+  FleetVisual,
+  ForkVisual,
   LedgerVisual,
   MarketVisual,
+  QueueEntryVisual,
   RecyclerVisual,
+  SlotUnlockVisual,
   SlotVisual,
   UpgradeVisual,
   VisualState,
@@ -58,12 +72,35 @@ function phaseOffsetOf(index: number, total: number): number {
   return index / total;
 }
 
+function toQueueVisual(slot: SlotState, content: Content): readonly QueueEntryVisual[] {
+  const materials = indexById(content.materials);
+  const objects = indexById(content.objects);
+  const entries: QueueEntryVisual[] = [];
+  slot.queue.forEach((entry, index) => {
+    const material = materials.get(entry.materialId);
+    const object = objects.get(entry.objectId);
+    if (material === undefined || object === undefined) {
+      return;
+    }
+    entries.push({
+      materialId: material.id,
+      materialName: material.name,
+      objectId: object.id,
+      objectName: object.name,
+      batches: entry.batches,
+      current: index === slot.queueIndex,
+    });
+  });
+  return entries;
+}
+
 function toSlotVisual(
   slot: SlotState,
   content: Content,
   index: number,
   slotCount: number,
   machineTier: number,
+  printerCapacity: number,
 ): SlotVisual {
   const config = resolveSlotConfig(content, slot);
   const staffed = slot.printerCount > NONE;
@@ -81,6 +118,7 @@ function toSlotVisual(
     objectName: config?.object.name ?? null,
     machineTier: staffed ? machineTier : NONE,
     printerCount: slot.printerCount,
+    printerCapacity,
     phaseOffset: phaseOffsetOf(index, slotCount),
     occupied,
     running: slot.run !== null,
@@ -92,6 +130,59 @@ function toSlotVisual(
         ? clamp((purgeMs - slot.changeoverMs) / purgeMs, NONE, FULL)
         : NONE,
     failureRisk: clamp(slot.failureCharge / content.failure.model.chargeThreshold, NONE, FULL),
+    queue: toQueueVisual(slot, content),
+    queueBatches: slot.queueBatches,
+  };
+}
+
+/** The next bay on sale (spec §4), with the reason it is not, if it is not. */
+function toSlotUnlockVisual(state: GameState, content: Content): SlotUnlockVisual | null {
+  const def = nextSlotUnlock(state, content);
+  if (def === null) {
+    return null;
+  }
+  const curves = createCurveRegistry(content.curves);
+  const cost = nextSlotCost(content, curves, def.id);
+  const blocked = slotUnlockAvailability(state, content, def.id);
+  return {
+    unlockId: def.id,
+    name: def.name,
+    available: blocked === null,
+    affordable: cost !== null && affordable(state, cost.resource, cost.amount),
+    cost: cost?.amount ?? NONE,
+    costResource: cost?.resource ?? def.costResource,
+    blockedReason: blocked,
+  };
+}
+
+/** Both branches of the per-run fork (spec §5B) — one of them may be taken. */
+function toForkVisuals(state: GameState, content: Content): readonly ForkVisual[] {
+  const curves = createCurveRegistry(content.curves);
+  return content.forks.map((def) => {
+    const cost = forkCost(content, curves, def.id);
+    return {
+      forkId: def.id,
+      name: def.name,
+      description: def.description,
+      layout: def.visual,
+      chosen: state.forkId === def.id,
+      available: forkAvailability(state, content, def.id) === null,
+      affordable: cost !== null && affordable(state, cost.resource, cost.amount),
+      cost: cost?.amount ?? NONE,
+      costResource: cost?.resource ?? def.costResource,
+      requiredForFinalPrint: def.requiredForFinalPrint,
+    };
+  });
+}
+
+function toFleetVisual(state: GameState, content: Content, active: number): FleetVisual {
+  return {
+    printers: countPrinters(state),
+    assigned: assignedPrinters(state),
+    slotsOwned: state.slots.length,
+    slotsActive: active,
+    slotsMaximum: hardSlotMaximum(content),
+    printerCapacity: fleetCapacity(state, content, active),
   };
 }
 
@@ -217,17 +308,35 @@ function toRecyclerVisual(
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
   const machineTier = bestPrinterTier(state, content, modifiers);
+  const fork = chosenFork(state, content);
+  /*
+   * How many bays the workshop is actually running. Normally that is every bay
+   * the player owns; a Goliath run caps it at one, because the fork melted the
+   * fleet into a single machine (spec §5B). Slots past the cap are inert — the
+   * fork emptied them — so they are not projected at all rather than drawn as
+   * bays the player might try to use.
+   */
+  const active = effectiveSlotCapacity(state, content);
+  const shown = state.slots.slice(NONE, active);
+  const perSlot = printersPerSlot(state, content);
   return {
     version: VISUAL_STATE_VERSION,
     phaseId: state.phaseId,
     phaseName: getPhase(content.pacing.phases, state.phaseId).name,
     simTimeMs: state.simTimeMs,
-    slotCapacity: content.start.maxSlotCount,
-    // Every slot is projected, empty ones included: the "empty slot = faint
-    // outline" rule (spec §4) is the renderer drawing data, not inventing it.
-    slots: state.slots.map((slot, index) =>
-      toSlotVisual(slot, content, index, state.slots.length, machineTier),
+    // The rack is drawn to the hard maximum so the shape of what is still to
+    // come is legible (spec §4: empty bays as faint outlines) — except under
+    // Goliath, where there is exactly one machine and nothing else to show.
+    slotCapacity: fork?.slotCapacity ?? hardSlotMaximum(content),
+    goliath: fork?.visual === 'goliath',
+    // Every owned slot is projected, empty ones included: the "empty slot =
+    // faint outline" rule is the renderer drawing data, not inventing it.
+    slots: shown.map((slot, index) =>
+      toSlotVisual(slot, content, index, shown.length, machineTier, perSlot),
     ),
+    fleet: toFleetVisual(state, content, active),
+    slotUnlock: toSlotUnlockVisual(state, content),
+    forks: toForkVisuals(state, content),
     assembly: toAssemblyVisual(state, content),
     ledger: toLedgerVisual(state),
     market: toMarketVisual(state, content),

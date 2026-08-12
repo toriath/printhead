@@ -1,0 +1,34 @@
+[
+  {
+    "id": "slot-2",
+    "name": "Second config slot",
+    "costCurveId": "slot-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "farm",
+    "requiresUpgradeIds": [],
+    "requires": []
+  },
+  {
+    "id": "slot-3",
+    "name": "Third config slot",
+    "costCurveId": "slot-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "studio",
+    "requiresUpgradeIds": ["enclosure"],
+    "requires": []
+  },
+  {
+    "id": "slot-4",
+    "name": "Fourth config slot",
+    "costCurveId": "slot-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "prestige",
+    "requiresUpgradeIds": [],
+    "requires": [
+      {
+        "metric": "plates",
+        "atLeast": 1
+      }
+    ]
+  }
+]

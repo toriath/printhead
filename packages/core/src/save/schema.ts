@@ -95,7 +95,8 @@ export const GameStateV2Schema = z
 
 // --- v3 (M3) ----------------------------------------------------------------
 
-export const SlotStateSchema = SlotStateV2Schema.extend({
+/** v3 (M3) — kept for the frozen fixture; migrated to v4 by `migrations.ts`. */
+export const SlotStateV3Schema = SlotStateV2Schema.extend({
   failureCharge: NonNegative,
   changeoverMs: NonNegative,
 }).strict();
@@ -132,7 +133,7 @@ export const MarketLedgerSchema = z.record(z.string().min(1), MarketMaterialStat
 
 export const GameStateV3Schema = z
   .object({
-    saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+    saveVersion: z.literal(3),
     simTimeMs: NonNegative,
     tickCount: z.number().int().nonnegative(),
     phaseId: z.string().min(1),
@@ -146,14 +147,38 @@ export const GameStateV3Schema = z
     upgrades: UpgradeLedgerSchema,
     automation: AutomationLedgerSchema,
     market: MarketLedgerSchema,
-    slots: z.array(SlotStateSchema),
+    slots: z.array(SlotStateV3Schema),
     assembly: AssemblyStateSchema,
     stats: StatsStateSchema,
   })
   .strict();
 
+// --- v4 (M4) ----------------------------------------------------------------
+
+/** One entry of a slot's print rota (spec §5B). */
+export const SlotQueueEntrySchema = z
+  .object({
+    materialId: z.string().min(1),
+    objectId: z.string().min(1),
+    batches: z.number().int().positive(),
+  })
+  .strict();
+
+export const SlotStateSchema = SlotStateV3Schema.extend({
+  queue: z.array(SlotQueueEntrySchema),
+  queueIndex: z.number().int().nonnegative(),
+  queueBatches: z.number().int().nonnegative(),
+}).strict();
+
+export const GameStateV4Schema = GameStateV3Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  slots: z.array(SlotStateSchema),
+  /** The run's Farm/Goliath commitment (spec §5B); `null` until it is made. */
+  forkId: z.string().min(1).nullable(),
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV3Schema;
+export const GameStateSchema = GameStateV4Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -167,3 +192,4 @@ export type SaveFile = z.infer<typeof SaveFileSchema>;
 export type GameStateV1 = z.infer<typeof GameStateV1Schema>;
 export type GameStateV2 = z.infer<typeof GameStateV2Schema>;
 export type GameStateV3 = z.infer<typeof GameStateV3Schema>;
+export type GameStateV4 = z.infer<typeof GameStateV4Schema>;
