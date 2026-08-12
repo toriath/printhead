@@ -14,6 +14,7 @@ import {
   FIRST_OBJECT_ID,
   FIRST_SLOT_ID,
   TEST_CONTENT,
+  testSlot,
 } from './__fixtures__/sim.js';
 import type { Action } from './actions.js';
 import { buyFilament, buyPrinter, sellParts, setSlotConfig, startPrint, tick } from './actions.js';
@@ -123,14 +124,14 @@ function fullRack(seed: number): GameState {
   return {
     ...base,
     printers: { [printerId]: capacity },
-    slots: Array.from({ length: capacity }, (_unused, index) => ({
-      id: `${content.start.slotIdPrefix}-${index + 1}`,
-      materialId: FIRST_MATERIAL_ID,
-      objectId: FIRST_OBJECT_ID,
-      printerCount: 1,
-      autoRestart: false,
-      run: null,
-    })),
+    slots: Array.from({ length: capacity }, (_unused, index) =>
+      testSlot({
+        id: `${content.start.slotIdPrefix}-${index + 1}`,
+        materialId: FIRST_MATERIAL_ID,
+        objectId: FIRST_OBJECT_ID,
+        printerCount: 1,
+      }),
+    ),
   };
 }
 

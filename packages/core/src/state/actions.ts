@@ -46,10 +46,40 @@ export interface BuyFilamentAction {
   readonly grams: number;
 }
 
+export interface SellFilamentAction {
+  readonly type: 'SELL_FILAMENT';
+  readonly materialId: string;
+  readonly grams: number;
+}
+
 export interface BuyPrinterAction {
   readonly type: 'BUY_PRINTER';
   readonly printerId: string;
   readonly slotId: string;
+}
+
+export interface BuyUpgradeAction {
+  readonly type: 'BUY_UPGRADE';
+  readonly upgradeId: string;
+}
+
+export interface BuyAutomationAction {
+  readonly type: 'BUY_AUTOMATION';
+  readonly automationId: string;
+}
+
+export interface SetAutomationAction {
+  readonly type: 'SET_AUTOMATION';
+  readonly automationId: string;
+  readonly enabled?: boolean;
+  readonly threshold?: number;
+}
+
+export interface RecycleScrapAction {
+  readonly type: 'RECYCLE_SCRAP';
+  readonly materialId: string;
+  /** Grams of Scrap to feed the recycler; `null` feeds it everything. */
+  readonly grams: number | null;
 }
 
 export type Action =
@@ -60,7 +90,12 @@ export type Action =
   | StartPrintAction
   | SellPartsAction
   | BuyFilamentAction
-  | BuyPrinterAction;
+  | SellFilamentAction
+  | BuyPrinterAction
+  | BuyUpgradeAction
+  | BuyAutomationAction
+  | SetAutomationAction
+  | RecycleScrapAction;
 
 export type ActionType = Action['type'];
 
@@ -87,8 +122,33 @@ export const buyFilament = (materialId: string, grams: number): BuyFilamentActio
   materialId,
   grams,
 });
+export const sellFilament = (materialId: string, grams: number): SellFilamentAction => ({
+  type: 'SELL_FILAMENT',
+  materialId,
+  grams,
+});
 export const buyPrinter = (printerId: string, slotId: string): BuyPrinterAction => ({
   type: 'BUY_PRINTER',
   printerId,
   slotId,
+});
+export const buyUpgrade = (upgradeId: string): BuyUpgradeAction => ({
+  type: 'BUY_UPGRADE',
+  upgradeId,
+});
+export const buyAutomation = (automationId: string): BuyAutomationAction => ({
+  type: 'BUY_AUTOMATION',
+  automationId,
+});
+export const setAutomation = (
+  automationId: string,
+  changes: { readonly enabled?: boolean; readonly threshold?: number },
+): SetAutomationAction => ({ type: 'SET_AUTOMATION', automationId, ...changes });
+export const recycleScrap = (
+  materialId: string,
+  grams: number | null = null,
+): RecycleScrapAction => ({
+  type: 'RECYCLE_SCRAP',
+  materialId,
+  grams,
 });

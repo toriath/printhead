@@ -11,7 +11,30 @@
     "effects": [
       {
         "type": "failureChargeMultiplier",
+        "combine": "multiply",
         "value": 0.8
+      },
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "recycler",
+    "name": "Scrap recycler",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-machine",
+    "costResource": "parts",
+    "requiresUpgradeIds": [],
+    "unlockPhaseId": "bench",
+    "effects": [
+      {
+        "type": "recyclerYieldFraction",
+        "combine": "max",
+        "value": 0.6
       }
     ]
   },
@@ -27,7 +50,81 @@
     "effects": [
       {
         "type": "printSpeedMultiplier",
+        "combine": "multiply",
         "value": 1.15
+      }
+    ]
+  },
+  {
+    "id": "enclosure",
+    "name": "Enclosure",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-machine",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["heated-bed"],
+    "unlockPhaseId": "farm",
+    "effects": [
+      {
+        "type": "failureChargeMultiplier",
+        "combine": "multiply",
+        "value": 0.7
+      },
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "sla-unit",
+    "name": "SLA unit",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["enclosure"],
+    "unlockPhaseId": "farm",
+    "effects": [
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "sintering-head",
+    "name": "Sintering head",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["sla-unit"],
+    "unlockPhaseId": "prestige",
+    "effects": [
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "broker-licence",
+    "name": "Broker licence",
+    "tree": "automation",
+    "maxLevel": 2,
+    "costCurveId": "upgrade-cost-machine",
+    "costResource": "money",
+    "requiresUpgradeIds": [],
+    "unlockPhaseId": "farm",
+    "effects": [
+      {
+        "type": "marketFeeMultiplier",
+        "combine": "multiply",
+        "value": 0.7
       }
     ]
   },
@@ -39,10 +136,11 @@
     "costCurveId": "slot-cost",
     "costResource": "parts",
     "requiresUpgradeIds": [],
-    "unlockPhaseId": "farm",
+    "unlockPhaseId": "studio",
     "effects": [
       {
         "type": "configSlots",
+        "combine": "add",
         "value": 1
       }
     ]

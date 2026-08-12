@@ -8,7 +8,7 @@
       "id": "intro",
       "name": "Intro",
       "budgetDesignMinutes": 5,
-      "waitWallBudgetDesignMinutes": 0.5,
+      "waitWallBudgetDesignMinutes": 0.6,
       "allowedActions": ["ATTACH_PIECE", "SET_SLOT_CONFIG", "START_PRINT", "SELL_PARTS"],
       "advanceWhen": [
         { "metric": "assemblyProgress", "atLeast": 1 },
@@ -20,41 +20,63 @@
       "id": "bench",
       "name": "Bench",
       "budgetDesignMinutes": 30,
-      "waitWallBudgetDesignMinutes": 2,
+      "waitWallBudgetDesignMinutes": 3,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "printers", "atLeast": 4 }]
+      "advanceWhen": [
+        { "metric": "printers", "atLeast": 4 },
+        { "metric": "upgradesInstalled", "atLeast": 2 },
+        { "metric": "scrapRecycledGrams", "atLeast": 1 }
+      ]
     },
     {
       "id": "farm",
       "name": "Farm",
       "budgetDesignMinutes": 80,
-      "waitWallBudgetDesignMinutes": 4,
+      "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
-      "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 80 }]
+      "advanceWhen": [
+        { "metric": "printers", "atLeast": 8 },
+        { "metric": "automationsInstalled", "atLeast": 2 }
+      ]
     },
     {
       "id": "studio",
       "name": "Studio",
       "budgetDesignMinutes": 75,
-      "waitWallBudgetDesignMinutes": 4,
+      "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
       "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 75 }]
     },
@@ -62,13 +84,18 @@
       "id": "prestige",
       "name": "Prestige runs 1-2",
       "budgetDesignMinutes": 90,
-      "waitWallBudgetDesignMinutes": 5,
+      "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
       "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 90 }]
     },
@@ -76,13 +103,18 @@
       "id": "absurd",
       "name": "The Absurd",
       "budgetDesignMinutes": 80,
-      "waitWallBudgetDesignMinutes": 5,
+      "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
       "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 80 }]
     },
@@ -90,13 +122,18 @@
       "id": "end",
       "name": "The End",
       "budgetDesignMinutes": 60,
-      "waitWallBudgetDesignMinutes": 6,
+      "waitWallBudgetDesignMinutes": 8,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "SELL_PARTS",
         "BUY_FILAMENT",
-        "BUY_PRINTER"
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
       ],
       "advanceWhen": [{ "metric": "phaseDesignMinutes", "atLeast": 60 }]
     }

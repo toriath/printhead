@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MaterialDef, ObjectDef } from '../content/schema.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
-import { TEST_CONTENT } from '../state/__fixtures__/sim.js';
+import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
 import {
   type SlotConfig,
@@ -22,6 +22,8 @@ import {
 
 const content = TEST_CONTENT;
 const base = createInitialState(content, { seed: 1 });
+/** Nothing installed: the fleet's own numbers, unmodified. */
+const bare = new Map<never, never>();
 
 const material = (over: Partial<MaterialDef> = {}): MaterialDef =>
   ({ ...content.materials[0], ...over }) as MaterialDef;
@@ -33,50 +35,41 @@ const config = (over: { material?: Partial<MaterialDef>; object?: Partial<Object
 
 describe('resolveSlotConfig', () => {
   it('resolves a configured slot to its defs', () => {
-    const slot = { ...base.slots[0], materialId: 'pla', objectId: 'bracket' };
-    const resolved = resolveSlotConfig(content, {
-      id: 'slot-1',
-      printerCount: 1,
-      autoRestart: false,
-      run: null,
-      ...slot,
-      materialId: 'pla',
-      objectId: 'bracket',
-    });
+    const resolved = resolveSlotConfig(
+      content,
+      testSlot({ printerCount: 1, materialId: 'pla', objectId: 'bracket' }),
+    );
     expect(resolved?.material.id).toBe('pla');
     expect(resolved?.object.id).toBe('bracket');
   });
 
   it('is null for an unconfigured or dangling slot', () => {
-    const empty = { id: 'slot-1', printerCount: 0, autoRestart: false, run: null };
+    expect(resolveSlotConfig(content, testSlot({ objectId: 'bracket' }))).toBeNull();
+    expect(resolveSlotConfig(content, testSlot({ materialId: 'pla' }))).toBeNull();
     expect(
-      resolveSlotConfig(content, { ...empty, materialId: null, objectId: 'bracket' }),
-    ).toBeNull();
-    expect(resolveSlotConfig(content, { ...empty, materialId: 'pla', objectId: null })).toBeNull();
-    expect(
-      resolveSlotConfig(content, { ...empty, materialId: 'ghost', objectId: 'bracket' }),
+      resolveSlotConfig(content, testSlot({ materialId: 'ghost', objectId: 'bracket' })),
     ).toBeNull();
     expect(
-      resolveSlotConfig(content, { ...empty, materialId: 'pla', objectId: 'ghost' }),
+      resolveSlotConfig(content, testSlot({ materialId: 'pla', objectId: 'ghost' })),
     ).toBeNull();
   });
 });
 
 describe('the owned fleet decides tier and speed', () => {
   it('is zero when nothing is owned', () => {
-    expect(bestPrinterTier(base, content)).toBe(0);
-    expect(bestSpeedMultiplier(base, content)).toBe(0);
+    expect(bestPrinterTier(base, content, bare)).toBe(0);
+    expect(bestSpeedMultiplier(base, content, bare)).toBe(0);
   });
 
   it('takes the best machine, not the last or the sum', () => {
     const owned = { ...base, printers: { 'bench-mk1': 3 } };
     const printer = content.printers[0];
-    expect(bestPrinterTier(owned, content)).toBe(printer?.machineTier);
-    expect(bestSpeedMultiplier(owned, content)).toBe(printer?.speedMultiplier);
+    expect(bestPrinterTier(owned, content, bare)).toBe(printer?.machineTier);
+    expect(bestSpeedMultiplier(owned, content, bare)).toBe(printer?.speedMultiplier);
   });
 
   it('ignores printer defs that are not owned', () => {
-    expect(bestPrinterTier({ ...base, printers: { 'bench-mk1': 0 } }, content)).toBe(0);
+    expect(bestPrinterTier({ ...base, printers: { 'bench-mk1': 0 } }, content, bare)).toBe(0);
   });
 });
 
@@ -122,7 +115,7 @@ describe('batching', () => {
       object: { partsYield: 2, basePartValue: 3 },
       material: { valueMultiplier: 1.5 },
     });
-    expect(batchYield(c, 4)).toEqual({ parts: 8, value: 8 * 3 * 1.5 });
+    expect(batchYield(c, 4, 1)).toEqual({ parts: 8, value: 8 * 3 * 1.5 });
   });
 });
 
@@ -191,14 +184,7 @@ describe('slot addressing', () => {
   });
 
   it('replaces exactly one slot and leaves the rest identical', () => {
-    const second: SlotState = {
-      id: 'slot-2',
-      materialId: null,
-      objectId: null,
-      printerCount: 0,
-      autoRestart: false,
-      run: null,
-    };
+    const second: SlotState = testSlot({ id: 'slot-2' });
     const two: GameState = { ...base, slots: [...base.slots, second] };
     const next = withSlot(two, 1, { ...second, printerCount: 7 });
     expect(next.slots[1]?.printerCount).toBe(7);

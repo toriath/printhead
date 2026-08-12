@@ -1,6 +1,8 @@
 import type { Content, Metric, Requirement } from '../content/schema.js';
 import { MS_PER_MINUTE } from '../engine/constants.js';
 import type { GameState } from '../state/game-state.js';
+import { countAutomations } from './automation.js';
+import { countUpgrades } from './upgrades.js';
 
 /**
  * Data-driven progression gates (spec §11/§15). Content names a metric and a
@@ -47,10 +49,20 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.stats.partsSold;
     case 'printsCompleted':
       return state.stats.printsCompleted;
+    case 'printsFailed':
+      return state.stats.printsFailed;
     case 'piecesAttached':
       return state.assembly.attachedPieceIds.length;
     case 'assemblyProgress':
       return assemblyProgress(state, content);
+    case 'upgradesInstalled':
+      return countUpgrades(state);
+    case 'automationsInstalled':
+      return countAutomations(state);
+    case 'scrapRecycledGrams':
+      return state.stats.scrapRecycledGrams;
+    case 'filamentTradedGrams':
+      return state.stats.filamentPurchasedGrams + state.stats.filamentSoldGrams;
     case 'phaseDesignMinutes':
       return phaseDesignMinutes(state);
     case 'totalDesignMinutes':

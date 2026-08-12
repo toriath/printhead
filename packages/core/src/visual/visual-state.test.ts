@@ -6,6 +6,7 @@ import {
   TEST_CONTENT,
   assemblePrinter,
   createSim,
+  testSlot,
 } from '../state/__fixtures__/sim.js';
 import { setSlotConfig, startPrint, tick } from '../state/actions.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
@@ -153,14 +154,11 @@ describe('toVisualState', () => {
     const configured: GameState = {
       ...state,
       slots: [
-        {
+        testSlot({
           id: FIRST_SLOT_ID,
           materialId: FIRST_MATERIAL_ID,
           objectId: FIRST_OBJECT_ID,
-          printerCount: 0,
-          autoRestart: false,
-          run: null,
-        },
+        }),
       ],
     };
     expect(toVisualState(configured, content).slots[0]).toMatchObject({
@@ -200,14 +198,8 @@ describe('toVisualState', () => {
   });
 
   it('gives each slot a distinct animation offset without rng or clock', () => {
-    const occupied = (id: string): SlotState => ({
-      id,
-      materialId: FIRST_MATERIAL_ID,
-      objectId: FIRST_OBJECT_ID,
-      printerCount: 1,
-      autoRestart: false,
-      run: null,
-    });
+    const occupied = (id: string): SlotState =>
+      testSlot({ id, materialId: FIRST_MATERIAL_ID, objectId: FIRST_OBJECT_ID, printerCount: 1 });
     const configured: GameState = {
       ...state,
       printers: { [content.start.printerId]: 2 },

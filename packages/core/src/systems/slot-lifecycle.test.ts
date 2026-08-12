@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Content } from '../content/schema.js';
 import { collectEvents } from '../events/bus.js';
-import { TEST_CONTENT } from '../state/__fixtures__/sim.js';
+import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
 import { beginRun, tickSlots } from './printing.js';
 
@@ -19,15 +19,8 @@ const object = content.objects[0];
 const RUN_MS = (object?.printDesignSeconds ?? 12) * 1000;
 const PER_PRINT_GRAMS = object?.filamentGrams ?? 4;
 
-const slot = (over: Partial<SlotState> = {}): SlotState => ({
-  id: 'slot-1',
-  materialId,
-  objectId,
-  printerCount: 1,
-  autoRestart: false,
-  run: null,
-  ...over,
-});
+const slot = (over: Partial<SlotState> = {}): SlotState =>
+  testSlot({ materialId, objectId, printerCount: 1, ...over });
 
 const world = (over: Partial<GameState> = {}, slotOver: Partial<SlotState> = {}): GameState => ({
   ...createInitialState(content, { seed: 1 }),

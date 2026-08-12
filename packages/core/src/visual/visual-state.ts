@@ -3,6 +3,7 @@ import type { GameState, SlotState } from '../state/game-state.js';
 import { assemblyPieces, isPieceReady, nextPiece } from '../systems/assembly.js';
 import { getPhase } from '../systems/phases.js';
 import { bestPrinterTier, resolveSlotConfig, runProgress } from '../systems/printing.js';
+import { computeModifiers } from '../systems/upgrades.js';
 import type { AssemblyVisual, LedgerVisual, SlotVisual, VisualState } from './schema.js';
 import { VISUAL_STATE_VERSION } from './schema.js';
 
@@ -85,7 +86,8 @@ function toLedgerVisual(state: GameState): LedgerVisual {
 }
 
 export function toVisualState(state: GameState, content: Content): VisualState {
-  const machineTier = bestPrinterTier(state, content);
+  const modifiers = computeModifiers(state, content);
+  const machineTier = bestPrinterTier(state, content, modifiers);
   return {
     version: VISUAL_STATE_VERSION,
     phaseId: state.phaseId,

@@ -4,14 +4,30 @@ import { createCurveRegistry } from '../curves/evaluate.js';
 import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, tickAssembly } from '../systems/assembly.js';
 import {
-  grantPrinter,
-  purchaseFilament,
-  purchasePrinter,
-  sellPartsFrom,
-} from '../systems/economy.js';
+  automationAvailability,
+  configureAutomation,
+  purchaseAutomation,
+  tickAutomation,
+} from '../systems/automation.js';
+import { grantPrinter, purchasePrinter, sellPartsFrom } from '../systems/economy.js';
+import { recycleScrapInto } from '../systems/failure.js';
+import { purchaseFilament, sellFilamentToMarket, tickMarket } from '../systems/market.js';
 import { getPhase, isActionAllowed, isPhaseReached, nextPhaseId } from '../systems/phases.js';
-import { beginRun, slotIndexOf, tickSlots, withSlot } from '../systems/printing.js';
+import {
+  applyChangeover,
+  beginRun,
+  resolveSlotConfig,
+  slotIndexOf,
+  tickSlots,
+  withSlot,
+} from '../systems/printing.js';
 import { meetsRequirements } from '../systems/requirements.js';
+import {
+  computeModifiers,
+  isMaterialAvailable,
+  purchaseUpgrade,
+  upgradeAvailability,
+} from '../systems/upgrades.js';
 import type { Action, GatedAction } from './actions.js';
 import type { GameState, ReduceContext } from './game-state.js';
 
@@ -61,13 +77,34 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applySellParts(state, action.count, ctx);
     case 'BUY_FILAMENT':
       return applyBuyFilament(state, action.materialId, action.grams, ctx);
+    case 'SELL_FILAMENT':
+      return applySellFilament(state, action.materialId, action.grams, ctx);
     case 'BUY_PRINTER':
       return applyBuyPrinter(state, action.printerId, action.slotId, ctx);
+    case 'BUY_UPGRADE':
+      return applyBuyUpgrade(state, action.upgradeId, ctx);
+    case 'BUY_AUTOMATION':
+      return applyBuyAutomation(state, action.automationId, ctx);
+    case 'SET_AUTOMATION':
+      return applySetAutomation(state, action, ctx);
+    case 'RECYCLE_SCRAP':
+      return applyRecycleScrap(state, action.materialId, action.grams, ctx);
   }
 }
 
 // --- TICK -------------------------------------------------------------------
 
+/**
+ * One fixed timestep. The order is fixed and load-bearing, because it is what
+ * makes a replay reproducible:
+ *
+ *   assembly → printers → market drift → automation → phase FSM
+ *
+ * Automation runs *after* the market has drifted and the printers have paid
+ * out, so a bot inside the machine sees exactly the world a player checking in
+ * at that instant would see. The FSM runs last, so a phase can only advance on
+ * a fully settled state.
+ */
 function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameState {
   if (!Number.isFinite(simDtMs) || simDtMs < 0) {
     throw new RangeError(`TICK simDtMs must be non-negative, received ${simDtMs}`);
@@ -78,7 +115,10 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
     tickCount: state.tickCount + 1,
     assembly: tickAssembly(state.assembly, simDtMs),
   };
-  return advanceWhileReady(tickSlots(clocked, ctx.content, simDtMs, ctx.emit), ctx);
+  const printed = tickSlots(clocked, ctx.content, simDtMs, ctx.emit);
+  const traded = tickMarket(printed, ctx.content, simDtMs);
+  const automated = tickAutomation(traded, ctx.content, simDtMs, ctx.emit);
+  return advanceWhileReady(automated, ctx);
 }
 
 // --- phase FSM --------------------------------------------------------------
@@ -174,22 +214,31 @@ function applySetSlotConfig(
   if (index < 0 || slot === undefined) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
   }
-  const availability = configAvailability(ctx.content, materialId, objectId, state.phaseId);
+  const availability = configAvailability(state, ctx.content, materialId, objectId);
   if (availability !== null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', availability);
   }
-  if (slot.run !== null) {
-    // Changeover on a running slot costs time and filament — that is M3.
+  if (slot.run !== null || slot.changeoverMs > 0) {
+    // A print in flight (or a purge already running) has to finish first.
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
   }
+  const config = resolveSlotConfig(ctx.content, { ...slot, materialId, objectId });
+  if (config === null) {
+    return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
+  }
+  // Changeover: a new material costs downtime and purges the outgoing spool
+  // (spec §3). Swapping only the object is free — the nozzle never changes.
+  const { state: purged, changeover } = applyChangeover(state, slot, config);
   ctx.emit?.({
     type: 'SLOT_CONFIGURED',
     simTimeMs: state.simTimeMs,
     slotId,
     materialId,
     objectId,
+    downtimeMs: changeover.downtimeMs,
+    purgedGrams: changeover.purgedGrams,
   });
-  return withSlot(state, index, { ...slot, materialId, objectId });
+  return withSlot(purged, index, changeover.slot);
 }
 
 /**
@@ -201,20 +250,20 @@ function applySetSlotConfig(
  * behind an expected rejection.
  */
 function configAvailability(
+  state: GameState,
   content: Content,
   materialId: string,
   objectId: string,
-  phaseId: string,
 ): ActionRejectedReason | null {
   const material = indexById(content.materials).get(materialId);
   const object = indexById(content.objects).get(objectId);
   if (material === undefined || object === undefined) {
     return 'unknown-target';
   }
-  const phases = content.pacing.phases;
   const unlocked =
-    isPhaseReached(phases, phaseId, material.unlockPhaseId) &&
-    isPhaseReached(phases, phaseId, object.unlockPhaseId);
+    // Materials are gated by the machine tree as well as by the phase (spec §3).
+    isMaterialAvailable(state, content, materialId) &&
+    isPhaseReached(content.pacing.phases, state.phaseId, object.unlockPhaseId);
   return unlocked ? null : 'locked';
 }
 
@@ -224,7 +273,7 @@ function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): 
   if (index < 0 || slot === undefined) {
     return reject(ctx, state, 'START_PRINT', 'unknown-target');
   }
-  if (slot.run !== null) {
+  if (slot.run !== null || slot.changeoverMs > 0) {
     return reject(ctx, state, 'START_PRINT', 'slot-busy');
   }
   const started = beginRun(state, ctx.content, index, 0, ctx.emit);
@@ -259,6 +308,9 @@ function applyBuyFilament(
   if (indexById(ctx.content.materials).get(materialId) === undefined) {
     return reject(ctx, state, 'BUY_FILAMENT', 'unknown-target');
   }
+  if (!isMaterialAvailable(state, ctx.content, materialId)) {
+    return reject(ctx, state, 'BUY_FILAMENT', 'locked');
+  }
   const purchase = purchaseFilament(state, ctx.content, materialId, grams);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_FILAMENT', 'insufficient-resources');
@@ -267,10 +319,38 @@ function applyBuyFilament(
     type: 'FILAMENT_PURCHASED',
     simTimeMs: state.simTimeMs,
     materialId,
-    grams,
-    money: purchase.cost,
+    grams: purchase.grams,
+    money: purchase.money,
   });
   return purchase.state;
+}
+
+function applySellFilament(
+  state: GameState,
+  materialId: string,
+  grams: number,
+  ctx: ReduceContext,
+): GameState {
+  const material = indexById(ctx.content.materials).get(materialId);
+  if (material === undefined) {
+    return reject(ctx, state, 'SELL_FILAMENT', 'unknown-target');
+  }
+  if (!ctx.content.market.listings.some((listing) => listing.materialId === materialId)) {
+    return reject(ctx, state, 'SELL_FILAMENT', 'not-tradeable');
+  }
+  const sale = sellFilamentToMarket(state, ctx.content, materialId, grams);
+  if (sale === null) {
+    return reject(ctx, state, 'SELL_FILAMENT', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'FILAMENT_SOLD',
+    simTimeMs: state.simTimeMs,
+    materialId,
+    grams: sale.grams,
+    money: sale.money,
+    pricePerGram: sale.pricePerGram,
+  });
+  return sale.state;
 }
 
 function applyBuyPrinter(
@@ -309,4 +389,90 @@ function applyBuyPrinter(
     paid: purchase.cost.amount,
   });
   return assigned;
+}
+
+// --- upgrades and automation ------------------------------------------------
+
+function applyBuyUpgrade(state: GameState, upgradeId: string, ctx: ReduceContext): GameState {
+  const blocked = upgradeAvailability(state, ctx.content, upgradeId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'BUY_UPGRADE', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const purchase = purchaseUpgrade(state, ctx.content, curves, upgradeId);
+  if (purchase === null) {
+    return reject(ctx, state, 'BUY_UPGRADE', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'UPGRADE_INSTALLED',
+    simTimeMs: state.simTimeMs,
+    upgradeId,
+    level: purchase.level,
+    paid: purchase.cost.amount,
+  });
+  return purchase.state;
+}
+
+function applyBuyAutomation(state: GameState, automationId: string, ctx: ReduceContext): GameState {
+  const blocked = automationAvailability(state, ctx.content, automationId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'BUY_AUTOMATION', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const purchase = purchaseAutomation(state, ctx.content, curves, automationId);
+  if (purchase === null) {
+    return reject(ctx, state, 'BUY_AUTOMATION', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'AUTOMATION_INSTALLED',
+    simTimeMs: state.simTimeMs,
+    automationId,
+    level: purchase.level,
+    paid: purchase.cost.amount,
+  });
+  return purchase.state;
+}
+
+function applySetAutomation(
+  state: GameState,
+  action: Extract<Action, { type: 'SET_AUTOMATION' }>,
+  ctx: ReduceContext,
+): GameState {
+  const configured = configureAutomation(state, action.automationId, {
+    ...(action.enabled === undefined ? {} : { enabled: action.enabled }),
+    ...(action.threshold === undefined ? {} : { threshold: action.threshold }),
+  });
+  if (configured === null) {
+    return reject(ctx, state, 'SET_AUTOMATION', 'unknown-target');
+  }
+  const owned = configured.automation[action.automationId];
+  ctx.emit?.({
+    type: 'AUTOMATION_CONFIGURED',
+    simTimeMs: state.simTimeMs,
+    automationId: action.automationId,
+    enabled: owned?.enabled ?? false,
+    threshold: owned?.threshold ?? 0,
+  });
+  return configured;
+}
+
+function applyRecycleScrap(
+  state: GameState,
+  materialId: string,
+  grams: number | null,
+  ctx: ReduceContext,
+): GameState {
+  const modifiers = computeModifiers(state, ctx.content);
+  const result = recycleScrapInto(state, ctx.content, modifiers, materialId, grams);
+  if (typeof result === 'string') {
+    return reject(ctx, state, 'RECYCLE_SCRAP', result);
+  }
+  ctx.emit?.({
+    type: 'SCRAP_RECYCLED',
+    simTimeMs: state.simTimeMs,
+    materialId,
+    scrapGrams: result.scrapGrams,
+    filamentGrams: result.filamentGrams,
+  });
+  return result.state;
 }

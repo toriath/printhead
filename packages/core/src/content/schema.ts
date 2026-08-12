@@ -48,7 +48,12 @@ export const GatedActionTypeSchema = z.enum([
   'START_PRINT',
   'SELL_PARTS',
   'BUY_FILAMENT',
+  'SELL_FILAMENT',
   'BUY_PRINTER',
+  'BUY_UPGRADE',
+  'BUY_AUTOMATION',
+  'SET_AUTOMATION',
+  'RECYCLE_SCRAP',
 ]);
 
 /**
@@ -64,8 +69,13 @@ export const MetricSchema = z.enum([
   'partsProduced',
   'partsSold',
   'printsCompleted',
+  'printsFailed',
   'piecesAttached',
   'assemblyProgress',
+  'upgradesInstalled',
+  'automationsInstalled',
+  'scrapRecycledGrams',
+  'filamentTradedGrams',
   'phaseDesignMinutes',
   'totalDesignMinutes',
 ]);
@@ -155,19 +165,48 @@ export const StartFileSchema = z
 
 // --- materials.json ---------------------------------------------------------
 
+/**
+ * Material identity (spec §3). One mechanical personality per material,
+ * expressed entirely in the numbers below — the label is what the editor shows
+ * and what a reader of the JSON can recognise the row by.
+ */
+export const MaterialIdentitySchema = z.enum([
+  'cheap-and-infinite',
+  'balanced-workhorse',
+  'fine-detail',
+  'structural',
+  'exotic',
+]);
+
+/**
+ * How a material is obtained. This is the Strategy selector of spec §15 for
+ * pricing: `infinite` is always in stock at its flat `costPerGram` (PLA is
+ * ~free and unlimited), `market` is priced and stock-limited by `market.json`,
+ * and `printed` cannot be bought at all — late-game filament you make yourself.
+ */
+export const MaterialSupplySchema = z.enum(['infinite', 'market', 'printed']);
+
 export const MaterialDefSchema = z
   .object({
     id: IdSchema,
     name: z.string().min(1),
-    identity: z.string().min(1),
+    identity: MaterialIdentitySchema,
     qualityTier: z.number().int().positive(),
-    supply: z.enum(['infinite', 'market', 'printed']),
+    supply: MaterialSupplySchema,
     costPerGram: NonNegative,
     printSpeedMultiplier: Multiplier,
+    /** Pity charge each print in this material adds (spec §7.1). */
     failureChargePerPrint: Fraction,
+    /** Share of a failed print's filament that comes back as Scrap. */
     scrapRecoveryFraction: Fraction,
     valueMultiplier: Multiplier,
+    /** Design-seconds a slot is out of action when switching *to* it (spec §3). */
+    changeoverDesignSeconds: NonNegative,
+    /** Filament purged from the *outgoing* spool by that switch (spec §3). */
+    changeoverWasteGrams: NonNegative,
     unlockPhaseId: IdSchema,
+    /** Machine node that must be installed first — `null` for the starters. */
+    requiresUpgradeId: IdSchema.nullable(),
   })
   .strict();
 
@@ -209,14 +248,33 @@ export const PrintersFileSchema = z.array(PrinterDefSchema).min(1);
 
 // --- upgrades.json ----------------------------------------------------------
 
+/**
+ * Upgrade effects (spec §5). Every node in every tree is expressed as a list of
+ * these, and `systems/upgrades.ts` is the single generic interpreter that folds
+ * the installed levels into a modifier set. Adding a node is a JSON edit; only
+ * a genuinely new *kind* of effect touches code.
+ *
+ * `combine` says how levels and nodes stack, so the interpreter never has to
+ * know what a particular effect means:
+ * - `multiply` — the values of every installed level are multiplied together
+ *   (speed, failure charge, yield).
+ * - `add` — summed (extra config slots).
+ * - `max` — the strongest node wins (the recycler's yield, machine tier).
+ */
+export const UpgradeEffectTypeSchema = z.enum([
+  'failureChargeMultiplier',
+  'printSpeedMultiplier',
+  'partsYieldMultiplier',
+  'configSlots',
+  'machineTier',
+  'recyclerYieldFraction',
+  'marketFeeMultiplier',
+]);
+
 export const UpgradeEffectSchema = z
   .object({
-    type: z.enum([
-      'failureChargeMultiplier',
-      'printSpeedMultiplier',
-      'partsYieldMultiplier',
-      'configSlots',
-    ]),
+    type: UpgradeEffectTypeSchema,
+    combine: z.enum(['multiply', 'add', 'max']),
     value: z.number().finite(),
   })
   .strict();
@@ -268,38 +326,141 @@ export const MarketListingSchema = z
   })
   .strict();
 
+export const MarketModelSchema = z
+  .object({
+    /** Strategy selector (spec §15) interpreted by `systems/market.ts`. */
+    strategy: z.enum(['sine-noise-supply', 'flat']),
+    periodDesignMinutes: Positive,
+    sineAmplitude: Fraction,
+    noiseAmplitude: Fraction,
+    /** Design minutes one pseudo-random noise sample holds for. */
+    noiseStepDesignMinutes: Positive,
+    /** How hard net player trading pushes the price around (spec §7.2). */
+    supplyResponse: Fraction,
+    /** Grams of net trade that move pressure by a full unit. */
+    pressureScaleGrams: Positive,
+    /** Share of the remaining pressure that decays each design minute. */
+    pressureDecayPerDesignMinute: Fraction,
+    minPriceMultiplier: Multiplier,
+    maxPriceMultiplier: Multiplier,
+    /**
+     * The spread the house keeps: you buy at the price and sell at
+     * `price × (1 − spread)`. This is what makes a buy/sell round-trip a loss
+     * rather than a money printer (spec §13, "round-trips never create value").
+     */
+    spread: Fraction,
+  })
+  .strict()
+  .refine((model) => model.maxPriceMultiplier >= model.minPriceMultiplier, {
+    message: 'maxPriceMultiplier must be at least minPriceMultiplier',
+    path: ['maxPriceMultiplier'],
+  });
+
 export const MarketFileSchema = z
   .object({
-    model: z
-      .object({
-        strategy: z.enum(['sine-noise-supply', 'flat']),
-        periodDesignMinutes: Positive,
-        sineAmplitude: Fraction,
-        noiseAmplitude: Fraction,
-        supplyResponse: Fraction,
-        minPriceMultiplier: Multiplier,
-        maxPriceMultiplier: Multiplier,
-      })
-      .strict(),
+    model: MarketModelSchema,
     listings: z.array(MarketListingSchema).min(1),
   })
   .strict();
 
 // --- automation.json --------------------------------------------------------
 
-export const AutomationDefSchema = z
+/**
+ * Automation (spec §5C): introduce friction, then sell its removal. Each def is
+ * a *behaviour* plus the numbers that behaviour needs, as a discriminated union
+ * so the schema itself rules out an auto-seller with trading thresholds. The
+ * interpreter in `systems/automation.ts` switches on `behavior` — the Strategy
+ * pattern of spec §15, selected by content.
+ */
+const AutomationBase = {
+  id: IdSchema,
+  name: z.string().min(1),
+  costCurveId: IdSchema,
+  costResource: ResourceKindSchema,
+  unlockPhaseId: IdSchema,
+  requiresUpgradeIds: z.array(IdSchema),
+  /** Tier-1 automations are a single install; later tiers can raise this. */
+  maxLevel: z.number().int().positive(),
+  /** Design-seconds between firings — the bot inside the machine's check-in. */
+  intervalDesignSeconds: Positive,
+};
+
+export const SellPartsAutomationSchema = z
   .object({
-    id: IdSchema,
-    name: z.string().min(1),
-    costCurveId: IdSchema,
-    costResource: ResourceKindSchema,
-    unlockPhaseId: IdSchema,
-    intervalDesignSeconds: Positive,
+    ...AutomationBase,
+    behavior: z.literal('sell-parts'),
+    /** Sell once the parts pile reaches this many. Player-editable. */
     defaultThreshold: NonNegative,
   })
   .strict();
 
+export const BuyFilamentAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('buy-filament'),
+    /** Top the loaded material back up to this many grams. */
+    defaultThreshold: NonNegative,
+    /** Never spend the last of the till: keep this much money in reserve. */
+    moneyReserve: NonNegative,
+  })
+  .strict();
+
+export const TradeFilamentAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('trade-filament'),
+    /** Grams moved per firing. */
+    defaultThreshold: Positive,
+    /** Buy when the price multiplier is below this. */
+    buyBelowMultiplier: Multiplier,
+    /** Sell when it is above this. */
+    sellAboveMultiplier: Multiplier,
+    /** Never hold more than this many grams of a traded material. */
+    maxHoldingGrams: Positive,
+  })
+  .strict();
+
+export const AutomationDefSchema = z.discriminatedUnion('behavior', [
+  SellPartsAutomationSchema,
+  BuyFilamentAutomationSchema,
+  TradeFilamentAutomationSchema,
+]);
+
 export const AutomationFileSchema = z.array(AutomationDefSchema).min(1);
+
+// --- failure.json -----------------------------------------------------------
+
+/**
+ * The failure model (spec §7.1): a **deterministic pity timer**, not a dice
+ * roll. Every print adds `material.failureChargePerPrint × modifiers` to the
+ * slot's charge; when the charge crosses `chargeThreshold` the *next* print
+ * fails and the threshold is subtracted. A player can therefore predict — and
+ * an upgrade can visibly reduce — how often the workshop wastes a spool.
+ *
+ * The recycler is the consolation loop: Scrap converts back into filament at
+ * `recycler.yieldFraction` of the value it carried in, which is strictly less
+ * than one, so recycling can never mint value (spec §13).
+ */
+export const FailureFileSchema = z
+  .object({
+    model: z
+      .object({
+        strategy: z.enum(['pity-timer', 'never']),
+        chargeThreshold: Positive,
+        /** Charge left on the slot after a failure, as a share of the threshold. */
+        carryFraction: Fraction,
+      })
+      .strict(),
+    recycler: z
+      .object({
+        /** Machine node that must be installed before Scrap can be recycled. */
+        requiresUpgradeId: IdSchema,
+        /** Share of the scrap's banked value that survives recycling (< 1). */
+        yieldFraction: z.number().finite().positive().max(1),
+      })
+      .strict(),
+  })
+  .strict();
 
 // --- prestige.json ----------------------------------------------------------
 
@@ -329,6 +490,7 @@ export const ContentSchema = z
     designs: DesignsFileSchema,
     market: MarketFileSchema,
     automation: AutomationFileSchema,
+    failure: FailureFileSchema,
     prestige: PrestigeFileSchema,
   })
   .strict();
@@ -345,6 +507,7 @@ export const CONTENT_FILE_SCHEMAS = {
   designs: DesignsFileSchema,
   market: MarketFileSchema,
   automation: AutomationFileSchema,
+  failure: FailureFileSchema,
   prestige: PrestigeFileSchema,
 } as const;
 
@@ -362,15 +525,24 @@ export type PacingContent = z.infer<typeof PacingFileSchema>;
 export type AssemblyPieceDef = z.infer<typeof AssemblyPieceSchema>;
 export type StartingFilament = z.infer<typeof StartingFilamentSchema>;
 export type StartContent = z.infer<typeof StartFileSchema>;
+export type MaterialIdentity = z.infer<typeof MaterialIdentitySchema>;
+export type MaterialSupply = z.infer<typeof MaterialSupplySchema>;
 export type MaterialDef = z.infer<typeof MaterialDefSchema>;
 export type ObjectDef = z.infer<typeof ObjectDefSchema>;
 export type PrinterDef = z.infer<typeof PrinterDefSchema>;
+export type UpgradeEffectType = z.infer<typeof UpgradeEffectTypeSchema>;
 export type UpgradeEffect = z.infer<typeof UpgradeEffectSchema>;
 export type UpgradeDef = z.infer<typeof UpgradeDefSchema>;
 export type DesignDef = z.infer<typeof DesignDefSchema>;
 export type MarketListing = z.infer<typeof MarketListingSchema>;
+export type MarketModel = z.infer<typeof MarketModelSchema>;
 export type MarketContent = z.infer<typeof MarketFileSchema>;
 export type AutomationDef = z.infer<typeof AutomationDefSchema>;
+export type AutomationBehavior = AutomationDef['behavior'];
+export type SellPartsAutomationDef = z.infer<typeof SellPartsAutomationSchema>;
+export type BuyFilamentAutomationDef = z.infer<typeof BuyFilamentAutomationSchema>;
+export type TradeFilamentAutomationDef = z.infer<typeof TradeFilamentAutomationSchema>;
+export type FailureContent = z.infer<typeof FailureFileSchema>;
 export type PrestigeContent = z.infer<typeof PrestigeFileSchema>;
 export type Content = z.infer<typeof ContentSchema>;
 export type RawContent = Record<ContentFileName, unknown>;

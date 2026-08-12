@@ -44,19 +44,58 @@ export interface SlotState {
   /** Keep printing the same config when a run finishes (the idle loop). */
   readonly autoRestart: boolean;
   readonly run: PrintRunState | null;
+  /**
+   * Pity-timer charge (spec §7.1). Every print adds the loaded material's
+   * charge rate; when it crosses the threshold a print fails. Deterministic on
+   * purpose — the player can feel it coming, and an upgrade visibly slows it.
+   */
+  readonly failureCharge: number;
+  /**
+   * Design-milliseconds of changeover purge left before the slot can print
+   * again (spec §3). Milliseconds for the same reason runs are: exact ticks.
+   */
+  readonly changeoverMs: number;
+}
+
+/**
+ * Per-material market state (spec §7.2). `pressure` is the player's own net
+ * trading, positive when they have been flooding the market; the price model
+ * subtracts it, so dumping filament makes filament cheap.
+ */
+export interface MarketMaterialState {
+  readonly stockGrams: number;
+  readonly pressure: number;
+}
+
+/** One purchased automation (spec §5C): a bot the machine runs for you. */
+export interface AutomationSlotState {
+  readonly level: number;
+  readonly enabled: boolean;
+  /** Player-tunable trigger; seeded from the def's `defaultThreshold`. */
+  readonly threshold: number;
+  /** Design-milliseconds until it next fires. */
+  readonly cooldownMs: number;
 }
 
 export interface StatsState {
   readonly printsCompleted: number;
+  readonly printsFailed: number;
   readonly partsProduced: number;
   readonly partsSold: number;
   readonly moneyEarned: number;
   readonly filamentPurchasedGrams: number;
+  readonly filamentSoldGrams: number;
+  readonly scrapProducedGrams: number;
+  readonly scrapRecycledGrams: number;
 }
 
 export type ResourceLedger = Readonly<Record<ScalarResourceKind, number>>;
 export type FilamentLedger = Readonly<Record<string, number>>;
 export type PrinterLedger = Readonly<Record<string, number>>;
+/** Installed level per upgrade id; absent means never bought. */
+export type UpgradeLedger = Readonly<Record<string, number>>;
+export type AutomationLedger = Readonly<Record<string, AutomationSlotState>>;
+export type MarketLedger = Readonly<Record<string, MarketMaterialState>>;
 
 export interface GameState {
   readonly saveVersion: number;
@@ -73,10 +112,22 @@ export interface GameState {
    * carries an average value that selling and spending draw down pro rata.
    */
   readonly partsValue: number;
+  /**
+   * Money value carried by the Scrap pile, tracked exactly like `partsValue`.
+   * The recycler hands back a fraction of *value*, not of grams, which is what
+   * stops "recycle cheap scrap into dear filament" from minting money.
+   */
+  readonly scrapValue: number;
   /** Grams per material id (spec §2: filament is tracked per material). */
   readonly filamentGrams: FilamentLedger;
   /** How many of each printer def are owned. */
   readonly printers: PrinterLedger;
+  /** Installed upgrade levels (spec §5); the modifier interpreter reads this. */
+  readonly upgrades: UpgradeLedger;
+  /** Purchased automations and their player-set thresholds (spec §5C). */
+  readonly automation: AutomationLedger;
+  /** Per-material market stock and trading pressure (spec §7.2). */
+  readonly market: MarketLedger;
   readonly slots: readonly SlotState[];
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
@@ -100,10 +151,14 @@ export const EMPTY_ASSEMBLY: AssemblyState = { attachedPieceIds: [], cooldownMs:
 
 export const EMPTY_STATS: StatsState = {
   printsCompleted: 0,
+  printsFailed: 0,
   partsProduced: 0,
   partsSold: 0,
   moneyEarned: 0,
   filamentPurchasedGrams: 0,
+  filamentSoldGrams: 0,
+  scrapProducedGrams: 0,
+  scrapRecycledGrams: 0,
 };
 
 export function zeroResources(): ResourceLedger {
@@ -128,7 +183,18 @@ export function createSlots(content: Content): readonly SlotState[] {
     printerCount: 0,
     autoRestart: false,
     run: null,
+    failureCharge: 0,
+    changeoverMs: 0,
   }));
+}
+
+/** Opening stock and a neutral price for every tradeable material (spec §7.2). */
+export function createMarket(content: Content): MarketLedger {
+  const market: Record<string, MarketMaterialState> = {};
+  for (const listing of content.market.listings) {
+    market[listing.materialId] = { stockGrams: listing.stockGrams, pressure: 0 };
+  }
+  return market;
 }
 
 function startingFilament(content: Content): FilamentLedger {
@@ -156,8 +222,12 @@ export function createInitialState(content: Content, options: InitialStateOption
     rng: { seed: options.seed, count: 0 },
     resources: { ...zeroResources(), ...content.start.startingResources },
     partsValue: 0,
+    scrapValue: 0,
     filamentGrams: startingFilament(content),
     printers: {},
+    upgrades: {},
+    automation: {},
+    market: createMarket(content),
     slots: createSlots(content),
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,

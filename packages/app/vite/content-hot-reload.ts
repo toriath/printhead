@@ -25,6 +25,7 @@ export const CONTENT_FILES = [
   'designs',
   'market',
   'automation',
+  'failure',
   'prestige',
 ] as const;
 

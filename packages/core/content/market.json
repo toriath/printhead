@@ -4,24 +4,35 @@
     "periodDesignMinutes": 20,
     "sineAmplitude": 0.25,
     "noiseAmplitude": 0.08,
-    "supplyResponse": 0.15,
+    "noiseStepDesignMinutes": 2.5,
+    "supplyResponse": 0.3,
+    "pressureScaleGrams": 5000,
+    "pressureDecayPerDesignMinute": 0.05,
     "minPriceMultiplier": 0.5,
-    "maxPriceMultiplier": 1.8
+    "maxPriceMultiplier": 1.8,
+    "spread": 0.15
   },
   "listings": [
     {
       "materialId": "petg",
       "basePricePerGram": 0.08,
-      "stockGrams": 2000,
-      "restockGramsPerDesignMinute": 40,
-      "unlockPhaseId": "farm"
+      "stockGrams": 6000,
+      "restockGramsPerDesignMinute": 120,
+      "unlockPhaseId": "bench"
     },
     {
       "materialId": "resin",
       "basePricePerGram": 0.35,
+      "stockGrams": 2400,
+      "restockGramsPerDesignMinute": 40,
+      "unlockPhaseId": "farm"
+    },
+    {
+      "materialId": "metal",
+      "basePricePerGram": 1.4,
       "stockGrams": 800,
-      "restockGramsPerDesignMinute": 12,
-      "unlockPhaseId": "studio"
+      "restockGramsPerDesignMinute": 8,
+      "unlockPhaseId": "prestige"
     }
   ]
 }

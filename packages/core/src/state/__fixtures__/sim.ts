@@ -7,7 +7,12 @@ import type { DomainEvent, DomainEventType } from '../../events/types.js';
 import { restoreRng } from '../../rng/mulberry32.js';
 import type { Action } from '../actions.js';
 import { tick } from '../actions.js';
-import { type GameState, type ReduceContext, createInitialState } from '../game-state.js';
+import {
+  type GameState,
+  type ReduceContext,
+  type SlotState,
+  createInitialState,
+} from '../game-state.js';
 import { reduce } from '../reduce.js';
 
 /**
@@ -15,6 +20,25 @@ import { reduce } from '../reduce.js';
  * exactly the code path the app and the balance harness use.
  */
 export const TEST_CONTENT: Content = loadContent(RAW_CONTENT);
+
+/**
+ * An empty slot with every field filled in. Tests build slots constantly, and
+ * spelling the defaults out in each of them means a new `SlotState` field is a
+ * hundred-line diff instead of a one-line one.
+ */
+export function testSlot(over: Partial<SlotState> = {}): SlotState {
+  return {
+    id: 'slot-1',
+    materialId: null,
+    objectId: null,
+    printerCount: 0,
+    autoRestart: false,
+    run: null,
+    failureCharge: 0,
+    changeoverMs: 0,
+    ...over,
+  };
+}
 
 export interface Sim {
   state: GameState;

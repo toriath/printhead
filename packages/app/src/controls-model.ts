@@ -2,14 +2,15 @@ import {
   type Content,
   type GameState,
   type GatedActionType,
+  type MarketQuote,
   type VisualState,
-  affordableGrams,
   createCurveRegistry,
   filamentOf,
-  filamentPrice,
   getPhase,
   isPhaseReached,
+  maxBuyableGrams,
   nextPrinterCost,
+  quoteFor,
 } from '@printhead/core';
 
 /**
@@ -43,6 +44,7 @@ export interface BuyFilamentControl {
   readonly materialName: string;
   readonly grams: number;
   readonly cost: number;
+  readonly pricePerGram: number;
   readonly enabled: boolean;
 }
 
@@ -113,7 +115,13 @@ export function buildControlModel(
   const buyFilament: BuyFilamentControl | null =
     buyMaterial === undefined || buyObject === undefined || !allows('BUY_FILAMENT')
       ? null
-      : buildBuyFilament(state, buyMaterial, buyObject.filamentGrams, slot?.printerCount ?? NONE);
+      : buildBuyFilament(
+          state,
+          content,
+          buyMaterial,
+          buyObject.filamentGrams,
+          slot?.printerCount ?? NONE,
+        );
 
   const printer = content.printers.find((candidate) =>
     isPhaseReached(content.pacing.phases, visual.phaseId, candidate.unlockPhaseId),
@@ -159,18 +167,28 @@ export function buildControlModel(
 
 function buildBuyFilament(
   state: GameState,
+  content: Content,
   material: Content['materials'][number],
   gramsPerPrint: number,
   printerCount: number,
-): BuyFilamentControl {
+): BuyFilamentControl | null {
+  // Prices come from the market (spec §7.2), so the button quotes what the
+  // reducer would actually charge — including today's multiplier.
+  const quote: MarketQuote | null = quoteFor(state, content, material.id);
+  if (quote === null) {
+    return null;
+  }
   const batchGrams = gramsPerPrint * Math.max(printerCount, 1);
   const wanted = batchGrams * RESTOCK_BATCHES;
-  const grams = Math.floor(Math.min(wanted, affordableGrams(material, state.resources.money)));
+  const grams = Math.floor(
+    Math.min(wanted, maxBuyableGrams(state, content, material.id, state.resources.money)),
+  );
   return {
     materialId: material.id,
     materialName: material.name,
     grams,
-    cost: filamentPrice(material, grams),
+    cost: quote.buyPerGram * grams,
+    pricePerGram: quote.buyPerGram,
     enabled: grams >= gramsPerPrint,
   };
 }

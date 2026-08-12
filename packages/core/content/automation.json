@@ -2,19 +2,41 @@
   {
     "id": "auto-sell",
     "name": "Auto-sell parts",
+    "behavior": "sell-parts",
     "costCurveId": "automation-cost",
     "costResource": "parts",
-    "unlockPhaseId": "farm",
+    "unlockPhaseId": "bench",
+    "requiresUpgradeIds": [],
+    "maxLevel": 1,
     "intervalDesignSeconds": 5,
-    "defaultThreshold": 50
+    "defaultThreshold": 40
   },
   {
     "id": "auto-buy-filament",
     "name": "Auto-buy filament",
+    "behavior": "buy-filament",
+    "costCurveId": "automation-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "bench",
+    "requiresUpgradeIds": [],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 10,
+    "defaultThreshold": 400,
+    "moneyReserve": 5
+  },
+  {
+    "id": "auto-trade",
+    "name": "Auto-trading desk",
+    "behavior": "trade-filament",
     "costCurveId": "automation-cost",
     "costResource": "money",
     "unlockPhaseId": "farm",
-    "intervalDesignSeconds": 10,
-    "defaultThreshold": 200
+    "requiresUpgradeIds": ["broker-licence"],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 30,
+    "defaultThreshold": 250,
+    "buyBelowMultiplier": 0.85,
+    "sellAboveMultiplier": 1.25,
+    "maxHoldingGrams": 4000
   }
 ]
