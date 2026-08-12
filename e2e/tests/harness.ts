@@ -22,7 +22,7 @@ export const T0 = 1_700_000_000_000;
 interface ContentShape {
   readonly start: { readonly assemblyPieces: readonly { readonly id: string }[] };
   readonly objects: readonly { readonly printDesignSeconds: number }[];
-  readonly pacing: { readonly offlineCapHours: number };
+  readonly pacing: { readonly offlineCapHours: number; readonly targetHours: number };
 }
 
 interface DevHooksShape {

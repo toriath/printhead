@@ -78,6 +78,38 @@ apply({ type: 'SELL_PARTS', count: null });
 tickSeconds((content.objects[0]?.printDesignSeconds ?? 0) / 2);
 capture('printing');
 
+/**
+ * 5. The M3 workshop: a machine node installed, an automation running, a scrap
+ * bin waiting for the recycler and a slot mid-purge. Reached by *playing*, not
+ * by hand-editing state — the point of a fixture is that the sim can produce it.
+ */
+const grind = (until: () => boolean, limitSeconds = 3600): void => {
+  const perPrint = content.objects.find((object) => object.id === objectId)?.filamentGrams ?? 1;
+  for (let second = 0; second < limitSeconds && !until(); second += 1) {
+    tickSeconds(1);
+    if ((state.filamentGrams[materialId] ?? 0) < perPrint) {
+      apply({ type: 'SELL_PARTS', count: Math.ceil(state.resources.parts / 2) });
+      const grams = Math.floor(state.resources.money / (content.materials[0]?.costPerGram ?? 1));
+      if (grams > 0) {
+        apply({ type: 'BUY_FILAMENT', materialId, grams });
+      }
+    }
+  }
+};
+
+grind(() => state.phaseId !== 'intro');
+grind(() => state.resources.parts >= 200);
+apply({ type: 'BUY_UPGRADE', upgradeId: 'heated-bed' });
+apply({ type: 'BUY_UPGRADE', upgradeId: content.failure.recycler.requiresUpgradeId });
+grind(() => state.resources.parts >= 400);
+apply({ type: 'BUY_AUTOMATION', automationId: content.automation[0]?.id ?? 'auto-sell' });
+grind(() => state.resources.scrap > 0);
+// Switch to the material the heated bed unlocked: a real changeover, mid-purge.
+apply({ type: 'BUY_FILAMENT', materialId: 'petg', grams: 200 });
+apply({ type: 'SET_SLOT_CONFIG', slotId, materialId: 'petg', objectId });
+tickSeconds(5);
+capture('economy');
+
 console.log(`wrote ${written.length} fixtures to ${dir}:`);
 for (const line of written) {
   console.log(`  - ${line}`);

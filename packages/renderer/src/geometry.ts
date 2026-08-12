@@ -64,6 +64,10 @@ export const BADGE_R = 13;
 export const BADGE_CX = BAY_WIDTH - 22;
 export const BADGE_CY = 22;
 
+/** The pity meter: a hairline under the progress bar (spec §7.1). */
+export const RISK_Y = BAY_HEIGHT - 19;
+export const RISK_HEIGHT = 2;
+
 export const CORNER_RADIUS = 4;
 
 /** Total drawing width for `capacity` bays laid out in a row. */

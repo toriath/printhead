@@ -26,6 +26,7 @@ describe('bundled content', () => {
         'automation',
         'curves',
         'designs',
+        'failure',
         'market',
         'materials',
         'objects',

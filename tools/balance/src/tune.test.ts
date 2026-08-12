@@ -1,7 +1,7 @@
 import { RAW_CONTENT, loadContent } from '@printhead/core';
 import { describe, expect, it } from 'vitest';
 import { PointerError, readPointer, writePointer } from './pointer.js';
-import { measurePhase, tunePhase, withOverrides } from './tune.js';
+import { measurePhase, roundSignificant, tunePhase, withOverrides } from './tune.js';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -113,5 +113,29 @@ describe('tunePhase', () => {
     // still put bench on budget, or the next balance change silently drifted.
     expect(measurePhase(RAW_CONTENT, 'bench')).toBeGreaterThanOrEqual(24);
     expect(measurePhase(RAW_CONTENT, 'bench')).toBeLessThanOrEqual(36);
+  });
+});
+
+describe('roundSignificant', () => {
+  it('turns an optimiser artefact into a number a reviewer can read', () => {
+    expect(roundSignificant(199.34029440000003)).toBe(199.34);
+    expect(roundSignificant(8.0291596)).toBe(8.02916);
+    expect(roundSignificant(0.000123456789)).toBe(0.000123457);
+  });
+
+  it('moves a value by far less than the balance tolerance', () => {
+    for (const value of [1.2345678, 55.5555555, 0.0987654321, 12345.6789]) {
+      expect(Math.abs(roundSignificant(value) - value) / value).toBeLessThan(1e-5);
+    }
+  });
+
+  it('leaves whole numbers, zero and non-finite values alone', () => {
+    expect(roundSignificant(42)).toBe(42);
+    expect(roundSignificant(0)).toBe(0);
+    expect(roundSignificant(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('keeps the sign', () => {
+    expect(roundSignificant(-1.23456789)).toBe(-1.23457);
   });
 });

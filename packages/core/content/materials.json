@@ -7,10 +7,13 @@
     "supply": "infinite",
     "costPerGram": 0.05,
     "printSpeedMultiplier": 1,
-    "failureChargePerPrint": 0.25,
+    "failureChargePerPrint": 0.16,
     "scrapRecoveryFraction": 0.5,
     "valueMultiplier": 1,
-    "unlockPhaseId": "intro"
+    "changeoverDesignSeconds": 20,
+    "changeoverWasteGrams": 6,
+    "unlockPhaseId": "intro",
+    "requiresUpgradeId": null
   },
   {
     "id": "petg",
@@ -20,10 +23,13 @@
     "supply": "market",
     "costPerGram": 0.08,
     "printSpeedMultiplier": 0.85,
-    "failureChargePerPrint": 0.12,
+    "failureChargePerPrint": 0.07,
     "scrapRecoveryFraction": 0.65,
-    "valueMultiplier": 1.6,
-    "unlockPhaseId": "farm"
+    "valueMultiplier": 1.9,
+    "changeoverDesignSeconds": 45,
+    "changeoverWasteGrams": 14,
+    "unlockPhaseId": "bench",
+    "requiresUpgradeId": "heated-bed"
   },
   {
     "id": "resin",
@@ -33,9 +39,28 @@
     "supply": "market",
     "costPerGram": 0.35,
     "printSpeedMultiplier": 0.55,
-    "failureChargePerPrint": 0.05,
+    "failureChargePerPrint": 0.03,
     "scrapRecoveryFraction": 0.2,
-    "valueMultiplier": 2.8,
-    "unlockPhaseId": "studio"
+    "valueMultiplier": 3.4,
+    "changeoverDesignSeconds": 90,
+    "changeoverWasteGrams": 20,
+    "unlockPhaseId": "farm",
+    "requiresUpgradeId": "sla-unit"
+  },
+  {
+    "id": "metal",
+    "name": "Sintered metal",
+    "identity": "structural",
+    "qualityTier": 4,
+    "supply": "market",
+    "costPerGram": 1.4,
+    "printSpeedMultiplier": 0.35,
+    "failureChargePerPrint": 0.01,
+    "scrapRecoveryFraction": 0.85,
+    "valueMultiplier": 7,
+    "changeoverDesignSeconds": 150,
+    "changeoverWasteGrams": 30,
+    "unlockPhaseId": "prestige",
+    "requiresUpgradeId": "sintering-head"
   }
 ]

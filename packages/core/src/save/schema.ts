@@ -53,7 +53,8 @@ export const PrintRunStateSchema = z
   })
   .strict();
 
-export const SlotStateSchema = z
+/** v2 (M1) — kept for the frozen fixture; migrated to v3 by `migrations.ts`. */
+export const SlotStateV2Schema = z
   .object({
     id: z.string().min(1),
     materialId: z.string().min(1).nullable(),
@@ -64,7 +65,7 @@ export const SlotStateSchema = z
   })
   .strict();
 
-export const StatsStateSchema = z
+export const StatsStateV2Schema = z
   .object({
     printsCompleted: z.number().int().nonnegative(),
     partsProduced: NonNegative,
@@ -76,7 +77,7 @@ export const StatsStateSchema = z
 
 export const GameStateV2Schema = z
   .object({
-    saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+    saveVersion: z.literal(2),
     simTimeMs: NonNegative,
     tickCount: z.number().int().nonnegative(),
     phaseId: z.string().min(1),
@@ -86,6 +87,65 @@ export const GameStateV2Schema = z
     partsValue: NonNegative,
     filamentGrams: FilamentLedgerSchema,
     printers: PrinterLedgerSchema,
+    slots: z.array(SlotStateV2Schema),
+    assembly: AssemblyStateSchema,
+    stats: StatsStateV2Schema,
+  })
+  .strict();
+
+// --- v3 (M3) ----------------------------------------------------------------
+
+export const SlotStateSchema = SlotStateV2Schema.extend({
+  failureCharge: NonNegative,
+  changeoverMs: NonNegative,
+}).strict();
+
+export const StatsStateSchema = StatsStateV2Schema.extend({
+  printsFailed: z.number().int().nonnegative(),
+  filamentSoldGrams: NonNegative,
+  scrapProducedGrams: NonNegative,
+  scrapRecycledGrams: NonNegative,
+}).strict();
+
+export const UpgradeLedgerSchema = z.record(z.string().min(1), z.number().int().nonnegative());
+
+export const AutomationSlotStateSchema = z
+  .object({
+    level: z.number().int().nonnegative(),
+    enabled: z.boolean(),
+    threshold: NonNegative,
+    cooldownMs: z.number().finite(),
+  })
+  .strict();
+
+export const AutomationLedgerSchema = z.record(z.string().min(1), AutomationSlotStateSchema);
+
+export const MarketMaterialStateSchema = z
+  .object({
+    stockGrams: NonNegative,
+    /** Signed: negative when the player has been buying, positive when dumping. */
+    pressure: z.number().finite(),
+  })
+  .strict();
+
+export const MarketLedgerSchema = z.record(z.string().min(1), MarketMaterialStateSchema);
+
+export const GameStateV3Schema = z
+  .object({
+    saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+    simTimeMs: NonNegative,
+    tickCount: z.number().int().nonnegative(),
+    phaseId: z.string().min(1),
+    phaseEnteredAtMs: NonNegative,
+    rng: RngSnapshotSchema,
+    resources: ResourceLedgerSchema,
+    partsValue: NonNegative,
+    scrapValue: NonNegative,
+    filamentGrams: FilamentLedgerSchema,
+    printers: PrinterLedgerSchema,
+    upgrades: UpgradeLedgerSchema,
+    automation: AutomationLedgerSchema,
+    market: MarketLedgerSchema,
     slots: z.array(SlotStateSchema),
     assembly: AssemblyStateSchema,
     stats: StatsStateSchema,
@@ -93,7 +153,7 @@ export const GameStateV2Schema = z
   .strict();
 
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV2Schema;
+export const GameStateSchema = GameStateV3Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -106,3 +166,4 @@ export const SaveFileSchema = z
 export type SaveFile = z.infer<typeof SaveFileSchema>;
 export type GameStateV1 = z.infer<typeof GameStateV1Schema>;
 export type GameStateV2 = z.infer<typeof GameStateV2Schema>;
+export type GameStateV3 = z.infer<typeof GameStateV3Schema>;

@@ -22,3 +22,10 @@ export const MAX_TICKS_PER_ADVANCE = 10_000;
  * value (a zero-length print) from spinning the reducer forever.
  */
 export const MAX_RUN_COMPLETIONS_PER_TICK = 64;
+
+/**
+ * Iterations the market's "how much can I afford?" bisection runs. A numerical
+ * method's precision, not a balance value: 40 halvings resolve a gram order to
+ * far below the smallest amount anything in content trades in.
+ */
+export const TRADE_SEARCH_ITERATIONS = 40;

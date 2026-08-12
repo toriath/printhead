@@ -5,6 +5,7 @@ import { Controls } from './controls.js';
 import { useVisualState } from './hooks.js';
 import { Hud } from './hud.js';
 import { OfflineSummaryScreen } from './offline-summary.js';
+import { AutomationPanel, MarketPanel, RecyclerPanel, UpgradePanel } from './panels.js';
 import type { GameStore } from './store.js';
 
 /**
@@ -60,6 +61,15 @@ export function App({
       <Hud visual={visual} content={content} />
       <Workshop visual={visual} />
       <Controls store={store} visual={visual} content={content} />
+
+      {/* The economy panels appear as the game unlocks them; each one hides
+          itself while its mechanic is still locked (spec §6's reveal order). */}
+      <div className="app__panels">
+        <UpgradePanel store={store} visual={visual} />
+        <MarketPanel store={store} visual={visual} />
+        <RecyclerPanel store={store} visual={visual} />
+        <AutomationPanel store={store} visual={visual} />
+      </div>
 
       {offline === null ? null : (
         <OfflineSummaryScreen summary={offline} onDismiss={() => setOffline(null)} />

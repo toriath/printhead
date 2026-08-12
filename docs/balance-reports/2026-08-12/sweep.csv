@@ -1,0 +1,9 @@
+
+> printhead@0.0.0 balance:sweep /workspaces/printhead
+> tsx tools/balance/src/cli-sweep.ts curves/printer-cost-tier1/base --steps 4 --spread 2
+
+curves/printer-cost-tier1/base,phase:intro,phase:bench,phase:farm,phase:studio,phase:prestige,phase:absurd,phase:end,total,longestWaitWall,budgetViolations,waitWallViolations,finalPhase
+4.01458,5.00,23.75,50.58,75.00,90.00,80.00,95.67,420.00,4.00,3,0,end
+8.02916,5.00,29.67,80.42,75.00,90.00,80.00,59.92,420.00,4.00,0,0,end
+12.04374,5.00,38.00,22.83,75.00,90.00,80.00,109.17,420.00,4.00,3,2,end
+16.05832,5.00,39.50,71.00,75.00,90.00,80.00,59.50,420.00,4.42,1,2,end

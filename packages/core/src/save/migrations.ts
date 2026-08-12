@@ -45,11 +45,49 @@ function migrateV1ToV2(payload: unknown): unknown {
 }
 
 /**
+ * v2 (M1) predates failure, the market, upgrades and automation. A v2 save is
+ * therefore a workshop that has bought nothing and wasted nothing: every new
+ * ledger starts empty and every new counter at zero.
+ *
+ * The market ledger is left empty rather than seeded with opening stock. It is
+ * keyed by material id and `marketStateOf` already treats a missing entry as
+ * "no stock yet", which the first `tickMarket` restocks from the listing — so
+ * the migration does not have to know today's content to produce a save that
+ * behaves correctly under tomorrow's.
+ */
+function migrateV2ToV3(payload: unknown): unknown {
+  const v2 = payload as Record<string, unknown>;
+  const slots = Array.isArray(v2.slots) ? v2.slots : [];
+  const stats = (v2.stats ?? {}) as Record<string, unknown>;
+  return {
+    ...v2,
+    saveVersion: 3,
+    scrapValue: 0,
+    upgrades: {},
+    automation: {},
+    market: {},
+    slots: slots.map((slot) => ({
+      ...(slot as Record<string, unknown>),
+      failureCharge: 0,
+      changeoverMs: 0,
+    })),
+    stats: {
+      ...stats,
+      printsFailed: 0,
+      filamentSoldGrams: 0,
+      scrapProducedGrams: 0,
+      scrapRecycledGrams: 0,
+    },
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
 export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateV1ToV2,
+  2: migrateV2ToV3,
 };
 
 export class SaveMigrationError extends Error {

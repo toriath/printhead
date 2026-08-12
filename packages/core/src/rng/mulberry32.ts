@@ -25,6 +25,17 @@ export interface RngSnapshot {
 const UINT32 = 0x100000000;
 const MULBERRY_INCREMENT = 0x6d2b79f5;
 
+/**
+ * A uniform draw in `[0, 1)` derived purely from a label and the seed, taking
+ * *no* position from any stream. Models that must be a pure function of
+ * `(seed, time)` — the market's noise term, per-material phase offsets — use
+ * this rather than an `Rng`, so replaying a save from any point reproduces the
+ * same curve without having to replay every draw that led to it.
+ */
+export function hashUnit(label: string, seed: number): number {
+  return hashSeed(label, seed) / UINT32;
+}
+
 export function hashSeed(label: string, seed: number): number {
   let h = seed >>> 0;
   for (let i = 0; i < label.length; i += 1) {

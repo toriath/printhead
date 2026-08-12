@@ -7,6 +7,7 @@ import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
 import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
+import { marketStateOf, priceMultiplier, quoteFor } from '../systems/market.js';
 import { validateVisualState } from '../visual/schema.js';
 import { toVisualState } from '../visual/visual-state.js';
 import {
@@ -14,9 +15,22 @@ import {
   FIRST_OBJECT_ID,
   FIRST_SLOT_ID,
   TEST_CONTENT,
+  testSlot,
 } from './__fixtures__/sim.js';
 import type { Action } from './actions.js';
-import { buyFilament, buyPrinter, sellParts, setSlotConfig, startPrint, tick } from './actions.js';
+import {
+  buyAutomation,
+  buyFilament,
+  buyPrinter,
+  buyUpgrade,
+  recycleScrap,
+  sellFilament,
+  sellParts,
+  setAutomation,
+  setSlotConfig,
+  startPrint,
+  tick,
+} from './actions.js';
 import { type GameState, type ReduceContext, createInitialState } from './game-state.js';
 import { reduce } from './reduce.js';
 
@@ -81,6 +95,18 @@ const anyAction = (): fc.Arbitrary<Action> =>
       .tuple(fc.constantFrom(...content.materials.map((m) => m.id)), quantity())
       .map(([materialId, grams]) => buyFilament(materialId, grams)),
     fc.constant(buyPrinter(printerId, FIRST_SLOT_ID)),
+    fc
+      .tuple(fc.constantFrom(...content.materials.map((m) => m.id)), quantity())
+      .map(([materialId, grams]) => sellFilament(materialId, grams)),
+    fc.constantFrom(...content.upgrades.map((u) => u.id)).map(buyUpgrade),
+    fc.constantFrom(...content.automation.map((a) => a.id)).map(buyAutomation),
+    fc
+      .tuple(fc.constantFrom(...content.automation.map((a) => a.id)), quantity())
+      .map(([automationId, threshold]) => setAutomation(automationId, { threshold })),
+    fc
+      .tuple(fc.constantFrom(...content.materials.map((m) => m.id)), quantity())
+      .map(([materialId, grams]) => recycleScrap(materialId, grams)),
+    fc.constantFrom(...content.materials.map((m) => m.id)).map((id) => recycleScrap(id, null)),
   );
 
 const ticksFor = (designSeconds: number): number => (designSeconds * 1000) / TICK_MS;
@@ -123,14 +149,14 @@ function fullRack(seed: number): GameState {
   return {
     ...base,
     printers: { [printerId]: capacity },
-    slots: Array.from({ length: capacity }, (_unused, index) => ({
-      id: `${content.start.slotIdPrefix}-${index + 1}`,
-      materialId: FIRST_MATERIAL_ID,
-      objectId: FIRST_OBJECT_ID,
-      printerCount: 1,
-      autoRestart: false,
-      run: null,
-    })),
+    slots: Array.from({ length: capacity }, (_unused, index) =>
+      testSlot({
+        id: `${content.start.slotIdPrefix}-${index + 1}`,
+        materialId: FIRST_MATERIAL_ID,
+        objectId: FIRST_OBJECT_ID,
+        printerCount: 1,
+      }),
+    ),
   };
 }
 
@@ -159,6 +185,10 @@ describe('property: resources are never negative', () => {
               expect(grams, `${materialId} filament went negative`).toBeGreaterThanOrEqual(0);
             }
             expect(state.partsValue).toBeGreaterThanOrEqual(0);
+            expect(state.scrapValue).toBeGreaterThanOrEqual(0);
+            for (const listing of Object.values(state.market)) {
+              expect(listing.stockGrams).toBeGreaterThanOrEqual(0);
+            }
             for (const owned of Object.values(state.printers)) {
               expect(owned).toBeGreaterThanOrEqual(0);
             }
@@ -231,6 +261,223 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
     expect(result.summary.appliedWallMs).toBe(MS_PER_HOUR * cap);
     expect(result.summary.skippedWallMs).toBe(MS_PER_HOUR * cap);
     expect(result.summary.gains.partsProduced).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The M3 economy invariants (spec §13). Each of these is a rule that, if it
+ * ever broke, would break quietly: an exploit the player finds long before the
+ * developer does.
+ */
+const TRADED_MATERIAL_ID = 'petg';
+const RECYCLER_ID = content.failure.recycler.requiresUpgradeId;
+
+/** A workshop with money, an unlocked market and the machine tree it needs. */
+function merchant(money: number): GameState {
+  const base = trading(9);
+  return {
+    ...base,
+    phaseId: 'bench',
+    resources: { ...base.resources, money },
+    upgrades: { 'heated-bed': 1, [RECYCLER_ID]: 1 },
+  };
+}
+
+describe('property: a buy/sell round trip never creates value', () => {
+  it('holds for any parcel size at any point in the price cycle', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 4000 }),
+        fc.integer({ min: 0, max: 240 }),
+        (grams, minutes) => {
+          const start: GameState = {
+            ...merchant(1_000_000),
+            simTimeMs: minutes * MS_PER_MINUTE,
+          };
+          const bought = apply(start, buyFilament(TRADED_MATERIAL_ID, grams));
+          // A refused buy is not a round trip; skip it rather than pass vacuously.
+          fc.pre(bought.filamentGrams[TRADED_MATERIAL_ID] === grams);
+          const sold = apply(bought, sellFilament(TRADED_MATERIAL_ID, grams));
+          expect(sold.filamentGrams[TRADED_MATERIAL_ID]).toBe(0);
+          expect(sold.resources.money).toBeLessThanOrEqual(start.resources.money);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('holds when the round trip is split into many small sells', () => {
+    const grams = 1200;
+    const start = merchant(1_000_000);
+    let state = apply(start, buyFilament(TRADED_MATERIAL_ID, grams));
+    for (let i = 0; i < 12; i += 1) {
+      state = apply(state, sellFilament(TRADED_MATERIAL_ID, grams / 12));
+    }
+    expect(state.resources.money).toBeLessThanOrEqual(start.resources.money);
+  });
+
+  /**
+   * The guard that makes the property mean something: with the trade priced
+   * *before* its own market impact instead of after, a large buy-then-sell
+   * turns a profit. This asserts the loss is not merely the spread.
+   */
+  it('loses more than the spread alone, because the trade moves the price', () => {
+    const grams = 4000;
+    const start = merchant(1_000_000);
+    const quoted = quoteFor(start, content, TRADED_MATERIAL_ID);
+    const bought = apply(start, buyFilament(TRADED_MATERIAL_ID, grams));
+    const sold = apply(bought, sellFilament(TRADED_MATERIAL_ID, grams));
+    const loss = start.resources.money - sold.resources.money;
+    const spreadOnly = (quoted?.buyPerGram ?? 0) * grams * content.market.model.spread;
+    expect(loss).toBeGreaterThan(spreadOnly);
+  });
+});
+
+describe('property: the recycler conserves value', () => {
+  it('never hands back filament worth more than the scrap it consumed', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 5000 }),
+        fc.double({ min: 0.01, max: 500, noNaN: true }),
+        fc.constantFrom(...content.materials.map((material) => material.id)),
+        (scrapGrams, scrapValue, materialId) => {
+          const base = merchant(0);
+          const start: GameState = {
+            ...base,
+            resources: { ...base.resources, scrap: scrapGrams },
+            scrapValue,
+          };
+          const after = apply(start, recycleScrap(materialId, null));
+          const material = content.materials.find((candidate) => candidate.id === materialId);
+          if (material === undefined || after === start) {
+            return;
+          }
+          const gained =
+            (after.filamentGrams[materialId] ?? 0) - (start.filamentGrams[materialId] ?? 0);
+          const outputValue = gained * material.costPerGram;
+          expect(outputValue).toBeLessThanOrEqual(scrapValue + 1e-9);
+          // The banked value leaves with the scrap: nothing is stranded either.
+          expect(after.scrapValue).toBeLessThanOrEqual(start.scrapValue + 1e-9);
+        },
+      ),
+      { numRuns: 80 },
+    );
+  });
+
+  it('cannot be run at all without the machine node', () => {
+    const base = trading(9);
+    const start: GameState = {
+      ...base,
+      phaseId: 'bench',
+      resources: { ...base.resources, scrap: 500 },
+      scrapValue: 50,
+    };
+    expect(apply(start, recycleScrap(FIRST_MATERIAL_ID, null))).toBe(start);
+  });
+});
+
+describe('property: market prices stay within their configured bounds', () => {
+  const model = content.market.model;
+
+  it('holds for any material, time and pressure', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...content.market.listings.map((listing) => listing.materialId)),
+        fc.double({ min: 0, max: 100_000, noNaN: true }),
+        fc.double({ min: -1000, max: 1000, noNaN: true }),
+        fc.integer({ min: -2147483648, max: 2147483647 }),
+        (materialId, minutes, pressure, seed) => {
+          const multiplier = priceMultiplier(model, materialId, minutes, pressure, seed);
+          expect(multiplier).toBeGreaterThanOrEqual(model.minPriceMultiplier);
+          expect(multiplier).toBeLessThanOrEqual(model.maxPriceMultiplier);
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
+  it('holds through arbitrary play, quotes included', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 80 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            state = apply(state, action);
+          }
+          for (const listing of content.market.listings) {
+            const quote = quoteFor(state, content, listing.materialId);
+            expect(quote?.multiplier).toBeGreaterThanOrEqual(model.minPriceMultiplier);
+            expect(quote?.multiplier).toBeLessThanOrEqual(model.maxPriceMultiplier);
+            expect(quote?.sellPerGram).toBeLessThanOrEqual(quote?.buyPerGram ?? 0);
+            expect(marketStateOf(state, listing.materialId).stockGrams).toBeGreaterThanOrEqual(0);
+          }
+        },
+      ),
+      { numRuns: 40 },
+    );
+  });
+});
+
+describe('property: pity failure is deterministic', () => {
+  /**
+   * Spec §7.1 asks for a pity timer rather than raw RNG precisely so that
+   * failure is reproducible. Two runs from the same state must fail the same
+   * prints, and — because the model draws nothing from the stream — the seed
+   * must make no difference to *when* a print fails at all.
+   */
+  const printForSeconds = (seed: number, seconds: number): GameState => {
+    let state = trading(seed);
+    for (let i = 0; i < ticksFor(seconds); i += 1) {
+      state = apply(state, tick(TICK_MS));
+    }
+    return state;
+  };
+
+  it('fails the same prints twice from the same state', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 30, max: 600 }), (seconds) => {
+        const once = printForSeconds(5, seconds);
+        const twice = printForSeconds(5, seconds);
+        expect(twice.stats.printsFailed).toBe(once.stats.printsFailed);
+        expect(twice.resources.scrap).toBe(once.resources.scrap);
+        expect(twice.slots[0]?.failureCharge).toBe(once.slots[0]?.failureCharge);
+      }),
+      { numRuns: 10 },
+    );
+  });
+
+  it('reaches the same charge under any seed — no dice are rolled', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 10_000 }), (seed) => {
+        const seeded = printForSeconds(seed, 300);
+        const reference = printForSeconds(1, 300);
+        expect(seeded.stats.printsFailed).toBe(reference.stats.printsFailed);
+        expect(seeded.slots[0]?.failureCharge).toBeCloseTo(
+          reference.slots[0]?.failureCharge ?? 0,
+          9,
+        );
+      }),
+      { numRuns: 15 },
+    );
+  });
+
+  it('fails at exactly the rate the content asks for', () => {
+    const perPrint = content.materials[0]?.failureChargePerPrint ?? 0;
+    const threshold = content.failure.model.chargeThreshold;
+    fc.assert(
+      fc.property(fc.integer({ min: 120, max: 1200 }), (seconds) => {
+        const state = printForSeconds(5, seconds);
+        const attempted = state.stats.printsCompleted + state.stats.printsFailed;
+        const expected = (attempted * perPrint) / threshold;
+        // Within one print: the charge is a running float sum, so a batch that
+        // lands exactly on the threshold may tip either side of it.
+        expect(state.stats.printsFailed).toBeGreaterThanOrEqual(Math.floor(expected) - 1);
+        expect(state.stats.printsFailed).toBeLessThanOrEqual(Math.ceil(expected));
+      }),
+      { numRuns: 15 },
+    );
   });
 });
 

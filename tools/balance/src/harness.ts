@@ -10,6 +10,7 @@ import {
   type ReduceContext,
   advance,
   countEventsByType,
+  createCurveRegistry,
   createEventBus,
   createInitialState,
   createPaceMapping,
@@ -19,6 +20,7 @@ import {
   totalBudgetDesignMinutes,
 } from '@printhead/core';
 import { designMinutesOf, wallHoursOf } from './budget.js';
+import { type WaitWall, WaitWallTracker, meaningfulOptions } from './waitwall.js';
 
 /**
  * Headless harness (spec §12.1): runs the real `core` at maximum speed with a
@@ -85,6 +87,8 @@ export interface RunLog {
   readonly actionsByType: Readonly<Partial<Record<ActionType, number>>>;
   readonly eventCounts: Readonly<Partial<Record<DomainEventType, number>>>;
   readonly samples: readonly ResourceSample[];
+  /** Stretches with nothing meaningful to do (spec §12.2). */
+  readonly waitWalls: readonly WaitWall[];
   readonly finalState: GameState;
 }
 
@@ -139,6 +143,8 @@ export function runHeadless(options: RunOptions): RunLog {
   const phaseEnteredAt = new Map<string, number>([[state.phaseId, 0]]);
   const phaseDurations = new Map<string, number>();
   const samples: ResourceSample[] = [];
+  const curves = createCurveRegistry(content.curves);
+  const waitWalls = new WaitWallTracker();
   const events: DomainEvent[] = [];
   bus.subscribe((event) => events.push(event));
 
@@ -178,6 +184,13 @@ export function runHeadless(options: RunOptions): RunLog {
       break;
     }
     const decidingIn = state.phaseId;
+    // Sampled *before* the bot acts: the question is what was on offer, not
+    // what the bot happened to pick.
+    waitWalls.sample(
+      designMinutesOf(state.simTimeMs),
+      decidingIn,
+      meaningfulOptions(state, content, curves).length > 0,
+    );
     const chosen = bot.decide({
       state,
       content,
@@ -228,6 +241,7 @@ export function runHeadless(options: RunOptions): RunLog {
     actionsByType,
     eventCounts: countEventsByType(events),
     samples,
+    waitWalls: waitWalls.finish(),
     finalState: state,
   };
 }

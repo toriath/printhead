@@ -26,6 +26,11 @@ export interface SlotConfiguredEvent extends EventBase {
   readonly slotId: string;
   readonly materialId: string;
   readonly objectId: string;
+  /** Changeover cost the switch incurred (spec §3); zero for a free swap. */
+  readonly downtimeMs: number;
+  readonly purgedGrams: number;
+  /** Prints thrown away because the switch interrupted them. */
+  readonly abandonedBatch: number;
 }
 
 export interface PrintStartedEvent extends EventBase {
@@ -45,6 +50,66 @@ export interface PrintCompletedEvent extends EventBase {
   readonly batch: number;
   readonly parts: number;
   readonly partsValue: number;
+  /** How many of the batch the pity timer failed (spec §7.1). */
+  readonly failed: number;
+  readonly scrapGrams: number;
+}
+
+/** Emitted alongside PRINT_COMPLETED when the pity timer bit — for flourishes. */
+export interface PrintFailedEvent extends EventBase {
+  readonly type: 'PRINT_FAILED';
+  readonly slotId: string;
+  readonly materialId: string;
+  readonly failed: number;
+  readonly scrapGrams: number;
+}
+
+export interface ChangeoverCompletedEvent extends EventBase {
+  readonly type: 'CHANGEOVER_COMPLETED';
+  readonly slotId: string;
+}
+
+export interface ScrapRecycledEvent extends EventBase {
+  readonly type: 'SCRAP_RECYCLED';
+  readonly materialId: string;
+  readonly scrapGrams: number;
+  readonly filamentGrams: number;
+}
+
+export interface FilamentSoldEvent extends EventBase {
+  readonly type: 'FILAMENT_SOLD';
+  readonly materialId: string;
+  readonly grams: number;
+  readonly money: number;
+  readonly pricePerGram: number;
+}
+
+export interface UpgradeInstalledEvent extends EventBase {
+  readonly type: 'UPGRADE_INSTALLED';
+  readonly upgradeId: string;
+  readonly level: number;
+  readonly paid: number;
+}
+
+export interface AutomationInstalledEvent extends EventBase {
+  readonly type: 'AUTOMATION_INSTALLED';
+  readonly automationId: string;
+  readonly level: number;
+  readonly paid: number;
+}
+
+export interface AutomationConfiguredEvent extends EventBase {
+  readonly type: 'AUTOMATION_CONFIGURED';
+  readonly automationId: string;
+  readonly enabled: boolean;
+  readonly threshold: number;
+}
+
+/** One firing of an installed automation — the machine acting on your behalf. */
+export interface AutomationFiredEvent extends EventBase {
+  readonly type: 'AUTOMATION_FIRED';
+  readonly automationId: string;
+  readonly behavior: string;
 }
 
 export interface PartSoldEvent extends EventBase {
@@ -85,6 +150,10 @@ export type ActionRejectedReason =
   | 'insufficient-resources'
   | 'slot-busy'
   | 'slot-idle'
+  | 'max-level'
+  | 'missing-prerequisite'
+  | 'no-recycler'
+  | 'not-tradeable'
   | 'nothing-to-do';
 
 export interface ActionRejectedEvent extends EventBase {
@@ -97,11 +166,19 @@ export type DomainEvent =
   | PieceAttachedEvent
   | AssemblyCompletedEvent
   | SlotConfiguredEvent
+  | ChangeoverCompletedEvent
   | PrintStartedEvent
   | PrintCompletedEvent
+  | PrintFailedEvent
+  | ScrapRecycledEvent
   | PartSoldEvent
   | FilamentPurchasedEvent
+  | FilamentSoldEvent
   | PrinterBuiltEvent
+  | UpgradeInstalledEvent
+  | AutomationInstalledEvent
+  | AutomationConfiguredEvent
+  | AutomationFiredEvent
   | PhaseAdvancedEvent
   | ActionRejectedEvent;
 
@@ -111,11 +188,19 @@ export const DOMAIN_EVENT_TYPES = [
   'PIECE_ATTACHED',
   'ASSEMBLY_COMPLETED',
   'SLOT_CONFIGURED',
+  'CHANGEOVER_COMPLETED',
   'PRINT_STARTED',
   'PRINT_COMPLETED',
+  'PRINT_FAILED',
+  'SCRAP_RECYCLED',
   'PART_SOLD',
   'FILAMENT_PURCHASED',
+  'FILAMENT_SOLD',
   'PRINTER_BUILT',
+  'UPGRADE_INSTALLED',
+  'AUTOMATION_INSTALLED',
+  'AUTOMATION_CONFIGURED',
+  'AUTOMATION_FIRED',
   'PHASE_ADVANCED',
   'ACTION_REJECTED',
 ] as const satisfies readonly DomainEventType[];

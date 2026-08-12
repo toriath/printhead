@@ -28,7 +28,7 @@ import {
   formatPercent,
 } from './format.js';
 import { useGameSelector, useVisualState } from './hooks.js';
-import { printStatus } from './hud.js';
+import { Hud, printStatus } from './hud.js';
 import { OFFLINE_THRESHOLD_MS, createGameLoop } from './loop.js';
 import { readSave, writeSave } from './persistence.js';
 import { createGameStore } from './store.js';
@@ -64,6 +64,22 @@ describe('display formatting', () => {
     expect(formatCountdown(1)).toBe('1 s');
     expect(formatCountdown(0)).toBe('0 s');
     expect(formatCountdown(2400)).toBe('3 s');
+  });
+});
+
+describe('the HUD reveals a mechanic only once it exists', () => {
+  it('hides Scrap until a print has actually failed', () => {
+    const content = loadContent(RAW_CONTENT);
+    const clean = visualFixture('printing');
+    expect(clean.ledger.scrap).toBe(0);
+    const { unmount } = render(<Hud visual={clean} content={content} />);
+    expect(screen.queryByTestId('scrap')).toBeNull();
+    unmount();
+
+    const scrapped = visualFixture('economy');
+    expect(scrapped.ledger.scrap).toBeGreaterThan(0);
+    render(<Hud visual={scrapped} content={content} />);
+    expect(screen.getByTestId('scrap').textContent).toContain('g');
   });
 });
 

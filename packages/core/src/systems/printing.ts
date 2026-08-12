@@ -3,12 +3,19 @@ import type { Content, MaterialDef, ObjectDef } from '../content/schema.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
+import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
 import { addParts, withFilament } from './resources.js';
+import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 
 /**
  * The print cycle (spec §2/§4). A slot holds one `{ material, objectType }`
  * config; every printer assigned to the slot runs that config, so a run is a
  * *batch* of `printerCount` identical prints that start and finish together.
+ *
+ * Since M3 a batch can also *fail*: the slot carries a pity charge and a run
+ * that crosses the threshold yields Scrap instead of Parts (spec §7.1). And
+ * changing a slot's configuration costs time and a purge of filament (spec §3),
+ * which is held on the slot as `changeoverMs`.
  *
  * Every number here comes from `content/`: object print seconds, material and
  * printer speed multipliers, filament grams, part yield and part value.
@@ -34,26 +41,53 @@ export function resolveSlotConfig(content: Content, slot: SlotState): SlotConfig
   return { material, object };
 }
 
-/** The best machine among the owned printers decides the visual tier (spec §4). */
-export function bestPrinterTier(state: GameState, content: Content): number {
+/**
+ * The visible tier of the workshop's machines (spec §4/§5A): the best owned
+ * printer, or better still whatever the machine tree has bolted onto it. A
+ * heated bed or an enclosure changes the SVG, so it has to reach the
+ * projection, and it does so as a `machineTier` upgrade effect in content.
+ */
+export function bestPrinterTier(
+  state: GameState,
+  content: Content,
+  modifiers: ModifierMap,
+): number {
   let tier = NONE;
   for (const printer of content.printers) {
     if ((state.printers[printer.id] ?? NONE) > NONE && printer.machineTier > tier) {
       tier = printer.machineTier;
     }
   }
-  return tier;
+  return tier > NONE ? Math.max(tier, modifierOf(modifiers, 'machineTier', NONE)) : NONE;
 }
 
-/** The best owned machine also sets the pace of a run in M1's single-slot fleet. */
-export function bestSpeedMultiplier(state: GameState, content: Content): number {
+/** The best owned machine, sped up by the machine tree, sets the pace of a run. */
+export function bestSpeedMultiplier(
+  state: GameState,
+  content: Content,
+  modifiers: ModifierMap,
+): number {
   let best = NONE;
   for (const printer of content.printers) {
     if ((state.printers[printer.id] ?? NONE) > NONE && printer.speedMultiplier > best) {
       best = printer.speedMultiplier;
     }
   }
-  return best;
+  return best * modifierOf(modifiers, 'printSpeedMultiplier', FULL);
+}
+
+/** The gentlest failure rate among the owned fleet — you run your best machine. */
+export function bestFailureChargeMultiplier(state: GameState, content: Content): number {
+  let best: number | null = null;
+  for (const printer of content.printers) {
+    if ((state.printers[printer.id] ?? NONE) > NONE) {
+      best =
+        best === null
+          ? printer.failureChargeMultiplier
+          : Math.min(best, printer.failureChargeMultiplier);
+    }
+  }
+  return best ?? FULL;
 }
 
 /**
@@ -86,9 +120,9 @@ export interface BatchYield {
   readonly value: number;
 }
 
-/** Parts and money value produced by one completed batch (spec §2). */
-export function batchYield(config: SlotConfig, batch: number): BatchYield {
-  const parts = config.object.partsYield * batch;
+/** Parts and money value produced by the *successful* prints in a batch. */
+export function batchYield(config: SlotConfig, batch: number, yieldMultiplier: number): BatchYield {
+  const parts = config.object.partsYield * batch * yieldMultiplier;
   return {
     parts,
     value: parts * config.object.basePartValue * config.material.valueMultiplier,
@@ -135,11 +169,68 @@ export function slotIndexOf(state: GameState, slotId: string): number {
   return state.slots.findIndex((slot) => slot.id === slotId);
 }
 
+// --- changeover (spec §3) ---------------------------------------------------
+
+export interface Changeover {
+  readonly slot: SlotState;
+  readonly purgedMaterialId: string | null;
+  readonly purgedGrams: number;
+  readonly downtimeMs: number;
+}
+
+/**
+ * Load a new configuration into an idle slot. Switching *material* costs the
+ * incoming material's changeover time and purges some of the outgoing spool;
+ * swapping only the object is free, because the nozzle never changes.
+ */
+export function applyChangeover(
+  state: GameState,
+  slot: SlotState,
+  next: SlotConfig,
+): { readonly state: GameState; readonly changeover: Changeover } {
+  const switching = slot.materialId !== null && slot.materialId !== next.material.id;
+  if (!switching) {
+    return {
+      state,
+      changeover: {
+        slot: { ...slot, materialId: next.material.id, objectId: next.object.id },
+        purgedMaterialId: null,
+        purgedGrams: NONE,
+        downtimeMs: NONE,
+      },
+    };
+  }
+  const outgoingId = slot.materialId;
+  const stock = state.filamentGrams[outgoingId] ?? NONE;
+  const purged = Math.min(stock, next.material.changeoverWasteGrams);
+  const downtimeMs = next.material.changeoverDesignSeconds * MS_PER_SECOND;
+  return {
+    state: { ...state, filamentGrams: withFilament(state.filamentGrams, outgoingId, -purged) },
+    changeover: {
+      slot: {
+        ...slot,
+        materialId: next.material.id,
+        objectId: next.object.id,
+        changeoverMs: downtimeMs,
+        // A fresh nozzle is a fresh pity timer: the charge belongs to the
+        // material that built it up, not to the slot forever.
+        failureCharge: NONE,
+      },
+      purgedMaterialId: outgoingId,
+      purgedGrams: purged,
+      downtimeMs,
+    },
+  };
+}
+
+// --- the run loop -----------------------------------------------------------
+
 export type StartRejection = 'unknown-target' | 'slot-busy' | 'insufficient-resources';
 
 /**
  * Load a slot's printers with filament and start a batch. Returns `null` when
- * the slot cannot run — unconfigured, already busy, no printers, no filament.
+ * the slot cannot run — unconfigured, already busy, mid-changeover, no
+ * printers, no filament.
  */
 export function beginRun(
   state: GameState,
@@ -147,9 +238,10 @@ export function beginRun(
   index: number,
   carryMs: number,
   emit: EventSink | undefined,
+  modifiers: ModifierMap = computeModifiers(state, content),
 ): GameState | null {
   const slot = state.slots.at(index);
-  if (slot === undefined || slot.run !== null) {
+  if (slot === undefined || slot.run !== null || slot.changeoverMs > NONE) {
     return null;
   }
   const config = resolveSlotConfig(content, slot);
@@ -161,7 +253,7 @@ export function beginRun(
   if (batch <= NONE) {
     return null;
   }
-  const speed = bestSpeedMultiplier(state, content);
+  const speed = bestSpeedMultiplier(state, content, modifiers);
   if (speed <= NONE) {
     return null;
   }
@@ -191,6 +283,7 @@ function completeRun(
   content: Content,
   index: number,
   emit: EventSink | undefined,
+  modifiers: ModifierMap,
 ): GameState {
   const slot = state.slots.at(index);
   const run = slot?.run;
@@ -201,13 +294,27 @@ function completeRun(
   if (config === null) {
     return withSlot(state, index, { ...slot, run: null });
   }
-  const produced = batchYield(config, run.batch);
-  const banked = addParts(state, produced.parts, produced.value);
+
+  const perPrint = chargePerPrint(
+    config.material,
+    bestFailureChargeMultiplier(state, content),
+    modifiers,
+  );
+  const outcome = resolveBatchFailures(content.failure, slot.failureCharge, run.batch, perPrint);
+  const produced = batchYield(
+    config,
+    outcome.succeeded,
+    modifierOf(modifiers, 'partsYieldMultiplier', FULL),
+  );
+  const scrapped = scrapFromFailure(config.material, config.object.filamentGrams * outcome.failed);
+
+  const banked = bankScrap(addParts(state, produced.parts, produced.value), scrapped);
   const counted: GameState = {
     ...banked,
     stats: {
       ...banked.stats,
-      printsCompleted: banked.stats.printsCompleted + run.batch,
+      printsCompleted: banked.stats.printsCompleted + outcome.succeeded,
+      printsFailed: banked.stats.printsFailed + outcome.failed,
       partsProduced: banked.stats.partsProduced + produced.parts,
     },
   };
@@ -220,12 +327,28 @@ function completeRun(
     batch: run.batch,
     parts: produced.parts,
     partsValue: produced.value,
+    failed: outcome.failed,
+    scrapGrams: scrapped.grams,
   });
-  const idle = withSlot(counted, index, { ...slot, run: null });
+  if (outcome.failed > NONE) {
+    emit?.({
+      type: 'PRINT_FAILED',
+      simTimeMs: state.simTimeMs,
+      slotId: slot.id,
+      materialId: config.material.id,
+      failed: outcome.failed,
+      scrapGrams: scrapped.grams,
+    });
+  }
+  const idle = withSlot(counted, index, {
+    ...slot,
+    run: null,
+    failureCharge: outcome.charge,
+  });
   if (!slot.autoRestart) {
     return idle;
   }
-  return beginRun(idle, content, index, run.remainingMs, emit) ?? idle;
+  return beginRun(idle, content, index, run.remainingMs, emit, modifiers) ?? idle;
 }
 
 /**
@@ -237,12 +360,43 @@ export function tickSlots(
   content: Content,
   dtMs: number,
   emit: EventSink | undefined,
+  modifiers: ModifierMap = computeModifiers(state, content),
 ): GameState {
   let next = state;
   for (let index = NONE; index < next.slots.length; index += FULL) {
-    next = tickSlot(next, content, index, dtMs, emit);
+    next = tickSlot(next, content, index, dtMs, emit, modifiers);
   }
   return next;
+}
+
+/**
+ * Burn `dtMs` off a slot's changeover purge. Any overshoot is handed back as a
+ * negative carry so the run that follows starts that much further along — the
+ * same trick the run loop uses, and for the same reason: no tick may be lost.
+ */
+function tickChangeover(
+  state: GameState,
+  index: number,
+  dtMs: number,
+  emit: EventSink | undefined,
+): { readonly state: GameState; readonly remainingDtMs: number; readonly blocked: boolean } {
+  const slot = state.slots.at(index);
+  if (slot === undefined || slot.changeoverMs <= NONE) {
+    return { state, remainingDtMs: dtMs, blocked: false };
+  }
+  if (slot.changeoverMs > dtMs) {
+    return {
+      state: withSlot(state, index, { ...slot, changeoverMs: slot.changeoverMs - dtMs }),
+      remainingDtMs: NONE,
+      blocked: true,
+    };
+  }
+  emit?.({ type: 'CHANGEOVER_COMPLETED', simTimeMs: state.simTimeMs, slotId: slot.id });
+  return {
+    state: withSlot(state, index, { ...slot, changeoverMs: NONE }),
+    remainingDtMs: dtMs - slot.changeoverMs,
+    blocked: false,
+  };
 }
 
 function tickSlot(
@@ -251,8 +405,17 @@ function tickSlot(
   index: number,
   dtMs: number,
   emit: EventSink | undefined,
+  modifiers: ModifierMap,
 ): GameState {
-  let next = state;
+  const purge = tickChangeover(state, index, dtMs, emit);
+  let next = purge.state;
+  if (purge.blocked) {
+    return next;
+  }
+  // Whatever the purge did not consume still has to be spent on the run, or a
+  // changeover would silently swallow part of a tick.
+  const remainingDt = purge.remainingDtMs;
+
   const idleSlot = next.slots.at(index);
   if (idleSlot !== undefined && idleSlot.run === null) {
     // An auto-restarting slot that stalled (no filament) resumes by itself.
@@ -262,7 +425,7 @@ function tickSlot(
     if (!idleSlot.autoRestart) {
       return next;
     }
-    const resumed = beginRun(next, content, index, NONE, emit);
+    const resumed = beginRun(next, content, index, NONE, emit, modifiers);
     if (resumed === null) {
       return next;
     }
@@ -272,7 +435,7 @@ function tickSlot(
   if (running === undefined || running.run === null) {
     return next;
   }
-  next = withSlot(next, index, { ...running, run: tickRun(running.run, dtMs) });
+  next = withSlot(next, index, { ...running, run: tickRun(running.run, remainingDt) });
 
   let completions = NONE;
   while (completions < MAX_RUN_COMPLETIONS_PER_TICK) {
@@ -280,7 +443,7 @@ function tickSlot(
     if (slot === undefined || slot.run === null || !isRunComplete(slot.run)) {
       return next;
     }
-    next = completeRun(next, content, index, emit);
+    next = completeRun(next, content, index, emit, modifiers);
     completions += FULL;
   }
   return next;

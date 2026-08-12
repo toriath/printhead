@@ -36,6 +36,16 @@ export interface GameLoop {
   /** Run one frame now. Returns the wall milliseconds it consumed. */
   frame(): number;
   isRunning(): boolean;
+  /**
+   * Dev time-warp (spec §14): multiplies the wall-clock gap handed to the
+   * engine, **on top of** the pace mapping and never instead of it. The scale
+   * factor of spec §8 still lives in exactly one place — `engine/pace.ts` — and
+   * still does the same job; this only lies to the loop about how long a frame
+   * took, which is the same lie a slow laptop tells it. Defaults to 1, so a
+   * production build behaves as if it did not exist.
+   */
+  setTimeScale(scale: number): void;
+  getTimeScale(): number;
 }
 
 const defaultScheduler: FrameScheduler = (callback) => {
@@ -57,6 +67,7 @@ export function createGameLoop(options: GameLoopOptions): GameLoop {
   // starts the pump immediately (tests and E2E step `frame()` by hand).
   let lastMs: number | null = clock.nowMs();
   let stopBackground: (() => void) | null = null;
+  let timeScale = 1;
 
   function frame(): number {
     const now = clock.nowMs();
@@ -65,7 +76,7 @@ export function createGameLoop(options: GameLoopOptions): GameLoop {
     if (previous === null) {
       return 0;
     }
-    const elapsed = Math.max(now - previous, 0);
+    const elapsed = Math.max(now - previous, 0) * timeScale;
     if (elapsed >= threshold) {
       options.onOffline?.(store.applyOffline(elapsed));
       return elapsed;
@@ -97,5 +108,12 @@ export function createGameLoop(options: GameLoopOptions): GameLoop {
     },
     frame,
     isRunning: () => cancel !== null,
+    setTimeScale(scale) {
+      if (!Number.isFinite(scale) || scale <= 0) {
+        throw new RangeError(`time scale must be positive, received ${scale}`);
+      }
+      timeScale = scale;
+    },
+    getTimeScale: () => timeScale,
   };
 }

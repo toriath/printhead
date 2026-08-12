@@ -29,6 +29,7 @@
     "vite-plugin-pwa": "catalog:",
     "vitest": "catalog:",
     "workbox-build": "catalog:",
-    "workbox-window": "catalog:"
+    "workbox-window": "catalog:",
+    "zod": "catalog:"
   }
 }

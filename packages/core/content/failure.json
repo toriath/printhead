@@ -1,0 +1,11 @@
+{
+  "model": {
+    "strategy": "pity-timer",
+    "chargeThreshold": 1,
+    "carryFraction": 0
+  },
+  "recycler": {
+    "requiresUpgradeId": "recycler",
+    "yieldFraction": 0.6
+  }
+}

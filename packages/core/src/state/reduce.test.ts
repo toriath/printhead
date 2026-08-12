@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createCurveRegistry, evaluateCurveById } from '../curves/evaluate.js';
 import { TICK_MS } from '../engine/constants.js';
 import { createRng } from '../rng/mulberry32.js';
+import { SAVE_SCHEMA_VERSION } from '../save/version.js';
 import { nextPrinterCost } from '../systems/economy.js';
 import {
   FIRST_MATERIAL_ID,
@@ -38,7 +39,7 @@ describe('reduce', () => {
     expect(initial.phaseId).toBe('intro');
     expect(initial.simTimeMs).toBe(0);
     expect(initial.tickCount).toBe(0);
-    expect(initial.saveVersion).toBe(2);
+    expect(initial.saveVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(initial.resources).toEqual(content.start.startingResources);
     expect(initial.filamentGrams[FIRST_MATERIAL_ID]).toBe(content.start.startingFilament[0]?.grams);
     expect(initial.slots).toHaveLength(content.start.slotCount);
@@ -217,11 +218,21 @@ describe('the print cycle', () => {
     expect(sim.eventsOf('ACTION_REJECTED')[0]?.reason).toBe('slot-busy');
   });
 
-  it('refuses a changeover while the slot is busy', () => {
-    const sim = configured()
-      .do(startPrint(FIRST_SLOT_ID))
-      .do(setSlotConfig(FIRST_SLOT_ID, FIRST_MATERIAL_ID, FIRST_OBJECT_ID));
-    expect(sim.eventsOf('ACTION_REJECTED')[0]?.reason).toBe('slot-busy');
+  /**
+   * Reconfiguring a *running* slot throws the batch away rather than being
+   * refused. An auto-restarting slot re-arms the instant a batch lands, so
+   * "only when idle" would have meant "never" in practice.
+   */
+  it('abandons the batch in flight when the slot is reconfigured', () => {
+    const sim = configured().do(startPrint(FIRST_SLOT_ID));
+    const batch = sim.state.slots[0]?.run?.batch ?? 0;
+    expect(batch).toBeGreaterThan(0);
+    sim.do(setSlotConfig(FIRST_SLOT_ID, FIRST_MATERIAL_ID, FIRST_OBJECT_ID));
+    expect(sim.eventsOf('ACTION_REJECTED')).toEqual([]);
+    expect(sim.state.slots[0]?.run).toBeNull();
+    expect(sim.eventsOf('SLOT_CONFIGURED').at(-1)?.abandonedBatch).toBe(batch);
+    // The batch's filament was consumed at the start of the run and is gone.
+    expect(sim.state.stats.printsCompleted).toBe(0);
   });
 
   it('refuses to start an unconfigured or unstocked slot', () => {

@@ -1,6 +1,7 @@
 import automation from '../../content/automation.json' with { type: 'json' };
 import curves from '../../content/curves.json' with { type: 'json' };
 import designs from '../../content/designs.json' with { type: 'json' };
+import failure from '../../content/failure.json' with { type: 'json' };
 import market from '../../content/market.json' with { type: 'json' };
 import materials from '../../content/materials.json' with { type: 'json' };
 import objects from '../../content/objects.json' with { type: 'json' };
@@ -23,5 +24,6 @@ export const RAW_CONTENT: RawContent = {
   designs,
   market,
   automation,
+  failure,
   prestige,
 };

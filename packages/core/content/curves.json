@@ -3,21 +3,28 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 55,
+    "base": 8.02916,
     "growth": 1.18
   },
   {
     "id": "upgrade-cost-machine",
     "name": "Machine upgrade cost",
     "type": "exponential",
-    "base": 25,
+    "base": 80.9012,
     "growth": 1.6
+  },
+  {
+    "id": "upgrade-cost-sla",
+    "name": "SLA / sintering head cost",
+    "type": "exponential",
+    "base": 900,
+    "growth": 2.4
   },
   {
     "id": "automation-cost",
     "name": "Automation upgrade cost",
     "type": "exponential",
-    "base": 120,
+    "base": 199.34,
     "growth": 2.1
   },
   {

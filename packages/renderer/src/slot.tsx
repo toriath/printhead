@@ -11,6 +11,8 @@ import {
   LABEL_Y,
   PROGRESS_HEIGHT,
   PROGRESS_Y,
+  RISK_HEIGHT,
+  RISK_Y,
 } from './geometry.js';
 import { Printer } from './printer.js';
 
@@ -50,10 +52,10 @@ export function CountBadge({ count }: { count: number }): ReactElement | null {
   );
 }
 
-function ProgressBar({ progress }: { progress: number }): ReactElement {
+function ProgressBar({ progress, purging }: { progress: number; purging: boolean }): ReactElement {
   const width = (BAY_WIDTH - BAY_PADDING * 2) * Math.min(Math.max(progress, 0), 1);
   return (
-    <g data-testid="progress-bar">
+    <g data-testid="progress-bar" data-purging={purging}>
       <rect
         className="ph-progress-track"
         x={BAY_PADDING}
@@ -63,7 +65,7 @@ function ProgressBar({ progress }: { progress: number }): ReactElement {
         rx={PROGRESS_HEIGHT / 2}
       />
       <rect
-        className="ph-progress-fill"
+        className={purging ? 'ph-progress-fill ph-progress-fill--purge' : 'ph-progress-fill'}
         x={BAY_PADDING}
         y={PROGRESS_Y}
         width={width}
@@ -74,8 +76,41 @@ function ProgressBar({ progress }: { progress: number }): ReactElement {
   );
 }
 
+/**
+ * The pity meter (spec §7.1). Failure is a deterministic charge, not a dice
+ * roll, so the player is *entitled* to see it filling — the whole design intent
+ * is that a bad print is something you watched coming.
+ */
+function RiskMeter({ risk }: { risk: number }): ReactElement | null {
+  if (risk <= 0) {
+    return null;
+  }
+  const width = (BAY_WIDTH - BAY_PADDING * 2) * Math.min(risk, 1);
+  return (
+    <g data-testid="risk-meter" data-risk={risk.toFixed(2)}>
+      <rect
+        className="ph-risk-track"
+        x={BAY_PADDING}
+        y={RISK_Y}
+        width={BAY_WIDTH - BAY_PADDING * 2}
+        height={RISK_HEIGHT}
+      />
+      <rect
+        className="ph-risk-fill"
+        x={BAY_PADDING}
+        y={RISK_Y}
+        width={width}
+        height={RISK_HEIGHT}
+      />
+    </g>
+  );
+}
+
 export function slotLabel(slot: SlotVisual): string {
   const config = `${slot.objectName ?? slot.objectId} · ${slot.materialName ?? slot.materialId}`;
+  if (slot.changingOver) {
+    return `purging → ${slot.materialName ?? slot.materialId}`;
+  }
   if (slot.occupied) {
     return config;
   }
@@ -113,7 +148,15 @@ export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
           progress={slot.progress}
         />
       ) : null}
-      {slot.occupied ? <ProgressBar progress={slot.progress} /> : null}
+      {slot.occupied ? (
+        <ProgressBar
+          // During a purge the bar tracks the changeover, not a print: the bay
+          // is busy either way and an empty bar would read as "idle".
+          progress={slot.changingOver ? slot.changeoverProgress : slot.progress}
+          purging={slot.changingOver}
+        />
+      ) : null}
+      {slot.occupied ? <RiskMeter risk={slot.failureRisk} /> : null}
       <CountBadge count={slot.printerCount} />
       <text
         data-testid={`label-${slot.slotId}`}

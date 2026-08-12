@@ -4,6 +4,7 @@ import { RAW_CONTENT } from '../content/raw.js';
 import { createInitialState } from '../state/game-state.js';
 import fixtureV1 from './__fixtures__/save-v1.json' with { type: 'json' };
 import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
+import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -49,9 +50,10 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
+    expect(fixtureV3.version).toBe(3);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -68,10 +70,26 @@ describe('save fixture corpus', () => {
     expect(loaded.slots).toHaveLength(1);
   });
 
-  it('loads the released v2 fixture untouched', () => {
+  it('loads the released v2 fixture by migrating it forward', () => {
     const loaded = fromSaveFile(fixtureV2);
-    expect(loaded).toEqual(fixtureV2.state);
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    // Everything v2 knew about survives verbatim...
     expect(loaded.printers['bench-mk1']).toBe(1);
+    expect(loaded.stats.printsCompleted).toBeGreaterThan(0);
+    expect(loaded.simTimeMs).toBe(fixtureV2.state.simTimeMs);
+    // ...and everything M3 added starts empty, because that save never had it.
+    expect(loaded.scrapValue).toBe(0);
+    expect(loaded.upgrades).toEqual({});
+    expect(loaded.automation).toEqual({});
+    expect(loaded.market).toEqual({});
+    expect(loaded.slots[0]?.failureCharge).toBe(0);
+    expect(loaded.slots[0]?.changeoverMs).toBe(0);
+    expect(loaded.stats.printsFailed).toBe(0);
+  });
+
+  it('loads the released v3 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV3);
+    expect(loaded).toEqual(fixtureV3.state);
     expect(loaded.stats.printsCompleted).toBeGreaterThan(0);
   });
 

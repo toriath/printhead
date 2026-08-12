@@ -15,7 +15,8 @@ pnpm tsx scripts/make-save-fixture.ts   # writes save-v<SAVE_SCHEMA_VERSION>.jso
 ```
 
 The generator plays the intro and part of the bench loop through the real
-reducer, so the fixture is a save the game actually produces rather than a
-hand-written guess. Its exact numbers depend on the content set at the time of
+reducer — and, since v3, goes on to install a machine node, run the recycler
+and buy an automation — so the fixture is a save the game actually produces
+rather than a hand-written guess. Its exact numbers depend on the content set at the time of
 generation, which is fine and expected — the fixture records one historical
 save, not the current balance.

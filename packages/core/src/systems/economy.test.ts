@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { MaterialDef } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { TEST_CONTENT } from '../state/__fixtures__/sim.js';
 import { type AssemblyState, type GameState, createInitialState } from '../state/game-state.js';
 import { attachAssemblyPiece, attachCooldownMs, nextPiece, tickAssembly } from './assembly.js';
 import {
-  affordableGrams,
-  filamentPrice,
   grantPrinter,
   nextPrinterCost,
   ownedPrinters,
   payCost,
-  purchaseFilament,
   purchasePrinter,
   sellPartsFrom,
 } from './economy.js';
@@ -20,7 +16,6 @@ const content = TEST_CONTENT;
 const curves = createCurveRegistry(content.curves);
 const printerId = content.start.printerId;
 const base = createInitialState(content, { seed: 1 });
-const pla = content.materials[0] as MaterialDef;
 
 const holding = (parts: number, value: number, money = 0): GameState => ({
   ...base,
@@ -50,44 +45,6 @@ describe('sellPartsFrom', () => {
     expect(sellPartsFrom(holding(0, 0), null)).toBeNull();
     expect(sellPartsFrom(holding(5, 5), 0)).toBeNull();
     expect(sellPartsFrom(holding(5, 5), -2)).toBeNull();
-  });
-});
-
-describe('filament pricing', () => {
-  it('prices grams from the material def', () => {
-    expect(filamentPrice(pla, 100)).toBeCloseTo(pla.costPerGram * 100, 9);
-  });
-
-  it('reports how many grams a balance buys', () => {
-    expect(affordableGrams(pla, 10)).toBeCloseTo(10 / pla.costPerGram, 9);
-  });
-
-  it('treats a free material as unlimited rather than dividing by zero', () => {
-    expect(affordableGrams({ ...pla, costPerGram: 0 }, 10)).toBe(Number.POSITIVE_INFINITY);
-  });
-});
-
-describe('purchaseFilament', () => {
-  it('exchanges money for grams and books the stat', () => {
-    const state = holding(0, 0, 10);
-    const bought = purchaseFilament(state, content, pla.id, 100);
-    expect(bought?.cost).toBeCloseTo(pla.costPerGram * 100, 9);
-    expect(bought?.state.filamentGrams[pla.id]).toBe((state.filamentGrams[pla.id] ?? 0) + 100);
-    expect(bought?.state.resources.money).toBeCloseTo(10 - (bought?.cost ?? 0), 9);
-    expect(bought?.state.stats.filamentPurchasedGrams).toBe(100);
-  });
-
-  it('refuses an unaffordable order rather than going into debt', () => {
-    expect(purchaseFilament(holding(0, 0, 1), content, pla.id, 1_000_000)).toBeNull();
-  });
-
-  it('refuses unknown materials and nonsensical quantities', () => {
-    const rich = holding(0, 0, 1000);
-    expect(purchaseFilament(rich, content, 'unobtainium', 10)).toBeNull();
-    expect(purchaseFilament(rich, content, pla.id, 0)).toBeNull();
-    expect(purchaseFilament(rich, content, pla.id, -10)).toBeNull();
-    expect(purchaseFilament(rich, content, pla.id, Number.NaN)).toBeNull();
-    expect(purchaseFilament(rich, content, pla.id, Number.POSITIVE_INFINITY)).toBeNull();
   });
 });
 
@@ -126,6 +83,22 @@ describe('payCost', () => {
 
   it('refuses to price anything in filament — that is per material, not scalar', () => {
     expect(payCost(holding(0, 0, 100), { resource: 'filament', amount: 1 })).toBeNull();
+  });
+
+  /**
+   * Scrap carries a banked value exactly as Parts do, so spending it has to
+   * draw the value out with the grams. Decrementing the count alone would
+   * strand the value and make the *next* recycle worth more than it should be.
+   */
+  it('draws a valued pool rather than decrementing it', () => {
+    const scrapped: GameState = {
+      ...base,
+      resources: { ...base.resources, scrap: 10 },
+      scrapValue: 40,
+    };
+    const paid = payCost(scrapped, { resource: 'scrap', amount: 4 });
+    expect(paid?.resources.scrap).toBe(6);
+    expect(paid?.scrapValue).toBeCloseTo(24, 9);
   });
 });
 
