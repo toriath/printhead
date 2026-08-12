@@ -1,0 +1,50 @@
+{
+  "targetHours": 8,
+  "baselineHours": 8,
+  "offlineCapHours": 24,
+  "phaseBudgetTolerance": 0.2,
+  "phases": [
+    {
+      "id": "intro",
+      "name": "Intro",
+      "budgetDesignMinutes": 5,
+      "waitWallBudgetDesignMinutes": 0.5
+    },
+    {
+      "id": "bench",
+      "name": "Bench",
+      "budgetDesignMinutes": 30,
+      "waitWallBudgetDesignMinutes": 2
+    },
+    {
+      "id": "farm",
+      "name": "Farm",
+      "budgetDesignMinutes": 80,
+      "waitWallBudgetDesignMinutes": 4
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "budgetDesignMinutes": 75,
+      "waitWallBudgetDesignMinutes": 4
+    },
+    {
+      "id": "prestige",
+      "name": "Prestige runs 1-2",
+      "budgetDesignMinutes": 90,
+      "waitWallBudgetDesignMinutes": 5
+    },
+    {
+      "id": "absurd",
+      "name": "The Absurd",
+      "budgetDesignMinutes": 80,
+      "waitWallBudgetDesignMinutes": 5
+    },
+    {
+      "id": "end",
+      "name": "The End",
+      "budgetDesignMinutes": 60,
+      "waitWallBudgetDesignMinutes": 6
+    }
+  ]
+}

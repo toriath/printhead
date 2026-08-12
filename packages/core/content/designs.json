@@ -1,0 +1,26 @@
+[
+  {
+    "id": "phone-stand",
+    "name": "Phone stand",
+    "requiredMaterialId": "resin",
+    "designDesignMinutes": 6,
+    "printDesignSeconds": 90,
+    "filamentGrams": 30,
+    "baseProductValue": 40,
+    "levelValueCurveId": "design-level-value",
+    "printsPerLevel": 10,
+    "unlockPhaseId": "studio"
+  },
+  {
+    "id": "money-plate",
+    "name": "Money plate",
+    "requiredMaterialId": "resin",
+    "designDesignMinutes": 18,
+    "printDesignSeconds": 240,
+    "filamentGrams": 120,
+    "baseProductValue": 500,
+    "levelValueCurveId": "design-level-value",
+    "printsPerLevel": 4,
+    "unlockPhaseId": "studio"
+  }
+]

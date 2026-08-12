@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.stryker-tmp/
+reports/
+stryker-incremental.json
+playwright-report/
+test-results/
+*.tsbuildinfo
+.tsbuildinfo
+.DS_Store
+*.local
+.vite/
+dist-types/
+.pnpm-store/
+.stryker-tmp/

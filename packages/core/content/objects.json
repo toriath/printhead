@@ -1,0 +1,20 @@
+[
+  {
+    "id": "bracket",
+    "name": "Bracket",
+    "printDesignSeconds": 12,
+    "filamentGrams": 4,
+    "partsYield": 1,
+    "basePartValue": 1,
+    "unlockPhaseId": "intro"
+  },
+  {
+    "id": "gearset",
+    "name": "Gear set",
+    "printDesignSeconds": 45,
+    "filamentGrams": 18,
+    "partsYield": 5,
+    "basePartValue": 1.1,
+    "unlockPhaseId": "bench"
+  }
+]

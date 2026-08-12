@@ -1,0 +1,50 @@
+[
+  {
+    "id": "heated-bed",
+    "name": "Heated bed",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-machine",
+    "costResource": "parts",
+    "requiresUpgradeIds": [],
+    "unlockPhaseId": "bench",
+    "effects": [
+      {
+        "type": "failureChargeMultiplier",
+        "value": 0.8
+      }
+    ]
+  },
+  {
+    "id": "hardened-nozzle",
+    "name": "Hardened nozzle",
+    "tree": "machine",
+    "maxLevel": 3,
+    "costCurveId": "upgrade-cost-machine",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["heated-bed"],
+    "unlockPhaseId": "bench",
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "value": 1.15
+      }
+    ]
+  },
+  {
+    "id": "config-slot-2",
+    "name": "Second config slot",
+    "tree": "farm",
+    "maxLevel": 1,
+    "costCurveId": "slot-cost",
+    "costResource": "parts",
+    "requiresUpgradeIds": [],
+    "unlockPhaseId": "farm",
+    "effects": [
+      {
+        "type": "configSlots",
+        "value": 1
+      }
+    ]
+  }
+]

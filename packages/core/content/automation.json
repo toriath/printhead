@@ -1,0 +1,20 @@
+[
+  {
+    "id": "auto-sell",
+    "name": "Auto-sell parts",
+    "costCurveId": "automation-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "farm",
+    "intervalDesignSeconds": 5,
+    "defaultThreshold": 50
+  },
+  {
+    "id": "auto-buy-filament",
+    "name": "Auto-buy filament",
+    "costCurveId": "automation-cost",
+    "costResource": "money",
+    "unlockPhaseId": "farm",
+    "intervalDesignSeconds": 10,
+    "defaultThreshold": 200
+  }
+]

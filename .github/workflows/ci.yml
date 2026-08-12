@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: pnpm check (devcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Spec §17: CI runs inside the devcontainer image, so dev == CI bit-for-bit.
+      - name: Build the devcontainer and run the full check
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/${{ github.repository }}/devcontainer
+          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
+          push: never
+          runCmd: |
+            set -euo pipefail
+            corepack enable
+            pnpm install --frozen-lockfile
+            pnpm check
+            pnpm balance:sim
+            pnpm mutation
+            pnpm exec playwright install chromium
+            pnpm e2e
