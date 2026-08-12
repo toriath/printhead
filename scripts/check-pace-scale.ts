@@ -11,11 +11,14 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SEARCH_ROOTS = ['packages', 'tools'];
 const ALLOWED_FILES = new Set(['packages/core/src/engine/pace.ts']);
 const NEEDLE = /paceScale/;
+const IGNORED_DIRS = new Set(['node_modules', 'dist', 'dist-types', 'coverage', 'reports']);
 
 function listFiles(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
-    if (entry.startsWith('.') || entry === 'node_modules' || entry === 'dist') {
+    // Generated output is not source: scanning it would report a violation in
+    // a `.d.ts` that merely echoes a doc comment from the file next door.
+    if (entry.startsWith('.') || IGNORED_DIRS.has(entry)) {
       continue;
     }
     const full = join(dir, entry);

@@ -17,7 +17,8 @@ the documents the projection's freeze test does.
 | `assembling.json` | generated | mid-intro, three pieces on the bench |
 | `assembled.json` | generated | printer #1 built, no config loaded |
 | `printing.json` | generated | the bench loop, one slot mid-batch |
-| `showcase.json` | hand-authored | four bays, three machine tiers, badges, one empty outline |
+| `economy.json` | generated | M3: a machine node installed, an automation running, scrap in the bin |
+| `showcase.json` | hand-authored | four bays, three machine tiers, badges, a purge in progress, one empty outline |
 
 Regenerate the *generated* ones (only when adding a new version) with:
 
@@ -25,8 +26,14 @@ Regenerate the *generated* ones (only when adding a new version) with:
 pnpm tsx scripts/make-visual-fixtures.ts
 ```
 
-`showcase.json` is written by hand on purpose: the M2 simulation has one slot
-and one printer tier, so nothing it can produce exercises the tier variants or
-the `×N` badges the renderer has to draw. It is schema-valid and represents a
-state the game reaches at M4; when the sim can produce it, it should become
-generated like the rest.
+`showcase.json` is written by hand on purpose: the simulation still has one
+slot, so nothing it can produce exercises the tier variants or the `×N` badges
+the renderer has to draw. It is schema-valid and represents a state the game
+reaches at M4; when the sim can produce it, it should become generated like the
+rest.
+
+Validation is **lazy and memoised** (`visualStateFixtures()`), not run at import
+time. The corpus is still checked the moment anything reads it — which every
+test that touches a fixture does — but the module stays importable by
+`scripts/make-visual-fixtures.ts`, whose whole job is to rewrite the very
+documents it would otherwise fail to load.
