@@ -1,0 +1,89 @@
+{
+  "version": 3,
+  "phaseId": "farm",
+  "phaseName": "Farm",
+  "simTimeMs": 4620000,
+  "slotCapacity": 4,
+  "slots": [
+    {
+      "slotId": "slot-1",
+      "index": 0,
+      "materialId": "pla",
+      "objectId": "bracket",
+      "machineTier": 1,
+      "printerCount": 7,
+      "phaseOffset": 0,
+      "occupied": true,
+      "running": true,
+      "progress": 0.5,
+      "batch": 7
+    },
+    {
+      "slotId": "slot-2",
+      "index": 1,
+      "materialId": "petg",
+      "objectId": "gearset",
+      "machineTier": 2,
+      "printerCount": 3,
+      "phaseOffset": 0.25,
+      "occupied": true,
+      "running": true,
+      "progress": 0.125,
+      "batch": 3
+    },
+    {
+      "slotId": "slot-3",
+      "index": 2,
+      "materialId": "resin",
+      "objectId": "bracket",
+      "machineTier": 3,
+      "printerCount": 1,
+      "phaseOffset": 0.5,
+      "occupied": true,
+      "running": false,
+      "progress": 0,
+      "batch": 0
+    },
+    {
+      "slotId": "slot-4",
+      "index": 3,
+      "materialId": null,
+      "objectId": null,
+      "machineTier": 0,
+      "printerCount": 0,
+      "phaseOffset": 0.75,
+      "occupied": false,
+      "running": false,
+      "progress": 0,
+      "batch": 0
+    }
+  ],
+  "assembly": {
+    "attachedPieceIds": [
+      "frame",
+      "gantry",
+      "bed",
+      "extruder",
+      "hotend",
+      "spool-holder",
+      "controller"
+    ],
+    "totalPieces": 7,
+    "nextPieceId": null,
+    "nextPieceName": null,
+    "cooldownMs": 0,
+    "ready": false,
+    "progress": 1,
+    "complete": true
+  },
+  "ledger": {
+    "parts": 184,
+    "money": 512.4,
+    "scrap": 12,
+    "filamentGrams": {
+      "pla": 940,
+      "petg": 310,
+      "resin": 88
+    }
+  }
+}
