@@ -22,7 +22,6 @@ import { isInstalled } from './upgrades.js';
  * NOTE: no gameplay numeric literals may appear in `systems/` (spec §11).
  */
 const NONE = 0;
-const ONE = 1;
 
 export type SlotRejection =
   | 'unknown-target'
@@ -56,7 +55,7 @@ export function hardSlotMaximum(content: Content): number {
 export function effectiveSlotCapacity(state: GameState, content: Content): number {
   const fork = chosenFork(state, content);
   const capped = fork?.slotCapacity ?? hardSlotMaximum(content);
-  return Math.min(capped, Math.max(ownedSlotCount(state), ONE));
+  return Math.min(capped, ownedSlotCount(state));
 }
 
 /** The next bay on the list, or `null` once every one has been bought. */

@@ -165,14 +165,15 @@ describe('the control model', () => {
   });
 
   it('points the panel at the bay it is asked about', () => {
+    const bareSlot = freshState.slots[0];
+    if (bareSlot === undefined) {
+      throw new Error('a fresh save always has one bay');
+    }
     const racked = {
       ...freshState,
       phaseId: 'farm',
       printers: { 'bench-mk1': 2 },
-      slots: [
-        { ...(freshState.slots[0] as never), id: 'slot-1', printerCount: 1 },
-        { ...(freshState.slots[0] as never), id: 'slot-2', printerCount: 1 },
-      ],
+      slots: ['slot-1', 'slot-2'].map((id) => ({ ...bareSlot, id, printerCount: 1 })),
     };
     const visual = toVisualState(racked, content);
     expect(buildControlModel(racked, content, visual).slotId).toBe('slot-1');
