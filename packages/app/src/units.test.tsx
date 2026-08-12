@@ -185,6 +185,21 @@ describe('the control model', () => {
     expect(buildControlModel(racked, content, visual, 'ghost').slotId).toBe('slot-1');
   });
 
+  it('offers the rota only once the auto-changeover unit is installed', () => {
+    const farm = { ...freshState, phaseId: 'farm' };
+    expect(buildControlModel(farm, content, toVisualState(farm, content)).canQueue).toBe(false);
+    const rota = content.automation.find((def) => def.behavior === 'auto-changeover');
+    const equipped = {
+      ...farm,
+      automation: {
+        [rota?.id ?? '']: { level: 1, enabled: true, threshold: 0, cooldownMs: 0 },
+      },
+    };
+    expect(buildControlModel(equipped, content, toVisualState(equipped, content)).canQueue).toBe(
+      true,
+    );
+  });
+
   it('sizes a filament purchase to what the money buys, capped at a restock', () => {
     const bench = {
       ...freshState,
