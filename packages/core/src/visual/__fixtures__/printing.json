@@ -155,7 +155,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -166,7 +166,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -177,7 +177,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -188,7 +188,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 81,
+      "cost": 106,
       "costResource": "parts"
     },
     {
@@ -221,7 +221,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 80.9012,
+      "cost": 105.172,
       "costResource": "money"
     }
   ],
@@ -236,7 +236,7 @@
       "threshold": 40,
       "available": true,
       "affordable": false,
-      "cost": 200,
+      "cost": 332,
       "costResource": "parts"
     },
     {
@@ -249,7 +249,7 @@
       "threshold": 400,
       "available": true,
       "affordable": false,
-      "cost": 200,
+      "cost": 332,
       "costResource": "parts"
     },
     {
@@ -262,7 +262,7 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 199.34,
+      "cost": 331.303,
       "costResource": "money"
     },
     {
@@ -275,7 +275,7 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 200,
+      "cost": 332,
       "costResource": "parts"
     }
   ],

@@ -3,28 +3,28 @@
   "savedAtMs": 1723420800000,
   "state": {
     "saveVersion": 4,
-    "simTimeMs": 5777000,
-    "tickCount": 57770,
+    "simTimeMs": 9161000,
+    "tickCount": 91610,
     "phaseId": "studio",
-    "phaseEnteredAtMs": 4635100,
+    "phaseEnteredAtMs": 8230100,
     "rng": {
       "seed": 7,
       "count": 0
     },
     "resources": {
-      "parts": 75.25000000000001,
-      "scrap": 251.7,
-      "money": 0.00044156415028240303,
+      "parts": 68.45,
+      "scrap": 284,
+      "money": 0.028757028118580052,
       "designs": 0,
       "products": 0,
       "plates": 0
     },
-    "partsValue": 75.3787042492611,
-    "scrapValue": 12.935999999999972,
+    "partsValue": 68.45,
+    "scrapValue": 14.199999999999966,
     "filamentGrams": {
-      "pla": 2.2000000000000455,
-      "petg": 63.9399999999996,
-      "resin": 0,
+      "pla": 0,
+      "petg": 23.464999999999392,
+      "resin": 2750,
       "metal": 0
     },
     "printers": {
@@ -35,36 +35,42 @@
       "recycler": 1,
       "hardened-nozzle": 3,
       "enclosure": 1,
-      "broker-licence": 1
+      "broker-licence": 2
     },
     "automation": {
       "auto-sell": {
         "level": 1,
         "enabled": true,
         "threshold": 1200,
-        "cooldownMs": 3000
+        "cooldownMs": 4000
       },
       "auto-buy-filament": {
         "level": 1,
         "enabled": true,
         "threshold": 400,
-        "cooldownMs": 3000
+        "cooldownMs": 9000
       },
       "auto-changeover": {
         "level": 1,
         "enabled": true,
         "threshold": 60,
-        "cooldownMs": 3000
+        "cooldownMs": 14000
+      },
+      "auto-trade": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 250,
+        "cooldownMs": 4000
       }
     },
     "market": {
       "petg": {
-        "stockGrams": 2129.999999997342,
-        "pressure": -0.38878033116987576
+        "stockGrams": 1862.9999999971865,
+        "pressure": -0.22362426511451972
       },
       "resin": {
-        "stockGrams": 2400,
-        "pressure": 0
+        "stockGrams": 1387.333333332541,
+        "pressure": -0.12797939835146815
       },
       "metal": {
         "stockGrams": 800,
@@ -78,12 +84,8 @@
         "objectId": "bracket",
         "printerCount": 8,
         "autoRestart": true,
-        "run": {
-          "remainingMs": 1435.1113668122725,
-          "totalMs": 4931.371743239913,
-          "batch": 4
-        },
-        "failureCharge": 0.5024000000000016,
+        "run": null,
+        "failureCharge": 0.7152000000000013,
         "changeoverMs": 0,
         "queue": [],
         "queueIndex": 0,
@@ -91,13 +93,13 @@
       },
       {
         "id": "slot-2",
-        "materialId": "petg",
+        "materialId": "pla",
         "objectId": "bracket",
         "printerCount": 6,
         "autoRestart": true,
         "run": null,
-        "failureCharge": 0,
-        "changeoverMs": 27100,
+        "failureCharge": 0.10720000000000095,
+        "changeoverMs": 0,
         "queue": [
           {
             "materialId": "pla",
@@ -110,8 +112,8 @@
             "batches": 4
           }
         ],
-        "queueIndex": 1,
-        "queueBatches": 0
+        "queueIndex": 0,
+        "queueBatches": 115
       }
     ],
     "forkId": "farm-path",
@@ -128,15 +130,15 @@
       "cooldownMs": 0
     },
     "stats": {
-      "printsCompleted": 2142,
-      "printsFailed": 168,
-      "partsProduced": 4264.25,
-      "partsSold": 919,
-      "moneyEarned": 1545.2261966375975,
-      "filamentPurchasedGrams": 20037,
-      "filamentSoldGrams": 0,
-      "scrapProducedGrams": 727.0999999999997,
-      "scrapRecycledGrams": 475.39999999999975
+      "printsCompleted": 2585,
+      "printsFailed": 206,
+      "partsProduced": 5973.450000000001,
+      "partsSold": 1839,
+      "moneyEarned": 4054.3654700747275,
+      "filamentPurchasedGrams": 31729,
+      "filamentSoldGrams": 1500,
+      "scrapProducedGrams": 966.4000000000003,
+      "scrapRecycledGrams": 682.4000000000003
     }
   }
 }

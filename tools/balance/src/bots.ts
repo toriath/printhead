@@ -848,7 +848,9 @@ export const balancedBot = createPolicyBot({
   capacityFirst: false,
   reserveBatches: 3,
   chaseMargin: true,
-  preferFork: 'throughput',
+  // The reference player keeps its rack: `greedy-spender` takes the other
+  // branch, so between them the roster exercises both sides of the fork.
+  preferFork: 'flexibility',
   useQueues: false,
 });
 

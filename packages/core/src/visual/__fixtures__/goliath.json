@@ -2,7 +2,7 @@
   "version": 5,
   "phaseId": "studio",
   "phaseName": "Studio",
-  "simTimeMs": 4650000,
+  "simTimeMs": 8245000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -90,13 +90,13 @@
     "complete": true
   },
   "ledger": {
-    "parts": 70,
-    "money": 98.25521523898242,
-    "scrap": 11.700000000000001,
+    "parts": 104,
+    "money": 247.58303727421088,
+    "scrap": 0,
     "filamentGrams": {
-      "pla": 399.2,
-      "petg": 387.9399999999996,
-      "resin": 0,
+      "pla": 400,
+      "petg": 23.464999999999392,
+      "resin": 2250,
       "metal": 0
     }
   },
@@ -110,38 +110,38 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 399.2
+      "heldGrams": 400
     },
     {
       "materialId": "petg",
       "materialName": "PETG",
       "tradeable": true,
       "available": true,
-      "buyPerGram": 0.10250211770510345,
-      "sellPerGram": 0.09173939534606759,
-      "priceMultiplier": 1.2812764713137932,
-      "stockGrams": 367.9999999969739,
-      "heldGrams": 387.9399999999996
+      "buyPerGram": 0.08630599874803227,
+      "sellPerGram": 0.07996250784005189,
+      "priceMultiplier": 1.0788249843504034,
+      "stockGrams": 30.999999996899724,
+      "heldGrams": 23.464999999999392
     },
     {
       "materialId": "resin",
       "materialName": "Resin (SLA)",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 0.393372656119289,
-      "sellPerGram": 0.3520685272267637,
-      "priceMultiplier": 1.12392187462654,
-      "stockGrams": 2400,
-      "heldGrams": 0
+      "buyPerGram": 0.3857581244753165,
+      "sellPerGram": 0.3574049023263807,
+      "priceMultiplier": 1.1021660699294757,
+      "stockGrams": 1276.6666666662695,
+      "heldGrams": 2250
     },
     {
       "materialId": "metal",
       "materialName": "Sintered metal",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 1.5280759582996741,
-      "sellPerGram": 1.3676279826782083,
-      "priceMultiplier": 1.0914828273569102,
+      "buyPerGram": 1.542171233706082,
+      "sellPerGram": 1.428821648028685,
+      "priceMultiplier": 1.10155088121863,
       "stockGrams": 800,
       "heldGrams": 0
     }
@@ -155,7 +155,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 130,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -166,7 +166,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 130,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -177,7 +177,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 332,
+      "cost": 431,
       "costResource": "parts"
     },
     {
@@ -188,7 +188,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 130,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -217,11 +217,11 @@
       "upgradeId": "broker-licence",
       "name": "Broker licence",
       "tree": "automation",
-      "level": 1,
+      "level": 2,
       "maxLevel": 2,
-      "available": true,
+      "available": false,
       "affordable": false,
-      "cost": 129.44192,
+      "cost": 269.24032000000005,
       "costResource": "money"
     }
   ],
@@ -233,10 +233,10 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 70,
+      "threshold": 104,
       "available": false,
       "affordable": false,
-      "cost": 419,
+      "cost": 696,
       "costResource": "parts"
     },
     {
@@ -249,20 +249,20 @@
       "threshold": 400,
       "available": false,
       "affordable": false,
-      "cost": 419,
+      "cost": 696,
       "costResource": "parts"
     },
     {
       "automationId": "auto-trade",
       "name": "Auto-trading desk",
       "behavior": "trade-filament",
-      "level": 0,
-      "installed": false,
-      "enabled": false,
+      "level": 1,
+      "installed": true,
+      "enabled": true,
       "threshold": 250,
-      "available": true,
+      "available": false,
       "affordable": false,
-      "cost": 199.34,
+      "cost": 695.7363,
       "costResource": "money"
     },
     {
@@ -275,14 +275,14 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 419,
+      "cost": 696,
       "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": true,
-    "scrapGrams": 11.700000000000001,
-    "yieldGrams": 11.232,
+    "scrapGrams": 0,
+    "yieldGrams": 0,
     "yieldMaterialId": "pla"
   }
 }

@@ -32,6 +32,11 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   { pointer: 'curves/upgrade-cost-machine/base', min: 5, max: 400 },
   { pointer: 'curves/automation-cost/base', min: 10, max: 2000 },
   { pointer: 'objects/gearset/partsYield', min: 1, max: 20, integer: true },
+  // M4's new sinks. A config slot is the biggest single purchase before the
+  // fork, so it owns a large slice of the farm phase's length (spec §4).
+  { pointer: 'curves/slot-cost/base', min: 50, max: 4000 },
+  { pointer: 'curves/slot-cost/growth', min: 1.5, max: 12 },
+  { pointer: 'curves/fork-cost/value', min: 100, max: 20000 },
 ];
 
 const DEFAULT_PHASES = ['intro', 'bench', 'farm'] as const;

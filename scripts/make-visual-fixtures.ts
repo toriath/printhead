@@ -16,8 +16,12 @@ import type { Action, GameState, VisualState } from '@printhead/core';
 import {
   RAW_CONTENT,
   TICK_MS,
+  createCurveRegistry,
   createInitialState,
   loadContent,
+  nextAutomationCost,
+  nextPrinterCost,
+  nextUpgradeCost,
   reduce,
   restoreRng,
   toVisualState,
@@ -101,11 +105,36 @@ const grind = (until: () => boolean, limitSeconds = 3600): void => {
 };
 
 grind(() => state.phaseId !== 'intro');
-grind(() => state.resources.parts >= 200);
-apply({ type: 'BUY_UPGRADE', upgradeId: 'heated-bed' });
-apply({ type: 'BUY_UPGRADE', upgradeId: content.failure.recycler.requiresUpgradeId });
-grind(() => state.resources.parts >= 400);
-apply({ type: 'BUY_AUTOMATION', automationId: content.automation[0]?.id ?? 'auto-sell' });
+
+/**
+ * Everything below is priced from the *current* content rather than from a
+ * number typed here. A re-balance moves these costs by hundreds of Parts, and a
+ * fixture generator that grinds to a hard-coded target quietly starts producing
+ * a workshop with no automation in it — which is exactly what this fixture
+ * exists to pin.
+ */
+const curves = createCurveRegistry(content.curves);
+const afford = (amount: number): void => grind(() => state.resources.parts >= amount);
+
+// A few more machines first: one printer cannot earn its way to a machine node
+// inside the generator's grind budget, and a player would not try.
+const printer = content.printers[0];
+for (let i = 0; printer !== undefined && i < 3; i += 1) {
+  afford(nextPrinterCost(state, content, curves, printer.id)?.amount ?? 0);
+  apply({ type: 'BUY_PRINTER', printerId: printer.id, slotId });
+}
+
+for (const upgradeId of ['heated-bed', content.failure.recycler.requiresUpgradeId]) {
+  afford(nextUpgradeCost(state, content, curves, upgradeId)?.amount ?? 0);
+  apply({ type: 'BUY_UPGRADE', upgradeId });
+}
+
+const firstAutomation = content.automation[0];
+if (firstAutomation !== undefined) {
+  afford(nextAutomationCost(state, content, curves, firstAutomation.id)?.amount ?? 0);
+  apply({ type: 'BUY_AUTOMATION', automationId: firstAutomation.id });
+}
+
 grind(() => state.resources.scrap > 0);
 // Switch to the material the heated bed unlocked: a real changeover, mid-purge.
 apply({ type: 'BUY_FILAMENT', materialId: 'petg', grams: 200 });
