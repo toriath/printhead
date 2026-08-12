@@ -3,7 +3,7 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 12,
+    "base": 55,
     "growth": 1.18
   },
   {
