@@ -84,6 +84,22 @@ describe('payCost', () => {
   it('refuses to price anything in filament — that is per material, not scalar', () => {
     expect(payCost(holding(0, 0, 100), { resource: 'filament', amount: 1 })).toBeNull();
   });
+
+  /**
+   * Scrap carries a banked value exactly as Parts do, so spending it has to
+   * draw the value out with the grams. Decrementing the count alone would
+   * strand the value and make the *next* recycle worth more than it should be.
+   */
+  it('draws a valued pool rather than decrementing it', () => {
+    const scrapped: GameState = {
+      ...base,
+      resources: { ...base.resources, scrap: 10 },
+      scrapValue: 40,
+    };
+    const paid = payCost(scrapped, { resource: 'scrap', amount: 4 });
+    expect(paid?.resources.scrap).toBe(6);
+    expect(paid?.scrapValue).toBeCloseTo(24, 9);
+  });
 });
 
 describe('purchasePrinter', () => {

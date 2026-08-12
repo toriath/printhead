@@ -3,7 +3,14 @@ import type { Content } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
 import type { GameState } from '../state/game-state.js';
 import { type Cost, canAfford, nextCost } from './cost.js';
-import { drawParts, removeParts, withResource } from './resources.js';
+import {
+  type ValuedPool,
+  drawParts,
+  drawPool,
+  removeParts,
+  removePool,
+  withResource,
+} from './resources.js';
 
 /**
  * Buying and selling (spec §2). Printers are priced from their cost curve
@@ -64,16 +71,28 @@ export function nextPrinterCost(
   return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
 }
 
+/** The balances that carry a banked value and must be drawn, not decremented. */
+const VALUED_POOLS: readonly ValuedPool[] = ['parts', 'scrap'];
+
+function isValuedPool(resource: Cost['resource']): resource is ValuedPool {
+  return VALUED_POOLS.some((pool) => pool === resource);
+}
+
 /** Pay a content-priced cost out of the ledger; `null` when it is unaffordable. */
 export function payCost(state: GameState, cost: Cost): GameState | null {
   if (cost.resource === 'filament') {
+    // Filament is per material, not a scalar balance: nothing can be priced in
+    // "filament" without saying which.
     return null;
   }
   if (!canAfford(state.resources[cost.resource], cost)) {
     return null;
   }
-  if (cost.resource === 'parts') {
-    return removeParts(state, drawParts(state, cost.amount));
+  if (isValuedPool(cost.resource)) {
+    // Spending from a valued pool has to *draw* from it, so the money value
+    // banked with those units leaves alongside them. Decrementing the count
+    // alone would strand the value and quietly enrich the next sale.
+    return removePool(state, cost.resource, drawPool(state, cost.resource, cost.amount));
   }
   return { ...state, resources: withResource(state.resources, cost.resource, -cost.amount) };
 }

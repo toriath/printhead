@@ -3,14 +3,14 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 8.0291596,
+    "base": 8.02916,
     "growth": 1.18
   },
   {
     "id": "upgrade-cost-machine",
     "name": "Machine upgrade cost",
     "type": "exponential",
-    "base": 80.9012295,
+    "base": 80.9012,
     "growth": 1.6
   },
   {
@@ -24,7 +24,7 @@
     "id": "automation-cost",
     "name": "Automation upgrade cost",
     "type": "exponential",
-    "base": 199.34029440000003,
+    "base": 199.34,
     "growth": 2.1
   },
   {

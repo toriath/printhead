@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { RAW_CONTENT, loadContent } from '@printhead/core';
 import { findBot } from './bots.js';
 import { readPointer, writePointer } from './pointer.js';
-import { type ClimbKnob, hillClimb, scoreRun, withOverrides } from './tune.js';
+import { type ClimbKnob, hillClimb, roundSignificant, scoreRun, withOverrides } from './tune.js';
 
 const CONTENT_DIR = fileURLToPath(new URL('../../../packages/core/content/', import.meta.url));
 
@@ -56,7 +56,9 @@ function applyToDisk(values: Readonly<Record<string, number>>): readonly string[
   for (const [pointer, value] of Object.entries(values)) {
     const file = fileOf(pointer);
     const bucket = byFile.get(file) ?? {};
-    bucket[pointer] = value;
+    // Rounded on the way to disk, not during the search: the fit works in full
+    // precision and the *diff* is what has to be legible.
+    bucket[pointer] = roundSignificant(value);
     byFile.set(file, bucket);
   }
   const written: string[] = [];

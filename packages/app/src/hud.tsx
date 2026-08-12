@@ -55,6 +55,11 @@ export function Hud({ visual, content }: HudProps): ReactElement {
       <dl className="hud__ledger" data-testid="ledger">
         <Stat label="Money" value={formatMoney(visual.ledger.money)} testId="money" />
         <Stat label="Parts" value={formatAmount(visual.ledger.parts)} testId="parts" />
+        {/* Scrap only exists once a print has failed, and showing a permanent
+            zero would advertise a mechanic the player has not met yet. */}
+        {visual.ledger.scrap > 0 ? (
+          <Stat label="Scrap" value={formatGrams(visual.ledger.scrap)} testId="scrap" />
+        ) : null}
         {stocked.length === 0 ? (
           <Stat label="Filament" value={formatGrams(0)} testId="filament" />
         ) : (

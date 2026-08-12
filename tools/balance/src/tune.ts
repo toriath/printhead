@@ -292,3 +292,21 @@ export function hillClimb(options: ClimbOptions): ClimbResult {
     improved: best.score < startScore,
   };
 }
+
+/**
+ * Round a fitted value to something a human can read in a diff.
+ *
+ * A hill climb produces numbers like `199.34029440000003`, and a balance change
+ * is meant to be *reviewable* (spec §19). Six significant figures is far finer
+ * than the ±20 % window the fit is aimed at, so the rounding cannot move a
+ * phase, but it is the difference between a diff someone reads and one they
+ * skim past.
+ */
+export function roundSignificant(value: number, digits = 6): number {
+  if (value === 0 || !Number.isFinite(value)) {
+    return value;
+  }
+  const magnitude = Math.ceil(Math.log10(Math.abs(value)));
+  const factor = 10 ** (digits - magnitude);
+  return Math.round(value * factor) / factor;
+}
