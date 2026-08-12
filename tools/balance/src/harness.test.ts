@@ -69,6 +69,32 @@ describe('headless harness', () => {
     expect(quick.wallHours).toBeCloseTo(slow.wallHours / 2, 6);
   });
 
+  it('records phases the FSM walks straight through in one tick', () => {
+    // Two gates satisfied at once: the FSM advances twice inside a single tick.
+    // A before/after comparison would drop the middle phase entirely and report
+    // it as never-reached, so the timeline is built from PHASE_ADVANCED events.
+    const raw = deepClone(RAW_CONTENT);
+    const phases = (raw.pacing as { phases: { advanceWhen: unknown }[] }).phases;
+    const trivial = [{ metric: 'totalDesignMinutes', atLeast: 0 }];
+    const first = phases[0];
+    const second = phases[1];
+    if (first === undefined || second === undefined) {
+      throw new Error('expected at least two phases');
+    }
+    first.advanceWhen = trivial;
+    second.advanceWhen = trivial;
+
+    const log = runHeadless({
+      content: loadContent(raw),
+      bot: idleBot,
+      limitDesignMinutes: 30,
+    });
+    expect(log.phaseEnteredAt.has('intro')).toBe(true);
+    expect(log.phaseEnteredAt.has('bench')).toBe(true);
+    expect(log.phaseDurations.has('bench')).toBe(true);
+    expect(log.finalPhaseId).toBe('farm');
+  });
+
   it('an idle bot never leaves the first phase', () => {
     const log = runHeadless({ content, bot: idleBot, limitDesignMinutes: 60 });
     expect(log.finalPhaseId).toBe('intro');

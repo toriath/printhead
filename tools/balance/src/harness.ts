@@ -149,14 +149,19 @@ export function runHeadless(options: RunOptions): RunLog {
     emit: bus.emit,
   });
 
-  const observePhase = (previousPhaseId: string): void => {
-    if (state.phaseId === previousPhaseId) {
-      return;
-    }
-    const enteredAt = phaseEnteredAt.get(previousPhaseId) ?? 0;
-    phaseDurations.set(previousPhaseId, designMinutesOf(state.simTimeMs) - enteredAt);
-    phaseEnteredAt.set(state.phaseId, designMinutesOf(state.simTimeMs));
-  };
+  /**
+   * The timeline is built from `PHASE_ADVANCED` events rather than by comparing
+   * the phase before and after each step. A single tick can walk more than one
+   * gate — the FSM advances while its requirements are met — and a before/after
+   * comparison would silently drop every phase passed through in between,
+   * reporting a real phase as "never reached".
+   */
+  bus.on('PHASE_ADVANCED', (event) => {
+    const at = designMinutesOf(event.simTimeMs);
+    const enteredAt = phaseEnteredAt.get(event.fromPhaseId) ?? 0;
+    phaseDurations.set(event.fromPhaseId, at - enteredAt);
+    phaseEnteredAt.set(event.toPhaseId, at);
+  });
 
   const maybeSample = (): void => {
     const minutes = designMinutesOf(state.simTimeMs);
@@ -172,22 +177,20 @@ export function runHeadless(options: RunOptions): RunLog {
     if (options.stopAtPhaseId !== undefined && state.phaseId === options.stopAtPhaseId) {
       break;
     }
-    const before = state.phaseId;
+    const decidingIn = state.phaseId;
     const chosen = bot.decide({
       state,
       content,
       designMinutes: designMinutesOf(state.simTimeMs),
     });
     decisions += 1;
-    decisionsByPhase.set(before, (decisionsByPhase.get(before) ?? 0) + 1);
+    decisionsByPhase.set(decidingIn, (decisionsByPhase.get(decidingIn) ?? 0) + 1);
     for (const action of chosen) {
       state = reduce(state, action, ctx());
       actions += 1;
       actionsByType[action.type] = (actionsByType[action.type] ?? 0) + 1;
     }
-    observePhase(before);
 
-    const beforeTicks = state.phaseId;
     const result = advance({
       state,
       carrySimMs,
@@ -204,7 +207,6 @@ export function runHeadless(options: RunOptions): RunLog {
     if (result.ticks === 0) {
       throw new Error(`bot "${bot.id}" check-in interval is shorter than one tick`);
     }
-    observePhase(beforeTicks);
     maybeSample();
   }
 
