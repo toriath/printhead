@@ -32,3 +32,5 @@ jobs:
             pnpm check
             pnpm balance:sim
             pnpm mutation
+            pnpm exec playwright install chromium
+            pnpm e2e

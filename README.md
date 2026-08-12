@@ -27,7 +27,7 @@ pnpm check          # the single verification entrypoint
 
 Other scripts: `pnpm mutation` (Stryker on `systems/` + `curves/`),
 `pnpm balance:sim` (headless harness vs. the §6 phase budgets),
-`pnpm e2e` (Playwright, from M2), `pnpm --filter @printhead/app dev`.
+`pnpm e2e` (Playwright smoke; run `pnpm exec playwright install chromium` once), `pnpm --filter @printhead/app dev`.
 
 ## Layout
 
