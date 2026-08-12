@@ -26,6 +26,7 @@ export interface BootOptions {
 }
 
 export interface BootedGame {
+  readonly platform: Platform;
   readonly store: GameStore;
   readonly loop: GameLoop;
   readonly autosave: Autosave;
@@ -95,6 +96,7 @@ export async function bootGame(options: BootOptions): Promise<BootedGame> {
   }
 
   return {
+    platform,
     store,
     loop,
     autosave,

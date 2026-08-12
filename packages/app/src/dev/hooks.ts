@@ -29,10 +29,12 @@ export interface DevHooks {
   readonly game: BootedGame;
   /** Advance wall-clock time and run one frame — the whole loop, instantly. */
   warp(wallMs: number): void;
+  /** The platform clock, so a test can compute an offline gap exactly. */
+  nowMs(): number;
   /** JSON snapshot of the simulation state, for save/reload equality checks. */
   snapshot(): GameState;
   saveNow(): Promise<void>;
-  /** Rewrite the stored save's timestamp to fake having been away. */
+  /** The most recent offline catch-up, at boot or on returning to the tab. */
   lastOffline(): OfflineSummary | null;
   pause(): void;
   resume(): void;
@@ -73,6 +75,7 @@ export function installDevHooks(options: InstallDevHooksOptions): DevHooks {
       clock.advance(wallMs);
       game.loop.frame();
     },
+    nowMs: () => game.platform.clock.nowMs(),
     snapshot: () => game.store.getState(),
     saveNow: () => game.autosave.saveNow(),
     lastOffline: () => lastOffline,
