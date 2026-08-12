@@ -27,13 +27,14 @@ const object = content.objects[0];
 const objectId = object?.id ?? 'bracket';
 const pla = 'pla';
 const petg = 'petg';
-const ROTA = changeoverAutomationDefs(content)[0];
 const RUN_MS = (object?.printDesignSeconds ?? 12) * 1000;
 const PER_PRINT = object?.filamentGrams ?? 4;
 
-if (ROTA === undefined) {
+const rota = changeoverAutomationDefs(content)[0];
+if (rota === undefined) {
   throw new Error('content must ship an auto-changeover automation');
 }
+const ROTA = rota;
 
 function world(over: Partial<GameState> = {}): GameState {
   return {
