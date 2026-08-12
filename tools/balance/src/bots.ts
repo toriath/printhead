@@ -40,6 +40,23 @@ const IDLE_CHECK_IN_SECONDS = 600;
  */
 const RESTOCK_BATCHES = 25;
 
+/**
+ * The registry is derived purely from the content set, and `decide` runs
+ * thousands of times per simulated run (and a full run per tuner iteration), so
+ * it is built once per content set rather than once per check-in.
+ */
+const curveRegistries = new WeakMap<Content, ReturnType<typeof createCurveRegistry>>();
+
+function curveRegistryFor(content: Content): ReturnType<typeof createCurveRegistry> {
+  const cached = curveRegistries.get(content);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const registry = createCurveRegistry(content.curves);
+  curveRegistries.set(content, registry);
+  return registry;
+}
+
 /** Does nothing at all — the lower bound on progress. */
 export const idleBot: Bot = {
   id: 'idle',
@@ -191,7 +208,7 @@ export const greedySpenderBot: Bot = {
     }
 
     // Spend parts on capacity as soon as the curve price is met (spec §5B).
-    const curves = createCurveRegistry(content.curves);
+    const curves = curveRegistryFor(content);
     for (const printer of unlocked(content.printers, content, state.phaseId)) {
       const cost = nextPrinterCost(state, content, curves, printer.id);
       if (cost !== null && cost.resource === 'parts' && state.resources.parts >= cost.amount) {

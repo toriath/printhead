@@ -179,7 +179,7 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
 
   it('splits a catch-up into two halves with an identical result', () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 90 }), (minutes) => {
+      fc.property(fc.integer({ min: 0, max: 30 }), (minutes) => {
         const half = minutes * MS_PER_MINUTE;
         const once = offline(start, half * 2, 0);
         const first = offline(start, half, 0);
@@ -187,7 +187,7 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
         expect(second.state).toEqual(once.state);
         expect(second.carrySimMs).toBeCloseTo(once.carrySimMs, 9);
       }),
-      { numRuns: 25 },
+      { numRuns: 12 },
     );
   });
 

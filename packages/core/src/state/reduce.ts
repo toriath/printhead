@@ -174,8 +174,9 @@ function applySetSlotConfig(
   if (index < 0 || slot === undefined) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
   }
-  if (!isUnlocked(ctx.content, materialId, objectId, state.phaseId)) {
-    return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
+  const availability = configAvailability(ctx.content, materialId, objectId, state.phaseId);
+  if (availability !== null) {
+    return reject(ctx, state, 'SET_SLOT_CONFIG', availability);
   }
   if (slot.run !== null) {
     // Changeover on a running slot costs time and filament — that is M3.
@@ -191,22 +192,30 @@ function applySetSlotConfig(
   return withSlot(state, index, { ...slot, materialId, objectId });
 }
 
-function isUnlocked(
+/**
+ * Why a `{ material, object }` pair cannot be loaded, or `null` if it can.
+ *
+ * "That id does not exist" and "you have not unlocked it yet" are different
+ * facts: the first is a bug in the caller, the second is the game working as
+ * designed. Reporting both as `unknown-target` would hide real content typos
+ * behind an expected rejection.
+ */
+function configAvailability(
   content: Content,
   materialId: string,
   objectId: string,
   phaseId: string,
-): boolean {
+): ActionRejectedReason | null {
   const material = indexById(content.materials).get(materialId);
   const object = indexById(content.objects).get(objectId);
   if (material === undefined || object === undefined) {
-    return false;
+    return 'unknown-target';
   }
   const phases = content.pacing.phases;
-  return (
+  const unlocked =
     isPhaseReached(phases, phaseId, material.unlockPhaseId) &&
-    isPhaseReached(phases, phaseId, object.unlockPhaseId)
-  );
+    isPhaseReached(phases, phaseId, object.unlockPhaseId);
+  return unlocked ? null : 'locked';
 }
 
 function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): GameState {

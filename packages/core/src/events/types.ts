@@ -78,6 +78,8 @@ export interface PhaseAdvancedEvent extends EventBase {
 export type ActionRejectedReason =
   | 'phase-gated'
   | 'unknown-target'
+  /** The target exists but its unlock phase has not been reached yet. */
+  | 'locked'
   | 'out-of-order'
   | 'not-ready'
   | 'insufficient-resources'

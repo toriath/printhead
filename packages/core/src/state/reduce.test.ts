@@ -162,7 +162,14 @@ describe('the print cycle', () => {
   it('refuses materials whose unlock phase has not been reached', () => {
     const sim = configured().do(setSlotConfig(FIRST_SLOT_ID, 'petg', FIRST_OBJECT_ID));
     expect(sim.state.slots[0]?.materialId).toBe(FIRST_MATERIAL_ID);
-    expect(sim.eventsOf('ACTION_REJECTED')[0]?.reason).toBe('unknown-target');
+    // "locked", not "unknown-target": petg exists, it is just not available yet.
+    expect(sim.eventsOf('ACTION_REJECTED')[0]?.reason).toBe('locked');
+  });
+
+  it('refuses objects whose unlock phase has not been reached', () => {
+    const sim = configured().do(setSlotConfig(FIRST_SLOT_ID, FIRST_MATERIAL_ID, 'gearset'));
+    expect(sim.state.slots[0]?.objectId).toBe(FIRST_OBJECT_ID);
+    expect(sim.eventsOf('ACTION_REJECTED')[0]?.reason).toBe('locked');
   });
 
   it('consumes filament up front and yields parts when the batch finishes', () => {

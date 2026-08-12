@@ -3,8 +3,11 @@
 A finite idle game about a 3D printer that eventually prints everything.
 The binding specification is [`docs/printhead-spec-v0.4.md`](docs/printhead-spec-v0.4.md).
 
-> **Status:** M0 — skeleton. Monorepo, content pipeline, pacing plumbing and CI
-> are in place; the game loop itself lands in M1.
+> **Status:** M1 — core loop. The game is playable end to end for phase 0–1:
+> assemble printer #1 by hand, configure the single slot, print, sell, buy
+> filament and buy more printers. Saves are versioned and migrated, offline
+> catch-up replays through the same reducer, and a `greedy-spender` bot proves
+> the loop against the §6 phase budgets in CI. Renderer v1 lands in M2.
 
 ## Quick start (inside the devcontainer)
 
@@ -26,8 +29,32 @@ pnpm check          # the single verification entrypoint
 | Tests | `vitest run` | every package (§13) |
 
 Other scripts: `pnpm mutation` (Stryker on `systems/` + `curves/`),
-`pnpm balance:sim` (headless harness vs. the §6 phase budgets),
+`pnpm balance:sim [botId]` (headless harness vs. the §6 phase budgets),
 `pnpm e2e` (Playwright smoke; run `pnpm exec playwright install chromium` once), `pnpm --filter @printhead/app dev`.
+
+## Balancing
+
+Numbers are never guessed. `tools/balance` runs the real `core` headlessly with
+a bot, and the phase budgets in `content/pacing.json` are asserted in CI:
+
+```bash
+pnpm balance:sim                 # reference bot (greedy-spender) vs. §6 budgets
+pnpm balance:sim idle            # lower bound: never leaves the intro
+```
+
+To move a number, fit it rather than pick it. `tunePhase` bisects a single
+content field until a phase lands on its budget, addressing content by id so a
+reordered file cannot silently retarget the knob:
+
+```ts
+tunePhase(
+  { pointer: 'curves/printer-cost-tier1/base', phaseId: 'bench', lo: 10, hi: 400 },
+  { raw: RAW_CONTENT },
+);
+```
+
+The result ships as a **data diff** in `packages/core/content/`, never as a
+constant in code. Sweep, wait-wall detection and the report generator are M3.
 
 ## Layout
 
