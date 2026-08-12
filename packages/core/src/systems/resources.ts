@@ -10,10 +10,6 @@ import type { FilamentLedger, GameState, ResourceLedger } from '../state/game-st
  */
 const NONE = 0;
 
-export function resourceOf(state: GameState, kind: ScalarResourceKind): number {
-  return state.resources[kind];
-}
-
 export function filamentOf(state: GameState, materialId: string): number {
   return state.filamentGrams[materialId] ?? NONE;
 }
@@ -32,14 +28,6 @@ export function withFilament(
   grams: number,
 ): FilamentLedger {
   return { ...filament, [materialId]: (filament[materialId] ?? NONE) + grams };
-}
-
-export function canSpend(state: GameState, kind: ScalarResourceKind, amount: number): boolean {
-  return amount >= NONE && state.resources[kind] >= amount;
-}
-
-export function canSpendFilament(state: GameState, materialId: string, grams: number): boolean {
-  return grams >= NONE && filamentOf(state, materialId) >= grams;
 }
 
 /**

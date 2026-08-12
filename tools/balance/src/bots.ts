@@ -5,6 +5,7 @@ import {
   type MaterialDef,
   type ObjectDef,
   affordableBatch,
+  affordableGrams,
   attachPiece,
   buyFilament,
   buyPrinter,
@@ -18,6 +19,7 @@ import {
   sellParts,
   setSlotConfig,
   startPrint,
+  unitPartValue,
 } from '@printhead/core';
 import type { Bot, BotView } from './harness.js';
 
@@ -144,7 +146,7 @@ function restockMoves(
   let money = state.resources.money;
   const shortfall = filamentPrice(material, wanted) - money;
   if (shortfall > 0 && state.resources.parts > 0) {
-    const unitValue = state.partsValue / state.resources.parts;
+    const unitValue = unitPartValue(state);
     if (unitValue > 0) {
       const needed = Math.min(Math.ceil(shortfall / unitValue), state.resources.parts);
       moves.push(sellParts(needed));
@@ -152,7 +154,7 @@ function restockMoves(
     }
   }
 
-  const grams = Math.min(wanted, Math.floor(money / material.costPerGram));
+  const grams = Math.min(wanted, Math.floor(affordableGrams(material, money)));
   if (grams < perPrint) {
     // Cannot even fund one print; selling more would not help either.
     return moves.length > 0 ? moves : [];

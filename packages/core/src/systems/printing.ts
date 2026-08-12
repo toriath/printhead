@@ -1,5 +1,5 @@
 import { indexById } from '../content/load.js';
-import type { Content, MaterialDef, ObjectDef, PrinterDef } from '../content/schema.js';
+import type { Content, MaterialDef, ObjectDef } from '../content/schema.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
@@ -32,10 +32,6 @@ export function resolveSlotConfig(content: Content, slot: SlotState): SlotConfig
     return null;
   }
   return { material, object };
-}
-
-export function printerDefOf(content: Content, printerId: string): PrinterDef | undefined {
-  return indexById(content.printers).get(printerId);
 }
 
 /** The best machine among the owned printers decides the visual tier (spec §4). */

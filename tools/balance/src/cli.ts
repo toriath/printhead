@@ -5,7 +5,7 @@
  *
  *   pnpm balance:sim [botId]
  */
-import { RAW_CONTENT, loadContent } from '@printhead/core';
+import { RAW_CONTENT, loadContent, requirementProgress } from '@printhead/core';
 import { REFERENCE_BOT, findBot } from './bots.js';
 import { buildBudgetTable, checkPhaseBudgets } from './budget.js';
 import { type RunLog, runHeadless } from './harness.js';
@@ -43,6 +43,26 @@ function printCurves(log: RunLog): void {
   }
 }
 
+/**
+ * Where the run stopped and why. When a phase budget is blown, the first
+ * question is always "what was the bot waiting for?" — this answers it from the
+ * same data-driven requirements the FSM gates on.
+ */
+function printBlockers(log: RunLog, content: ReturnType<typeof loadContent>): void {
+  const phase = content.pacing.phases.find((candidate) => candidate.id === log.finalPhaseId);
+  if (phase === undefined) {
+    return;
+  }
+  const progress = requirementProgress(log.finalState, content, phase.advanceWhen);
+  console.log(`\nfinal phase "${phase.id}" advances when:`);
+  for (const requirement of progress) {
+    console.log(
+      `  ${requirement.met ? 'met ' : 'WAIT'} ${requirement.metric} ` +
+        `${requirement.actual.toFixed(1)} / ${requirement.atLeast}`,
+    );
+  }
+}
+
 function main(): void {
   const botId = process.argv[2];
   const content = loadContent(RAW_CONTENT);
@@ -63,6 +83,7 @@ function main(): void {
   console.log('');
   printTimeline(log, content);
   printCurves(log);
+  printBlockers(log, content);
 
   const violations = checkPhaseBudgets(buildBudgetTable(content.pacing), log.phaseDurations);
   if (violations.length > 0) {

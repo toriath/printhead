@@ -21,10 +21,6 @@ export function assemblyPieces(content: Content): readonly AssemblyPieceDef[] {
   return content.start.assemblyPieces;
 }
 
-export function isAssemblyComplete(assembly: AssemblyState, content: Content): boolean {
-  return assembly.attachedPieceIds.length >= assemblyPieces(content).length;
-}
-
 /** The piece the player may attach next, or `null` when the printer is finished. */
 export function nextPiece(assembly: AssemblyState, content: Content): AssemblyPieceDef | null {
   return assemblyPieces(content).at(assembly.attachedPieceIds.length) ?? null;
@@ -73,9 +69,4 @@ export function tickAssembly(assembly: AssemblyState, dtMs: number): AssemblySta
     ...assembly,
     cooldownMs: Math.max(assembly.cooldownMs - dtMs, NONE),
   };
-}
-
-/** Design-milliseconds from a fresh save to the last piece being attachable. */
-export function totalAssemblyDesignMs(content: Content): number {
-  return assemblyPieces(content).reduce((total, piece) => total + attachCooldownMs(piece), NONE);
 }
