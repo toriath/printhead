@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/platform" },
+    { "path": "./packages/renderer" },
+    { "path": "./packages/editor" },
+    { "path": "./packages/app" },
+    { "path": "./tools/balance" },
+    { "path": "./tools/stl" },
+    { "path": "./e2e" },
+    { "path": "./tsconfig.scripts.json" }
+  ]
+}

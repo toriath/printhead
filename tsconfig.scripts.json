@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist/scripts",
+    "tsBuildInfoFile": "dist/scripts/.tsbuildinfo",
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts"],
+  "references": [{ "path": "./packages/core" }]
+}
