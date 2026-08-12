@@ -239,12 +239,26 @@ function affordableUpgrade(
   return best?.def;
 }
 
+/**
+ * The cheapest automation on offer, in content order — unless the player is the
+ * sort who is not there to watch. `preferRota` puts the auto-changeover unit at
+ * the front of the queue, which is what an inattentive player would actually
+ * buy first: it is the one automation that keeps the workshop *varying* what it
+ * makes while nobody is looking.
+ */
 function affordableAutomation(
   state: GameState,
   content: Content,
   curves: CurveRegistry,
+  preferRota = false,
 ): AutomationDef | undefined {
-  for (const def of content.automation) {
+  const ordered = preferRota
+    ? [...content.automation].sort((a, b) => {
+        const rank = (def: AutomationDef): number => (def.behavior === 'auto-changeover' ? 0 : 1);
+        return rank(a) - rank(b);
+      })
+    : content.automation;
+  for (const def of ordered) {
     if (automationAvailability(state, content, def.id) !== null) {
       continue;
     }
@@ -613,7 +627,13 @@ function queueMoves(
   object: ObjectDef,
   primary: MaterialDef,
 ): readonly Action[] {
-  if (!phaseAllows(state, content, 'SET_SLOT_QUEUE')) {
+  // The rota is the auto-changeover unit's feature (spec §5B): asking for one
+  // before buying the unit is an action the reducer refuses, and a bot that
+  // spends its check-ins on refused actions is not modelling a player.
+  const owned = content.automation.some(
+    (def) => def.behavior === 'auto-changeover' && (state.automation[def.id]?.level ?? 0) > 0,
+  );
+  if (!owned || !phaseAllows(state, content, 'SET_SLOT_QUEUE')) {
     return [];
   }
   const alternatives = availableMaterials(state, content).filter(
@@ -716,6 +736,12 @@ export function createPolicyBot(options: PolicyOptions): Bot {
 
       moves.push(...recycleMoves(state, content));
       moves.push(...retuneAutoSell(state, content, curves));
+      if (options.useQueues) {
+        // Before the shopping, not after: a rota is set once per bay and costs
+        // nothing, and a bot that only gets to it when there is nothing left to
+        // buy never gets to it at all.
+        moves.push(...queueMoves(state, content, object, material));
+      }
 
       const rebalance = fleetMove(state, content);
       if (rebalance !== null) {
@@ -755,7 +781,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
           ? upgradeCandidate
           : undefined;
       const automationCandidate = phaseAllows(state, content, 'BUY_AUTOMATION')
-        ? affordableAutomation(state, content, curves)
+        ? affordableAutomation(state, content, curves, options.useQueues)
         : undefined;
       const automation =
         automationCandidate !== undefined &&
@@ -794,10 +820,6 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (investment !== undefined) {
         moves.push(investment);
         return moves;
-      }
-
-      if (options.useQueues) {
-        moves.push(...queueMoves(state, content, object, material));
       }
 
       for (const slot of bays) {

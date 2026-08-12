@@ -297,6 +297,19 @@ describe('the strategies are genuinely different players', () => {
   });
 
   /**
+   * The print rota is the mechanic for the player who is not watching, so the
+   * player who is not watching is the one that exercises it (spec §19: a new
+   * mechanic means bot support). `idle-heavy` buys the auto-changeover unit
+   * ahead of the others and writes a rota onto its bay; the attentive bots
+   * deliberately do not, because a bot that re-loads a slot the moment the
+   * margin moves would only be paying for purges it did not need.
+   */
+  it('lets the ten-minute player put a bay on a rota', () => {
+    expect(idleHeavy.eventCounts.SLOT_QUEUE_SET ?? 0).toBeGreaterThan(0);
+    expect(balanced.eventCounts.SLOT_QUEUE_SET ?? 0).toBe(0);
+  });
+
+  /**
    * Both sides of the per-run fork (spec §5B) get played. `greedy-spender`
    * takes whichever branch multiplies output hardest and `balanced` keeps its
    * rack, so neither branch is dead content that only a unit test ever visits.
