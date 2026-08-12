@@ -102,19 +102,24 @@ export function slotUnlockAvailability(
   return null;
 }
 
-/** Price of a bay: its position in the progression indexes the cost curve. */
+/**
+ * Price of a bay: its position in the progression indexes the cost curve, so
+ * the second bay is cheap and the third is not. Rounded up when it is priced in
+ * a countable resource — you cannot hand over a fraction of a Part.
+ */
+export function slotCostAt(curves: CurveRegistry, def: SlotUnlockDef, index: number): Cost {
+  const cost = nextCost(curves, def, index);
+  return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
+}
+
 export function nextSlotCost(
   content: Content,
   curves: CurveRegistry,
   unlockId: string,
 ): Cost | null {
   const index = content.slots.findIndex((def) => def.id === unlockId);
-  const def = content.slots.at(index);
-  if (def === undefined || index < NONE) {
-    return null;
-  }
-  const cost = nextCost(curves, def, index);
-  return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
+  const def = content.slots[index];
+  return def === undefined ? null : slotCostAt(curves, def, index);
 }
 
 export interface SlotPurchase {
@@ -130,11 +135,12 @@ export function purchaseSlot(
   curves: CurveRegistry,
   unlockId: string,
 ): SlotPurchase | null {
-  const def = indexById(content.slots).get(unlockId);
-  const cost = nextSlotCost(content, curves, unlockId);
-  if (def === undefined || cost === null) {
+  const index = content.slots.findIndex((entry) => entry.id === unlockId);
+  const def = content.slots[index];
+  if (def === undefined) {
     return null;
   }
+  const cost = slotCostAt(curves, def, index);
   const paid = payCost(state, cost);
   if (paid === null) {
     return null;

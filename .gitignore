@@ -16,3 +16,4 @@ dist-types/
 .pnpm-store/
 .stryker-tmp/
 dev-dist/
+.mutation-full.log

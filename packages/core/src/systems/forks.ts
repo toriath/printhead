@@ -30,7 +30,9 @@ export type ForkRejection =
   | 'insufficient-resources';
 
 export function chosenFork(state: GameState, content: Content): ForkDef | null {
-  return state.forkId === null ? null : (indexById(content.forks).get(state.forkId) ?? null);
+  // No def has a null id, so an uncommitted run falls out of the lookup on its
+  // own — a separate null check would be a branch nothing can distinguish.
+  return content.forks.find((def) => def.id === state.forkId) ?? null;
 }
 
 export function isForkChosen(state: GameState): boolean {
@@ -62,13 +64,19 @@ export function forkAvailability(
   return meetsRequirements(state, content, def.requires) ? null : 'locked';
 }
 
-export function forkCost(content: Content, curves: CurveRegistry, forkId: string): Cost | null {
-  const def = indexById(content.forks).get(forkId);
-  if (def === undefined) {
-    return null;
-  }
+/**
+ * A branch is bought once, so its price is its curve at position zero. Rounded
+ * up when it is priced in a countable resource: you cannot hand over a fraction
+ * of a Part.
+ */
+export function forkCostOf(curves: CurveRegistry, def: ForkDef): Cost {
   const cost = nextCost(curves, def, FIRST);
   return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
+}
+
+export function forkCost(content: Content, curves: CurveRegistry, forkId: string): Cost | null {
+  const def = indexById(content.forks).get(forkId);
+  return def === undefined ? null : forkCostOf(curves, def);
 }
 
 /**
@@ -90,10 +98,9 @@ export function consolidateSlots(
   const kept = slots.slice(FIRST, capacity);
   const surplus = slots.slice(capacity);
   const absorbed = surplus.reduce((total, slot) => total + slot.printerCount, NONE);
-  const first = kept.at(FIRST);
-  if (first === undefined) {
-    return slots;
-  }
+  // `capacity` comes from a schema-positive field and we only get here when the
+  // rack is longer than it, so the kept list always has a first bay.
+  const first = kept[FIRST] as SlotState;
   return [
     { ...first, printerCount: first.printerCount + absorbed },
     ...kept.slice(FIRST + 1),
@@ -125,10 +132,10 @@ export function commitFork(
   forkId: string,
 ): ForkChoice | null {
   const def = indexById(content.forks).get(forkId);
-  const cost = forkCost(content, curves, forkId);
-  if (def === undefined || cost === null) {
+  if (def === undefined) {
     return null;
   }
+  const cost = forkCostOf(curves, def);
   const paid = payCost(state, cost);
   if (paid === null) {
     return null;

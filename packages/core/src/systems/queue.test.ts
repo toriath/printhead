@@ -4,6 +4,7 @@ import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, createInitialState } from '../state/game-state.js';
 import { tickSlots } from './printing.js';
 import {
+  CHANGEOVER_BEHAVIOR,
   changeoverAutomationDefs,
   currentQueueEntry,
   isQueueRunning,
@@ -71,6 +72,23 @@ describe('the rota itself', () => {
     expect(currentQueueEntry(slot)?.materialId).toBe(pla);
     expect(nextQueueEntry(slot)?.materialId).toBe(petg);
     expect(nextQueueEntry({ ...slot, queueIndex: 1 })?.materialId).toBe(pla);
+    /*
+     * Three entries, not two. With a two-entry rota "the next one" and "the
+     * previous one" are the same entry, so a rota that ran *backwards* would
+     * pass every test — and one did survive here before this line existed.
+     */
+    const three = {
+      ...slot,
+      queue: [
+        { materialId: pla, objectId, batches: 1 },
+        { materialId: petg, objectId, batches: 1 },
+        { materialId: pla, objectId: 'gearset', batches: 1 },
+      ],
+    };
+    expect(nextQueueEntry(three)?.objectId).toBe(objectId);
+    expect(nextQueueEntry({ ...three, queueIndex: 1 })?.objectId).toBe('gearset');
+    expect(nextQueueEntry({ ...three, queueIndex: 2 })?.materialId).toBe(pla);
+    expect(nextQueueEntry({ ...three, queueIndex: 2 })?.objectId).toBe(objectId);
     expect(nextQueueEntry({ ...slot, queue: [] })).toBeNull();
     expect(currentQueueEntry({ ...slot, queue: [] })).toBeNull();
   });
@@ -113,6 +131,20 @@ describe('the rota itself', () => {
       automation: { [ROTA.id]: { level: 1, enabled: false, threshold: 0, cooldownMs: 0 } },
     });
     expect(isQueueRunning(off, content)).toBe(false);
+  });
+
+  it('is not turned by some other automation the player happens to own', () => {
+    const other = content.automation.find((def) => def.behavior !== CHANGEOVER_BEHAVIOR);
+    if (other === undefined) {
+      throw new Error('content must ship more than one automation behaviour');
+    }
+    const elsewhere = world({
+      automation: { [other.id]: { level: 1, enabled: true, threshold: 9, cooldownMs: 0 } },
+    });
+    expect(changeoverAutomationDefs(content).map((def) => def.id)).toEqual([ROTA.id]);
+    expect(isQueueRunning(elsewhere, content)).toBe(false);
+    // …and its threshold is not mistaken for the rota's stock floor either.
+    expect(queueStockFloor(elsewhere, content)).toBe(0);
   });
 
   it('reports the stock floor of whatever rota units are installed', () => {

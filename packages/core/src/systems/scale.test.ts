@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { loadContent } from '../content/load.js';
+import { RAW_CONTENT } from '../content/raw.js';
+import type { RawContent } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, createInitialState } from '../state/game-state.js';
@@ -270,9 +273,42 @@ describe('the Farm/Goliath fork (spec §5B)', () => {
     expect(slots[1]?.printerCount).toBe(0);
     expect(slots[1]?.run).toBeNull();
     expect(slots[1]?.queue).toEqual([]);
+    // The stripped bays must not quietly re-arm themselves either.
+    expect(slots[1]?.autoRestart).toBe(false);
+    expect(slots[1]?.materialId).toBeNull();
     expect(effectiveSlotCapacity(choice?.state as GameState, content)).toBe(1);
     // …and that one bay is allowed to hold the whole fleet.
     expect(printersPerSlot(choice?.state as GameState, content)).toBeGreaterThanOrEqual(9);
+  });
+
+  /**
+   * Both fields the branch defs carry that today's content never exercises: a
+   * machine-tree prerequisite (both shipped branches have none) and a price
+   * that is not already a whole number of Parts. Content will grow both, and a
+   * gate nothing tests is a gate that breaks silently when it does.
+   */
+  it('honours a prerequisite and rounds a fractional price, on content that has them', () => {
+    const raw = JSON.parse(JSON.stringify(RAW_CONTENT)) as RawContent;
+    const forks = raw.forks as { id: string; requiresUpgradeIds: string[] }[];
+    const first = forks[0];
+    if (first === undefined) {
+      throw new Error('expected a fork def');
+    }
+    first.requiresUpgradeIds = ['enclosure'];
+    const curveList = raw.curves as { id: string; value?: number }[];
+    const forkCurve = curveList.find((curve) => curve.id === 'fork-cost');
+    if (forkCurve === undefined) {
+      throw new Error('expected the fork cost curve');
+    }
+    forkCurve.value = 1200.4;
+    const gated = loadContent(raw);
+    const gatedCurves = createCurveRegistry(gated.curves);
+
+    const before = withParts(world({ phaseId: 'studio' }), 5000);
+    expect(forkAvailability(before, gated, first.id)).toBe('missing-prerequisite');
+    const built = { ...before, upgrades: { enclosure: 1 } };
+    expect(forkAvailability(built, gated, first.id)).toBeNull();
+    expect(forkCost(gated, gatedCurves, first.id)?.amount).toBe(1201);
   });
 
   it('leaves the rack alone when the branch does not cap it', () => {
