@@ -1,0 +1,280 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-1 1`] = `
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="3" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+.printhead-workshop {
+  --ph-ink: #d7dee6;
+  --ph-dim: #7b8794;
+  --ph-bay: #10151b;
+  --ph-bay-edge: #263141;
+  --ph-accent: #4cc2ff;
+  --ph-hot: #ff8a3d;
+  --ph-sweep: 3.4s;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ph-bay { fill: var(--ph-bay); stroke: var(--ph-bay-edge); stroke-width: 1.5; }
+.ph-bay--empty { fill: none; stroke-dasharray: 5 5; opacity: 0.45; }
+
+.ph-label { fill: var(--ph-ink); font-size: 11px; }
+.ph-label--dim { fill: var(--ph-dim); font-style: italic; }
+.ph-badge-disc { fill: var(--ph-accent); }
+.ph-badge-text { fill: #05090d; font-size: 12px; font-weight: 700; }
+
+.ph-progress-track { fill: var(--ph-bay-edge); }
+.ph-progress-fill { fill: var(--ph-accent); }
+
+/* --- frame tiers (spec §5A) --------------------------------------------- */
+.printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
+.printer--frame-aluminium { --ph-frame: #c9d3dd; --ph-frame-fill: rgba(201, 211, 221, 0.16); }
+.printer--frame-steel     { --ph-frame: #8b98a8; --ph-frame-fill: rgba(139, 152, 168, 0.28); }
+
+.ph-frame { fill: var(--ph-frame-fill); stroke: var(--ph-frame); }
+.ph-strut { fill: var(--ph-frame); }
+.ph-base { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-enclosure { fill: rgba(159, 217, 255, 0.06); stroke: var(--ph-frame); stroke-dasharray: 3 3; }
+
+/* --- bed tiers ----------------------------------------------------------- */
+.ph-bed { fill: #38424f; }
+.printer--bed-tape .ph-bed { fill: #4a5462; }
+.printer--bed-heated .ph-bed { fill: #6b3a2c; }
+.printer--bed-auto-level .ph-bed { fill: #2f4a44; }
+.ph-bed-probe { fill: var(--ph-accent); }
+.ph-bed-heat { fill: var(--ph-hot); opacity: 0.35; }
+
+/* --- nozzle tiers -------------------------------------------------------- */
+.ph-carriage-body { fill: #2b3542; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-nozzle { fill: #b98b3f; }
+.printer--nozzle-hardened .ph-nozzle { fill: #6f7883; }
+.printer--nozzle-glowing .ph-nozzle { fill: #ffd08a; }
+.ph-nozzle-glow { fill: var(--ph-hot); opacity: 0; }
+.printer--nozzle-glowing .ph-nozzle-glow { opacity: 0.3; }
+.printer--running .ph-nozzle-glow { opacity: 0.55; }
+
+.ph-spool-rim { fill: none; stroke: var(--ph-accent); stroke-width: 3; }
+.ph-spool-hub { fill: var(--ph-dim); }
+.ph-filament { fill: none; stroke: var(--ph-accent); stroke-width: 1.2; opacity: 0.7; }
+.ph-controller { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-controller-screen { fill: var(--ph-accent); opacity: 0.55; }
+.ph-print { fill: var(--ph-accent); opacity: 0.85; }
+
+/* --- the idle print-head animation --------------------------------------- */
+@keyframes ph-sweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--ph-travel, 70px)); }
+}
+@keyframes ph-spin { to { transform: rotate(360deg); } }
+@keyframes ph-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.7; }
+}
+
+.ph-carriage {
+  animation: ph-sweep var(--ph-sweep) ease-in-out infinite alternate;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -1);
+}
+.printer--idle .ph-carriage { animation-duration: calc(var(--ph-sweep) * 2.5); }
+.ph-spool {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ph-spin calc(var(--ph-sweep) * 3) linear infinite;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -3);
+  animation-play-state: paused;
+}
+.printer--running .ph-spool { animation-play-state: running; }
+.printer--running .ph-nozzle-glow { animation: ph-pulse var(--ph-sweep) ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-carriage, .ph-spool, .ph-nozzle-glow { animation: none; }
+}
+</style><g transform="translate(0, 0)"><g data-testid="slot-slot-1" data-occupied="true" data-slot-index="0"><rect data-testid="bay-slot-1" class="ph-bay" x="0" y="0" width="160" height="208" rx="8"></rect><g data-testid="printer-figure" data-machine-tier="1" data-frame="acrylic" data-nozzle="brass" data-bed="tape" class="printer printer--tier-1 printer--frame-acrylic printer--nozzle-brass printer--bed-tape printer--running" style="--ph-offset: 0; --ph-travel: 78px;"><title>Acrylic frame · brass nozzle · taped bed</title><g data-part="frame"><rect class="ph-frame" x="24" y="34" width="112" height="118" rx="4" stroke-width="1"></rect><rect class="ph-strut" x="24" y="34" width="7" height="118"></rect><rect class="ph-strut" x="129" y="34" width="7" height="118"></rect><rect class="ph-base" x="16" y="152" width="128" height="12" rx="2"></rect></g><rect data-part="gantry" class="ph-strut" x="28" y="66" width="104" height="7" rx="3.5"></rect><g data-part="bed"><rect class="ph-bed" x="44" y="134" width="72" height="7" rx="1"></rect><rect data-testid="print-in-progress" class="ph-print" x="65" y="114" width="30" height="20"></rect></g><g transform="translate(28, 0)"><g class="ph-carriage" data-part="extruder"><rect class="ph-carriage-body" x="0" y="60" width="26" height="18" rx="2"></rect><g data-part="hotend" transform="translate(0, 60)"><circle class="ph-nozzle-glow" cx="13" cy="28" r="7"></circle><polygon class="ph-nozzle" points="8.5,18 17.5,18 13,28"></polygon></g></g></g><g data-part="spool-holder"><g class="ph-spool"><circle class="ph-spool-rim" cx="40" cy="20" r="13"></circle><circle class="ph-spool-hub" cx="40" cy="20" r="4"></circle></g><path class="ph-filament" d="M 53 20 Q 80 20 41 66"></path></g><g data-part="controller"><rect class="ph-controller" x="96" y="156" width="42" height="14" rx="2"></rect><rect class="ph-controller-screen" x="100" y="160" width="34" height="6"></rect></g></g><g data-testid="progress-bar"><rect class="ph-progress-track" x="6" y="182" width="148" height="5" rx="2.5"></rect><rect class="ph-progress-fill" x="6" y="182" width="74" height="5" rx="2.5"></rect></g><g data-testid="count-badge"><circle class="ph-badge-disc" cx="138" cy="22" r="13"></circle><text class="ph-badge-text" x="138" y="22" text-anchor="middle" dominant-baseline="central">×7</text></g><text data-testid="label-slot-1" class="ph-label" x="80" y="196" text-anchor="middle">Bracket · PLA</text></g></g></svg>"
+`;
+
+exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-2 1`] = `
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="3" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+.printhead-workshop {
+  --ph-ink: #d7dee6;
+  --ph-dim: #7b8794;
+  --ph-bay: #10151b;
+  --ph-bay-edge: #263141;
+  --ph-accent: #4cc2ff;
+  --ph-hot: #ff8a3d;
+  --ph-sweep: 3.4s;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ph-bay { fill: var(--ph-bay); stroke: var(--ph-bay-edge); stroke-width: 1.5; }
+.ph-bay--empty { fill: none; stroke-dasharray: 5 5; opacity: 0.45; }
+
+.ph-label { fill: var(--ph-ink); font-size: 11px; }
+.ph-label--dim { fill: var(--ph-dim); font-style: italic; }
+.ph-badge-disc { fill: var(--ph-accent); }
+.ph-badge-text { fill: #05090d; font-size: 12px; font-weight: 700; }
+
+.ph-progress-track { fill: var(--ph-bay-edge); }
+.ph-progress-fill { fill: var(--ph-accent); }
+
+/* --- frame tiers (spec §5A) --------------------------------------------- */
+.printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
+.printer--frame-aluminium { --ph-frame: #c9d3dd; --ph-frame-fill: rgba(201, 211, 221, 0.16); }
+.printer--frame-steel     { --ph-frame: #8b98a8; --ph-frame-fill: rgba(139, 152, 168, 0.28); }
+
+.ph-frame { fill: var(--ph-frame-fill); stroke: var(--ph-frame); }
+.ph-strut { fill: var(--ph-frame); }
+.ph-base { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-enclosure { fill: rgba(159, 217, 255, 0.06); stroke: var(--ph-frame); stroke-dasharray: 3 3; }
+
+/* --- bed tiers ----------------------------------------------------------- */
+.ph-bed { fill: #38424f; }
+.printer--bed-tape .ph-bed { fill: #4a5462; }
+.printer--bed-heated .ph-bed { fill: #6b3a2c; }
+.printer--bed-auto-level .ph-bed { fill: #2f4a44; }
+.ph-bed-probe { fill: var(--ph-accent); }
+.ph-bed-heat { fill: var(--ph-hot); opacity: 0.35; }
+
+/* --- nozzle tiers -------------------------------------------------------- */
+.ph-carriage-body { fill: #2b3542; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-nozzle { fill: #b98b3f; }
+.printer--nozzle-hardened .ph-nozzle { fill: #6f7883; }
+.printer--nozzle-glowing .ph-nozzle { fill: #ffd08a; }
+.ph-nozzle-glow { fill: var(--ph-hot); opacity: 0; }
+.printer--nozzle-glowing .ph-nozzle-glow { opacity: 0.3; }
+.printer--running .ph-nozzle-glow { opacity: 0.55; }
+
+.ph-spool-rim { fill: none; stroke: var(--ph-accent); stroke-width: 3; }
+.ph-spool-hub { fill: var(--ph-dim); }
+.ph-filament { fill: none; stroke: var(--ph-accent); stroke-width: 1.2; opacity: 0.7; }
+.ph-controller { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-controller-screen { fill: var(--ph-accent); opacity: 0.55; }
+.ph-print { fill: var(--ph-accent); opacity: 0.85; }
+
+/* --- the idle print-head animation --------------------------------------- */
+@keyframes ph-sweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--ph-travel, 70px)); }
+}
+@keyframes ph-spin { to { transform: rotate(360deg); } }
+@keyframes ph-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.7; }
+}
+
+.ph-carriage {
+  animation: ph-sweep var(--ph-sweep) ease-in-out infinite alternate;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -1);
+}
+.printer--idle .ph-carriage { animation-duration: calc(var(--ph-sweep) * 2.5); }
+.ph-spool {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ph-spin calc(var(--ph-sweep) * 3) linear infinite;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -3);
+  animation-play-state: paused;
+}
+.printer--running .ph-spool { animation-play-state: running; }
+.printer--running .ph-nozzle-glow { animation: ph-pulse var(--ph-sweep) ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-carriage, .ph-spool, .ph-nozzle-glow { animation: none; }
+}
+</style><g transform="translate(0, 0)"><g data-testid="slot-slot-2" data-occupied="true" data-slot-index="0"><rect data-testid="bay-slot-2" class="ph-bay" x="0" y="0" width="160" height="208" rx="8"></rect><g data-testid="printer-figure" data-machine-tier="2" data-frame="aluminium" data-nozzle="hardened" data-bed="heated" class="printer printer--tier-2 printer--frame-aluminium printer--nozzle-hardened printer--bed-heated printer--running" style="--ph-offset: 0.25; --ph-travel: 78px;"><title>Aluminium frame · hardened nozzle · heated bed</title><g data-part="frame"><rect class="ph-frame" x="24" y="34" width="112" height="118" rx="4" stroke-width="1.3"></rect><rect class="ph-strut" x="24" y="34" width="9.1" height="118"></rect><rect class="ph-strut" x="126.9" y="34" width="9.1" height="118"></rect><rect class="ph-base" x="16" y="152" width="128" height="12" rx="2"></rect></g><rect data-part="gantry" class="ph-strut" x="28" y="66" width="104" height="7" rx="3.5"></rect><g data-part="bed"><rect class="ph-bed-heat" x="40" y="132" width="80" height="13" rx="4"></rect><rect class="ph-bed" x="44" y="134" width="72" height="7" rx="1"></rect><rect data-testid="print-in-progress" class="ph-print" x="65" y="129" width="30" height="5"></rect></g><g transform="translate(28, 0)"><g class="ph-carriage" data-part="extruder"><rect class="ph-carriage-body" x="0" y="60" width="26" height="18" rx="2"></rect><g data-part="hotend" transform="translate(0, 60)"><circle class="ph-nozzle-glow" cx="13" cy="28" r="7"></circle><polygon class="ph-nozzle" points="8.5,18 17.5,18 13,28"></polygon></g></g></g><g data-part="spool-holder"><g class="ph-spool"><circle class="ph-spool-rim" cx="40" cy="20" r="13"></circle><circle class="ph-spool-hub" cx="40" cy="20" r="4"></circle></g><path class="ph-filament" d="M 53 20 Q 80 20 41 66"></path></g><g data-part="controller"><rect class="ph-controller" x="96" y="156" width="42" height="14" rx="2"></rect><rect class="ph-controller-screen" x="100" y="160" width="34" height="6"></rect></g></g><g data-testid="progress-bar"><rect class="ph-progress-track" x="6" y="182" width="148" height="5" rx="2.5"></rect><rect class="ph-progress-fill" x="6" y="182" width="18.5" height="5" rx="2.5"></rect></g><g data-testid="count-badge"><circle class="ph-badge-disc" cx="138" cy="22" r="13"></circle><text class="ph-badge-text" x="138" y="22" text-anchor="middle" dominant-baseline="central">×3</text></g><text data-testid="label-slot-2" class="ph-label" x="80" y="196" text-anchor="middle">Gear set · PETG</text></g></g></svg>"
+`;
+
+exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-3 1`] = `
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Farm" data-visual-version="3" data-phase="farm" data-slot-capacity="1" viewBox="0 0 160 208" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Farm</title><style>
+.printhead-workshop {
+  --ph-ink: #d7dee6;
+  --ph-dim: #7b8794;
+  --ph-bay: #10151b;
+  --ph-bay-edge: #263141;
+  --ph-accent: #4cc2ff;
+  --ph-hot: #ff8a3d;
+  --ph-sweep: 3.4s;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ph-bay { fill: var(--ph-bay); stroke: var(--ph-bay-edge); stroke-width: 1.5; }
+.ph-bay--empty { fill: none; stroke-dasharray: 5 5; opacity: 0.45; }
+
+.ph-label { fill: var(--ph-ink); font-size: 11px; }
+.ph-label--dim { fill: var(--ph-dim); font-style: italic; }
+.ph-badge-disc { fill: var(--ph-accent); }
+.ph-badge-text { fill: #05090d; font-size: 12px; font-weight: 700; }
+
+.ph-progress-track { fill: var(--ph-bay-edge); }
+.ph-progress-fill { fill: var(--ph-accent); }
+
+/* --- frame tiers (spec §5A) --------------------------------------------- */
+.printer--frame-acrylic   { --ph-frame: #9fd9ff; --ph-frame-fill: rgba(159, 217, 255, 0.10); }
+.printer--frame-aluminium { --ph-frame: #c9d3dd; --ph-frame-fill: rgba(201, 211, 221, 0.16); }
+.printer--frame-steel     { --ph-frame: #8b98a8; --ph-frame-fill: rgba(139, 152, 168, 0.28); }
+
+.ph-frame { fill: var(--ph-frame-fill); stroke: var(--ph-frame); }
+.ph-strut { fill: var(--ph-frame); }
+.ph-base { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-enclosure { fill: rgba(159, 217, 255, 0.06); stroke: var(--ph-frame); stroke-dasharray: 3 3; }
+
+/* --- bed tiers ----------------------------------------------------------- */
+.ph-bed { fill: #38424f; }
+.printer--bed-tape .ph-bed { fill: #4a5462; }
+.printer--bed-heated .ph-bed { fill: #6b3a2c; }
+.printer--bed-auto-level .ph-bed { fill: #2f4a44; }
+.ph-bed-probe { fill: var(--ph-accent); }
+.ph-bed-heat { fill: var(--ph-hot); opacity: 0.35; }
+
+/* --- nozzle tiers -------------------------------------------------------- */
+.ph-carriage-body { fill: #2b3542; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-nozzle { fill: #b98b3f; }
+.printer--nozzle-hardened .ph-nozzle { fill: #6f7883; }
+.printer--nozzle-glowing .ph-nozzle { fill: #ffd08a; }
+.ph-nozzle-glow { fill: var(--ph-hot); opacity: 0; }
+.printer--nozzle-glowing .ph-nozzle-glow { opacity: 0.3; }
+.printer--running .ph-nozzle-glow { opacity: 0.55; }
+
+.ph-spool-rim { fill: none; stroke: var(--ph-accent); stroke-width: 3; }
+.ph-spool-hub { fill: var(--ph-dim); }
+.ph-filament { fill: none; stroke: var(--ph-accent); stroke-width: 1.2; opacity: 0.7; }
+.ph-controller { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
+.ph-controller-screen { fill: var(--ph-accent); opacity: 0.55; }
+.ph-print { fill: var(--ph-accent); opacity: 0.85; }
+
+/* --- the idle print-head animation --------------------------------------- */
+@keyframes ph-sweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--ph-travel, 70px)); }
+}
+@keyframes ph-spin { to { transform: rotate(360deg); } }
+@keyframes ph-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.7; }
+}
+
+.ph-carriage {
+  animation: ph-sweep var(--ph-sweep) ease-in-out infinite alternate;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -1);
+}
+.printer--idle .ph-carriage { animation-duration: calc(var(--ph-sweep) * 2.5); }
+.ph-spool {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ph-spin calc(var(--ph-sweep) * 3) linear infinite;
+  animation-delay: calc(var(--ph-offset, 0) * var(--ph-sweep) * -3);
+  animation-play-state: paused;
+}
+.printer--running .ph-spool { animation-play-state: running; }
+.printer--running .ph-nozzle-glow { animation: ph-pulse var(--ph-sweep) ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-carriage, .ph-spool, .ph-nozzle-glow { animation: none; }
+}
+</style><g transform="translate(0, 0)"><g data-testid="slot-slot-3" data-occupied="true" data-slot-index="0"><rect data-testid="bay-slot-3" class="ph-bay" x="0" y="0" width="160" height="208" rx="8"></rect><g data-testid="printer-figure" data-machine-tier="3" data-frame="steel" data-nozzle="glowing" data-bed="auto-level" class="printer printer--tier-3 printer--frame-steel printer--nozzle-glowing printer--bed-auto-level printer--idle" style="--ph-offset: 0.5; --ph-travel: 78px;"><title>Steel frame · glowing nozzle · auto-levelling bed</title><g data-part="frame"><rect class="ph-frame" x="24" y="34" width="112" height="118" rx="4" stroke-width="1.7"></rect><rect class="ph-strut" x="24" y="34" width="11.9" height="118"></rect><rect class="ph-strut" x="124.1" y="34" width="11.9" height="118"></rect><rect class="ph-base" x="16" y="152" width="128" height="12" rx="2"></rect></g><rect data-part="enclosure" class="ph-enclosure" x="20" y="30" width="120" height="126" rx="4"></rect><rect data-part="gantry" class="ph-strut" x="28" y="66" width="104" height="7" rx="3.5"></rect><g data-part="bed"><rect class="ph-bed" x="44" y="134" width="72" height="7" rx="1"></rect><circle class="ph-bed-probe" cx="110" cy="131" r="2.5"></circle></g><g transform="translate(28, 0)"><g class="ph-carriage" data-part="extruder"><rect class="ph-carriage-body" x="0" y="60" width="26" height="18" rx="2"></rect><g data-part="hotend" transform="translate(0, 60)"><circle class="ph-nozzle-glow" cx="13" cy="28" r="7"></circle><polygon class="ph-nozzle" points="8.5,18 17.5,18 13,28"></polygon></g></g></g><g data-part="spool-holder"><g class="ph-spool"><circle class="ph-spool-rim" cx="40" cy="20" r="13"></circle><circle class="ph-spool-hub" cx="40" cy="20" r="4"></circle></g><path class="ph-filament" d="M 53 20 Q 80 20 41 66"></path></g><g data-part="controller"><rect class="ph-controller" x="96" y="156" width="42" height="14" rx="2"></rect><rect class="ph-controller-screen" x="100" y="160" width="34" height="6"></rect></g></g><g data-testid="progress-bar"><rect class="ph-progress-track" x="6" y="182" width="148" height="5" rx="2.5"></rect><rect class="ph-progress-fill" x="6" y="182" width="0" height="5" rx="2.5"></rect></g><text data-testid="label-slot-3" class="ph-label" x="80" y="196" text-anchor="middle">Bracket · Resin (SLA)</text></g></g></svg>"
+`;

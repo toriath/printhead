@@ -1,0 +1,52 @@
+{
+  "version": 3,
+  "phaseId": "bench",
+  "phaseName": "Bench",
+  "simTimeMs": 300000,
+  "slotCapacity": 4,
+  "slots": [
+    {
+      "slotId": "slot-1",
+      "index": 0,
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "bracket",
+      "objectName": "Bracket",
+      "machineTier": 1,
+      "printerCount": 1,
+      "phaseOffset": 0,
+      "occupied": true,
+      "running": true,
+      "progress": 0.5,
+      "batch": 1
+    }
+  ],
+  "assembly": {
+    "attachedPieceIds": [
+      "frame",
+      "gantry",
+      "bed",
+      "extruder",
+      "hotend",
+      "spool-holder",
+      "controller"
+    ],
+    "totalPieces": 7,
+    "nextPieceId": null,
+    "nextPieceName": null,
+    "cooldownMs": 0,
+    "ready": false,
+    "progress": 1,
+    "complete": true
+  },
+  "ledger": {
+    "parts": 0,
+    "money": 2,
+    "scrap": 0,
+    "filamentGrams": {
+      "pla": 28,
+      "petg": 0,
+      "resin": 0
+    }
+  }
+}

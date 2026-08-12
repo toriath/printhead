@@ -9,6 +9,8 @@
     "ignore": [
       "**/.devcontainer/**",
       "**/node_modules/**",
+      "**/.pnpm-store/**",
+      "**/dev-dist/**",
       "**/dist/**",
       "**/dist-types/**",
       "**/coverage/**",

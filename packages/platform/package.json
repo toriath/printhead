@@ -7,7 +7,12 @@
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "test": "vitest run" },
+  "dependencies": {
+    "idb": "catalog:"
+  },
   "devDependencies": {
+    "fake-indexeddb": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

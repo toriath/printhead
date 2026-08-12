@@ -9,7 +9,9 @@ import {
 } from '../state/__fixtures__/sim.js';
 import { setSlotConfig, startPrint, tick } from '../state/actions.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
-import { VISUAL_STATE_VERSION, toVisualState } from './visual-state.js';
+import { VISUAL_STATE_FIXTURES, visualFixture } from './fixtures.js';
+import { VISUAL_STATE_VERSION, VisualStateSchema, validateVisualState } from './schema.js';
+import { occupiedSlots, toVisualState } from './visual-state.js';
 
 const content = TEST_CONTENT;
 const state = createInitialState(content, { seed: 1 });
@@ -21,14 +23,34 @@ describe('toVisualState', () => {
     expect(toVisualState(state, content)).toEqual({
       version: VISUAL_STATE_VERSION,
       phaseId: 'intro',
+      phaseName: 'Intro',
       simTimeMs: 0,
-      slots: [],
+      slotCapacity: content.start.maxSlotCount,
+      slots: [
+        {
+          slotId: FIRST_SLOT_ID,
+          index: 0,
+          materialId: null,
+          materialName: null,
+          objectId: null,
+          objectName: null,
+          machineTier: 0,
+          printerCount: 0,
+          phaseOffset: 0,
+          occupied: false,
+          running: false,
+          progress: 0,
+          batch: 0,
+        },
+      ],
       assembly: {
         attachedPieceIds: [],
         totalPieces: pieces.length,
         nextPieceId: pieces[0]?.id,
         nextPieceName: pieces[0]?.name,
         cooldownMs: (pieces[0]?.attachDesignSeconds ?? 0) * 1000,
+        ready: false,
+        progress: 0,
         complete: false,
       },
       ledger: {
@@ -44,46 +66,107 @@ describe('toVisualState', () => {
     expect(toVisualState(state, content)).toEqual(toVisualState(state, content));
   });
 
+  it('carries the phase display name so the renderer holds no content table', () => {
+    expect(toVisualState(state, content).phaseName).toBe(
+      content.pacing.phases[0]?.name ?? '(missing)',
+    );
+  });
+
   it('tracks sim time so the renderer can animate without reading internals', () => {
     const sim = createSim().do(tick(100));
     expect(toVisualState(sim.state, content).simTimeMs).toBe(100);
   });
 
+  it('publishes the hard slot cap so the renderer draws empty bays (spec §4)', () => {
+    const visual = toVisualState(state, content);
+    expect(visual.slotCapacity).toBe(content.start.maxSlotCount);
+    expect(visual.slotCapacity).toBeGreaterThanOrEqual(visual.slots.length);
+  });
+
+  it('projects unconfigured slots as empty rather than hiding them', () => {
+    const visual = toVisualState(state, content);
+    expect(visual.slots).toHaveLength(state.slots.length);
+    expect(visual.slots[0]?.occupied).toBe(false);
+    expect(occupiedSlots(visual)).toEqual([]);
+  });
+
   it('reports assembly progress while the intro printer is being built', () => {
     const sim = createSim().tickSeconds(pieces[0]?.attachDesignSeconds ?? 0);
+    expect(toVisualState(sim.state, content).assembly.ready).toBe(true);
     sim.do({ type: 'ATTACH_PIECE', pieceId: pieces[0]?.id ?? '' });
     const visual = toVisualState(sim.state, content);
     expect(visual.assembly.attachedPieceIds).toEqual([pieces[0]?.id]);
     expect(visual.assembly.nextPieceId).toBe(pieces[1]?.id);
+    expect(visual.assembly.progress).toBeCloseTo(1 / pieces.length);
+    expect(visual.assembly.ready).toBe(false);
     expect(visual.assembly.complete).toBe(false);
-    // No slot visual yet: the printer is not finished, so nothing is printing.
-    expect(visual.slots).toEqual([]);
+    // The printer is not finished, so the bay is still empty.
+    expect(occupiedSlots(visual)).toEqual([]);
   });
 
   it('marks the assembly complete once every piece is attached', () => {
     const sim = assemblePrinter(createSim());
     const { assembly } = toVisualState(sim.state, content);
     expect(assembly.complete).toBe(true);
+    expect(assembly.ready).toBe(false);
+    expect(assembly.progress).toBe(1);
     expect(assembly.nextPieceId).toBeNull();
     expect(assembly.nextPieceName).toBeNull();
     expect(assembly.attachedPieceIds).toHaveLength(pieces.length);
   });
 
-  it('renders once per configured slot, carrying the count badge (spec §4)', () => {
+  it('renders once per slot, carrying the count badge (spec §4)', () => {
     const sim = assemblePrinter(createSim()).do(
       setSlotConfig(FIRST_SLOT_ID, FIRST_MATERIAL_ID, FIRST_OBJECT_ID),
     );
     const visual = toVisualState(sim.state, content);
-    expect(visual.slots).toHaveLength(1);
+    expect(occupiedSlots(visual)).toHaveLength(1);
     expect(visual.slots[0]).toMatchObject({
       slotId: FIRST_SLOT_ID,
+      index: 0,
       materialId: FIRST_MATERIAL_ID,
+      materialName: content.materials[0]?.name,
       objectId: FIRST_OBJECT_ID,
+      objectName: content.objects[0]?.name,
       machineTier: 1,
       printerCount: 1,
+      occupied: true,
       running: false,
       progress: 0,
       batch: 0,
+    });
+  });
+
+  it('shows a staffed bay that has no config, but does not call it occupied', () => {
+    // The player has just finished building printer #1. It must be on screen —
+    // and the bay must still read as "not working" until something is loaded.
+    const sim = assemblePrinter(createSim());
+    expect(toVisualState(sim.state, content).slots[0]).toMatchObject({
+      printerCount: 1,
+      machineTier: 1,
+      materialId: null,
+      occupied: false,
+    });
+  });
+
+  it('leaves an unstaffed but configured slot empty and tierless', () => {
+    const configured: GameState = {
+      ...state,
+      slots: [
+        {
+          id: FIRST_SLOT_ID,
+          materialId: FIRST_MATERIAL_ID,
+          objectId: FIRST_OBJECT_ID,
+          printerCount: 0,
+          autoRestart: false,
+          run: null,
+        },
+      ],
+    };
+    expect(toVisualState(configured, content).slots[0]).toMatchObject({
+      occupied: false,
+      machineTier: 0,
+      materialId: FIRST_MATERIAL_ID,
     });
   });
 
@@ -117,7 +200,6 @@ describe('toVisualState', () => {
   });
 
   it('gives each slot a distinct animation offset without rng or clock', () => {
-    // Both slots need a config and a printer before they project a visual.
     const occupied = (id: string): SlotState => ({
       id,
       materialId: FIRST_MATERIAL_ID,
@@ -133,5 +215,85 @@ describe('toVisualState', () => {
     };
     const offsets = toVisualState(configured, content).slots.map((slot) => slot.phaseOffset);
     expect(offsets).toEqual([0, 0.5]);
+  });
+});
+
+describe('the frozen VisualState contract (spec §15)', () => {
+  it('validates its own output against the frozen schema', () => {
+    const sim = assemblePrinter(createSim())
+      .do(setSlotConfig(FIRST_SLOT_ID, FIRST_MATERIAL_ID, FIRST_OBJECT_ID))
+      .do(startPrint(FIRST_SLOT_ID))
+      .tickSeconds(1);
+    expect(validateVisualState(toVisualState(sim.state, content)).ok).toBe(true);
+  });
+
+  it('accepts every shipped fixture — that is what freezing means', () => {
+    expect(VISUAL_STATE_FIXTURES.length).toBeGreaterThan(0);
+    for (const fixture of VISUAL_STATE_FIXTURES) {
+      expect(validateVisualState(fixture.visual), fixture.name).toMatchObject({ ok: true });
+      expect(fixture.visual.version, fixture.name).toBe(VISUAL_STATE_VERSION);
+    }
+  });
+
+  it('rejects an added field, so a silent shape change cannot ship', () => {
+    const drifted = { ...visualFixture('printing'), extraField: 1 };
+    const validation = validateVisualState(drifted);
+    expect(validation.ok).toBe(false);
+    expect(validation.issues.map((issue) => issue.message).join(' ')).toContain('extraField');
+  });
+
+  it('rejects a removed field, so a silent shape change cannot ship', () => {
+    const { ledger: _dropped, ...drifted } = visualFixture('printing');
+    const validation = validateVisualState(drifted);
+    expect(validation.ok).toBe(false);
+    expect(validation.issues.map((issue) => issue.path)).toContain('ledger');
+  });
+
+  it('rejects an out-of-range progress value, and says where', () => {
+    const fixture = visualFixture('printing');
+    const broken = {
+      ...fixture,
+      slots: fixture.slots.map((slot) => ({ ...slot, progress: 1.5 })),
+    };
+    const validation = validateVisualState(broken);
+    expect(validation.ok).toBe(false);
+    // The dotted path is what makes a report actionable for a renderer host.
+    expect(validation.issues.map((issue) => issue.path)).toEqual(['slots.0.progress']);
+  });
+
+  it('rejects a document from a different version', () => {
+    const stale = { ...visualFixture('fresh'), version: VISUAL_STATE_VERSION - 1 };
+    expect(validateVisualState(stale).ok).toBe(false);
+  });
+
+  it('reports "(root)" for a wholesale mismatch instead of an empty path', () => {
+    const validation = validateVisualState('not a visual state');
+    expect(validation.ok).toBe(false);
+    expect(validation.issues[0]?.path).toBe('(root)');
+  });
+
+  it('covers the states the renderer has to draw', () => {
+    const byName = new Map(VISUAL_STATE_FIXTURES.map((f) => [f.name, f.visual]));
+    expect([...byName.keys()]).toEqual([
+      'fresh',
+      'assembling',
+      'assembled',
+      'printing',
+      'showcase',
+    ]);
+    // Machine-tier variants and count badges only exist in the showcase until
+    // the sim can produce multiple slots and printer tiers (M4).
+    const showcase = byName.get('showcase');
+    expect(new Set(showcase?.slots.map((slot) => slot.machineTier))).toEqual(new Set([0, 1, 2, 3]));
+    expect(showcase?.slots.some((slot) => slot.printerCount > 1)).toBe(true);
+    expect(showcase?.slots.some((slot) => !slot.occupied)).toBe(true);
+  });
+
+  it('is exported as a schema so hosts can validate without importing the sim', () => {
+    expect(VisualStateSchema.safeParse(visualFixture('showcase')).success).toBe(true);
+  });
+
+  it('throws a named error rather than shipping a fixture that drifted', () => {
+    expect(() => visualFixture('nope')).toThrow(RangeError);
   });
 });

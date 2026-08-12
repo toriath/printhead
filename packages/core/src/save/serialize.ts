@@ -18,7 +18,19 @@ export function serializeSave(state: GameState, nowMs: number): string {
   return JSON.stringify(toSaveFile(state, nowMs));
 }
 
-export function fromSaveFile(raw: unknown): GameState {
+/**
+ * A loaded save plus the envelope around it. `savedAtMs` is wall-clock time, so
+ * it is the only honest input to "how long was the player away?" — the offline
+ * catch-up on boot (spec §7.4) is computed from it, never from sim time.
+ */
+export interface LoadedSave {
+  readonly state: GameState;
+  readonly savedAtMs: number;
+  /** The version the file was written at, before migrations ran. */
+  readonly fromVersion: number;
+}
+
+export function parseSaveFile(raw: unknown): LoadedSave {
   const file = SaveFileSchema.safeParse(raw);
   if (!file.success) {
     throw new SaveLoadError(`malformed save file: ${file.error.issues[0]?.message ?? 'unknown'}`);
@@ -31,15 +43,25 @@ export function fromSaveFile(raw: unknown): GameState {
       `save state failed validation: ${issue?.path.join('.') ?? '(root)'} ${issue?.message ?? ''}`.trim(),
     );
   }
-  return state.data;
+  return { state: state.data, savedAtMs: file.data.savedAtMs, fromVersion: file.data.version };
 }
 
-export function deserializeSave(json: string): GameState {
-  let parsed: unknown;
+export function fromSaveFile(raw: unknown): GameState {
+  return parseSaveFile(raw).state;
+}
+
+function parseJson(json: string): unknown {
   try {
-    parsed = JSON.parse(json);
+    return JSON.parse(json);
   } catch (error) {
     throw new SaveLoadError(`save file is not valid JSON: ${(error as Error).message}`);
   }
-  return fromSaveFile(parsed);
+}
+
+export function deserializeSave(json: string): GameState {
+  return fromSaveFile(parseJson(json));
+}
+
+export function parseSave(json: string): LoadedSave {
+  return parseSaveFile(parseJson(json));
 }

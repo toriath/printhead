@@ -136,13 +136,22 @@ export const StartFileSchema = z
     /** The printer the intro assembly produces (spec §6 phase 0). */
     printerId: IdSchema,
     slotCount: z.number().int().positive(),
+    /**
+     * Config slots go 1 → 2 → 3 → 4 and stop (spec §4, "hard max"). The
+     * renderer draws this many bays, the surplus ones as faint outlines.
+     */
+    maxSlotCount: z.number().int().positive(),
     slotIdPrefix: IdSchema,
     startingResources: StartingResourcesSchema,
     startingFilament: z.array(StartingFilamentSchema),
     /** 6–8 pieces, attached in order — one click each (spec §6 phase 0). */
     assemblyPieces: z.array(AssemblyPieceSchema).min(1),
   })
-  .strict();
+  .strict()
+  .refine((start) => start.maxSlotCount >= start.slotCount, {
+    message: 'maxSlotCount must be at least slotCount',
+    path: ['maxSlotCount'],
+  });
 
 // --- materials.json ---------------------------------------------------------
 

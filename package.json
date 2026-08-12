@@ -16,16 +16,17 @@
     "deps:check": "depcruise packages tools scripts --config .dependency-cruiser.cjs",
     "typecheck": "tsc -b",
     "test": "vitest run --maxWorkers=3",
-    "check": "pnpm run lint && pnpm run content:check && pnpm run literals:check && pnpm run pace:check && pnpm run deps:check && pnpm run typecheck && pnpm run test",
+    "check": "pnpm run lint && pnpm run content:check && pnpm run literals:check && pnpm run pace:check && pnpm run deps:check && pnpm run typecheck && pnpm run test && pnpm run coverage",
     "mutation": "pnpm --filter @printhead/core mutation",
     "balance:sim": "tsx tools/balance/src/cli.ts",
     "e2e": "playwright test --config e2e/playwright.config.ts",
-    "clean": "rm -rf packages/*/dist tools/*/dist e2e/dist .tsbuildinfo packages/*/*.tsbuildinfo tools/*/*.tsbuildinfo"
+    "clean": "rm -rf packages/*/dist tools/*/dist e2e/dist .tsbuildinfo packages/*/*.tsbuildinfo tools/*/*.tsbuildinfo",
+    "coverage": "pnpm --filter @printhead/core coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@printhead/core": "workspace:*",
     "@playwright/test": "1.49.1",
+    "@printhead/core": "workspace:*",
     "@types/node": "22.20.1",
     "dependency-cruiser": "16.10.4",
     "tsx": "4.23.12",

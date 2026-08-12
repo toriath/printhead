@@ -1,88 +1,69 @@
-import { attachPiece, sellParts, setSlotConfig, startPrint } from '@printhead/core';
+import type { OfflineSummary } from '@printhead/core';
 import { Workshop } from '@printhead/renderer';
-import { useSyncExternalStore } from 'react';
-import type { ReactElement } from 'react';
+import { type ReactElement, useEffect, useState } from 'react';
+import { Controls } from './controls.js';
+import { useVisualState } from './hooks.js';
+import { Hud } from './hud.js';
+import { OfflineSummaryScreen } from './offline-summary.js';
 import type { GameStore } from './store.js';
 
 /**
- * The shell (spec §16). It renders `VisualState` and dispatches Actions —
- * nothing else. Every rule it appears to know (which piece is next, which
- * buttons exist) is read out of the projection or the content, never decided
- * here: the reducer rejects anything the phase FSM does not allow.
+ * The shell (spec §16). It renders `VisualState` and dispatches `Action`s —
+ * that is the whole contract. Every rule it appears to know (which piece is
+ * next, which buttons exist, what a phase allows) is read out of the projection
+ * or the content, never decided here.
  */
 export interface AppProps {
   readonly store: GameStore;
+  /** Catch-up applied at boot, if the player was away (spec §7.4). */
+  readonly initialOffline?: OfflineSummary | null;
+  /** Later catch-ups — the tab came back after a long time in the background. */
+  readonly subscribeOffline?: (listener: (summary: OfflineSummary) => void) => () => void;
+  /** Shown when a save existed but could not be read. */
+  readonly loadWarning?: string | null;
 }
 
-export function useVisualState(store: GameStore) {
-  return useSyncExternalStore(
-    (listener) => store.subscribe(listener),
-    () => store.getVisualState(),
-  );
-}
-
-const format = (value: number): string =>
-  Number.isInteger(value) ? String(value) : value.toFixed(2);
-
-export function App({ store }: AppProps): ReactElement {
+export function App({
+  store,
+  initialOffline = null,
+  subscribeOffline,
+  loadWarning = null,
+}: AppProps): ReactElement {
   const visual = useVisualState(store);
   const content = store.getContent();
-  const firstSlot = content.start.slotIdPrefix;
-  const slotId = `${firstSlot}-1`;
-  const material = content.materials[0];
-  const object = content.objects[0];
-  const nextPieceId = visual.assembly.nextPieceId;
+  const [offline, setOffline] = useState<OfflineSummary | null>(initialOffline);
+
+  useEffect(() => subscribeOffline?.(setOffline), [subscribeOffline]);
 
   return (
-    <main>
-      <header>
+    <main className="app">
+      <header className="app__header">
         <h1>PRINTHEAD</h1>
-        <p data-testid="phase">{visual.phaseId}</p>
+        <p className="app__phase">
+          {/* The id is the stable handle tests and tooling address; the name is
+              what a player reads. Both are here; only one is visible. */}
+          <span className="visually-hidden" data-testid="phase">
+            {visual.phaseId}
+          </span>
+          <span className="app__phase-name" data-testid="phase-name">
+            {visual.phaseName}
+          </span>
+        </p>
       </header>
 
-      <dl data-testid="ledger">
-        <dt>parts</dt>
-        <dd data-testid="parts">{format(visual.ledger.parts)}</dd>
-        <dt>money</dt>
-        <dd data-testid="money">{format(visual.ledger.money)}</dd>
-        <dt>filament</dt>
-        <dd data-testid="filament">
-          {format(visual.ledger.filamentGrams[material?.id ?? ''] ?? 0)}
-        </dd>
-      </dl>
+      {loadWarning === null ? null : (
+        <output className="app__warning" data-testid="load-warning">
+          {loadWarning}
+        </output>
+      )}
 
+      <Hud visual={visual} content={content} />
       <Workshop visual={visual} />
+      <Controls store={store} visual={visual} content={content} />
 
-      <section>
-        {nextPieceId === null ? null : (
-          <button
-            type="button"
-            data-testid="attach"
-            onClick={() => store.dispatch(attachPiece(nextPieceId))}
-          >
-            {`Attach ${visual.assembly.nextPieceName ?? nextPieceId}`}
-          </button>
-        )}
-        {material === undefined || object === undefined ? null : (
-          <button
-            type="button"
-            data-testid="configure"
-            onClick={() => store.dispatch(setSlotConfig(slotId, material.id, object.id))}
-          >
-            {`Load ${material.name} · ${object.name}`}
-          </button>
-        )}
-        <button
-          type="button"
-          data-testid="print"
-          onClick={() => store.dispatch(startPrint(slotId))}
-        >
-          Print
-        </button>
-        <button type="button" data-testid="sell" onClick={() => store.dispatch(sellParts())}>
-          Sell parts
-        </button>
-      </section>
+      {offline === null ? null : (
+        <OfflineSummaryScreen summary={offline} onDismiss={() => setOffline(null)} />
+      )}
     </main>
   );
 }

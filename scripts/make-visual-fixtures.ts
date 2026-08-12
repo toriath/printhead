@@ -1,0 +1,84 @@
+/**
+ * Regenerates the *reachable* `VisualState` fixtures by playing the real
+ * simulation and projecting it, so each fixture is a snapshot the game actually
+ * produces rather than a hand-written guess (spec §13, renderer row).
+ *
+ *   pnpm tsx scripts/make-visual-fixtures.ts
+ *
+ * Fixtures for a *released* VisualState version are frozen — see the README in
+ * `packages/core/src/visual/__fixtures__/`. Run this when adding a new version.
+ * `showcase.json` is hand-authored and is deliberately not written here.
+ */
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { Action, GameState, VisualState } from '@printhead/core';
+import {
+  RAW_CONTENT,
+  TICK_MS,
+  createInitialState,
+  loadContent,
+  reduce,
+  restoreRng,
+  toVisualState,
+} from '@printhead/core';
+
+const content = loadContent(RAW_CONTENT);
+let state: GameState = createInitialState(content, { seed: 20260812 });
+
+const apply = (action: Action): void => {
+  state = reduce(state, action, {
+    content,
+    nowMs: state.simTimeMs,
+    rng: restoreRng(state.rng),
+  });
+};
+
+const tickSeconds = (seconds: number): void => {
+  for (let i = 0; i < Math.round((seconds * 1000) / TICK_MS); i += 1) {
+    apply({ type: 'TICK', simDtMs: TICK_MS });
+  }
+};
+
+const dir = resolve(import.meta.dirname, '../packages/core/src/visual/__fixtures__');
+const written: string[] = [];
+
+const capture = (name: string): void => {
+  const visual: VisualState = toVisualState(state, content);
+  writeFileSync(resolve(dir, `${name}.json`), `${JSON.stringify(visual, null, 2)}\n`);
+  written.push(`${name} (phase ${visual.phaseId}, ${visual.slots.length} slot(s))`);
+};
+
+// 1. A brand-new save: bare bench, nothing attached.
+capture('fresh');
+
+// 2. Mid-intro: three pieces on, the fourth still cooling down.
+const pieces = content.start.assemblyPieces;
+for (const piece of pieces.slice(0, 3)) {
+  tickSeconds(piece.attachDesignSeconds);
+  apply({ type: 'ATTACH_PIECE', pieceId: piece.id });
+}
+tickSeconds((pieces[3]?.attachDesignSeconds ?? 0) / 2);
+capture('assembling');
+
+// 3. Printer #1 exists but no config is loaded yet — an empty staffed bay.
+for (const piece of pieces.slice(3)) {
+  tickSeconds(piece.attachDesignSeconds);
+  apply({ type: 'ATTACH_PIECE', pieceId: piece.id });
+}
+capture('assembled');
+
+// 4. The first batch, halfway through, with parts and money on the books.
+const slotId = `${content.start.slotIdPrefix}-1`;
+const materialId = content.materials[0]?.id ?? 'pla';
+const objectId = content.objects[0]?.id ?? 'bracket';
+apply({ type: 'SET_SLOT_CONFIG', slotId, materialId, objectId });
+apply({ type: 'START_PRINT', slotId });
+tickSeconds((content.objects[0]?.printDesignSeconds ?? 0) * 2);
+apply({ type: 'SELL_PARTS', count: null });
+tickSeconds((content.objects[0]?.printDesignSeconds ?? 0) / 2);
+capture('printing');
+
+console.log(`wrote ${written.length} fixtures to ${dir}:`);
+for (const line of written) {
+  console.log(`  - ${line}`);
+}

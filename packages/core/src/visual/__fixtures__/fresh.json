@@ -1,0 +1,44 @@
+{
+  "version": 3,
+  "phaseId": "intro",
+  "phaseName": "Intro",
+  "simTimeMs": 0,
+  "slotCapacity": 4,
+  "slots": [
+    {
+      "slotId": "slot-1",
+      "index": 0,
+      "materialId": null,
+      "materialName": null,
+      "objectId": null,
+      "objectName": null,
+      "machineTier": 0,
+      "printerCount": 0,
+      "phaseOffset": 0,
+      "occupied": false,
+      "running": false,
+      "progress": 0,
+      "batch": 0
+    }
+  ],
+  "assembly": {
+    "attachedPieceIds": [],
+    "totalPieces": 7,
+    "nextPieceId": "frame",
+    "nextPieceName": "Frame",
+    "cooldownMs": 36000,
+    "ready": false,
+    "progress": 0,
+    "complete": false
+  },
+  "ledger": {
+    "parts": 0,
+    "money": 0,
+    "scrap": 0,
+    "filamentGrams": {
+      "pla": 40,
+      "petg": 0,
+      "resin": 0
+    }
+  }
+}

@@ -32,6 +32,12 @@ export function describeField(schema: z.ZodTypeAny, path = ''): FieldDescriptor 
   if (schema instanceof z.ZodDefault) {
     return describeField(schema.removeDefault() as z.ZodTypeAny, path);
   }
+  // `.refine()` wraps the object it validates. Cross-field rules are not
+  // editable fields, so look straight through them at the real shape —
+  // otherwise adding one invariant to a content file would empty its form.
+  if (schema instanceof z.ZodEffects) {
+    return describeField(schema.innerType() as z.ZodTypeAny, path);
+  }
   if (schema instanceof z.ZodNumber) {
     const descriptor: {
       kind: 'number';

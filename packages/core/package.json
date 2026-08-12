@@ -11,7 +11,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "mutation": "stryker run --incremental"
+    "mutation": "stryker run --incremental",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@stryker-mutator/core": "8.7.1",
     "@stryker-mutator/vitest-runner": "8.7.1",
+    "@vitest/coverage-v8": "catalog:",
     "fast-check": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
