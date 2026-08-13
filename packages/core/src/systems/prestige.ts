@@ -172,6 +172,14 @@ export function meltDown(
       resources,
       ...retainedLedgers(state, content, fresh),
       selfAssembling: true,
+      /*
+       * New Game Plus is a fact about the *game*, not about the run: the
+       * modifiers the player took are in force until they start again. A
+       * melt-down that reset them would quietly change the difficulty
+       * mid-playthrough — which is exactly what it did until a bot played
+       * through the ending and melted down on the far side of it.
+       */
+      ngPlus: state.ngPlus,
       assembly: {
         ...fresh.assembly,
         cooldownMs:

@@ -783,8 +783,12 @@ function forkMove(
    * attempt the last print, and a run that takes the other one cannot finish
    * the game. This is exactly the decision the spec describes a Farm player
    * making — pre-print your sections, then take the giant machine.
+   *
+   * "In view" is the phase that *sells the blueprint*, not the phase that
+   * allows the print: the fork is committed for a whole run, so a bot that
+   * waited for the last phase would already be locked into the wrong branch.
    */
-  if (phaseAllows(state, content, 'START_FABRICATOR')) {
+  if (blueprintInView(state, content)) {
     const required = content.forks.find(
       (def) => def.requiredForFinalPrint && forkAvailability(state, content, def.id) === null,
     );
@@ -985,16 +989,21 @@ function designBayMove(state: GameState, content: Content, curves: CurveRegistry
   const bays = activeSlots(state, content);
   const onDesign = bays.filter((slot) => slot.designId !== null);
   /*
-   * One bay always keeps making Parts.
+   * Once the endgame is in view, one bay always keeps making Parts.
    *
-   * Products are worth Money and Money is worth nothing to a workshop that
-   * needs a *config slot*, a *fork* and a *Fabricator section* — all of which
-   * are priced in Parts (spec §5B, §7.3). The reference player reached the last
-   * phase with 149 million in the bank, zero Parts, one bay printing Designs
-   * and no way to buy the giant printer the final print requires. Leaving the
-   * studio the bays *beyond the first* is what keeps that from happening.
+   * Products are worth Money, and Money is worth nothing to a workshop that
+   * needs a *fork* and *Fabricator sections* — both priced in Parts (spec §5B,
+   * §7.3). The reference player reached the last phase with 149 million in the
+   * bank, zero Parts, one bay printing Designs and no way to buy the giant
+   * printer the final print requires.
+   *
+   * Before then the studio may have the only bay, and must be allowed to: the
+   * studio phase is gated on *selling Products* (spec §6 phase 3), and a
+   * Goliath run has exactly one bay to sell them from. Reserving a Parts bay
+   * that early is how the greedy player got stuck in the studio for ever.
    */
-  const studioBays = Math.min(DESIGN_BAYS, Math.max(bays.length - 1, 0));
+  const floor = phaseAllows(state, content, 'START_FABRICATOR') ? 0 : 1;
+  const studioBays = Math.min(DESIGN_BAYS, Math.max(bays.length - 1, floor));
   if (onDesign.length >= studioBays) {
     // Already committed as many bays as the policy allows — but keep the one it
     // has pointed at the best design it now owns.
@@ -1067,12 +1076,14 @@ function prestigeMove(state: GameState, content: Content, curves: CurveRegistry)
   if (state.fabricator.run !== null || state.fabricator.completedAtMs !== null) {
     return null;
   }
-  const fabricator = fabricatorDef(content);
-  const held = state.filamentGrams[fabricator.materialId] ?? 0;
-  const affordable =
-    held + affordableFilamentGrams(state, content, fabricator.materialId) >=
-    fabricator.filamentGrams;
-  if (hasBlueprint(state, content) && affordable) {
+  /*
+   * ...and the blueprint itself ends them. It is the last node of the tree, so
+   * once it is owned there is nothing left to spend Plates on but the feedstock
+   * — and a melt-down would scrap the fleet the print needs (spec §4). The bot
+   * buys the blueprint only when it can afford that feedstock too
+   * (`endgameTreeMove`), so stopping here cannot strand it.
+   */
+  if (hasBlueprint(state, content)) {
     return null;
   }
   if (prestigeAvailability(state, content, curves) !== null) {
@@ -1098,6 +1109,18 @@ function prestigeMove(state: GameState, content: Content, curves: CurveRegistry)
  * finishes the game. The tree is bought in content order — it is a chain of
  * prerequisites ending at the Fabricator — so this is simply "keep climbing".
  */
+/**
+ * Has the phase that sells the Fabricator's blueprint arrived? Read off the
+ * node's own `unlockPhaseId`, so moving the endgame earlier or later in
+ * `pacing.json` moves the bot's whole endgame with it.
+ */
+function blueprintInView(state: GameState, content: Content): boolean {
+  const def = content.upgrades.find((node) => node.id === fabricatorDef(content).requiresUpgradeId);
+  return (
+    def !== undefined && isPhaseReached(content.pacing.phases, state.phaseId, def.unlockPhaseId)
+  );
+}
+
 function endgameTreeMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
   if (!phaseAllows(state, content, 'BUY_UPGRADE')) {
     return null;

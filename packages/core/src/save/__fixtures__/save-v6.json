@@ -1,81 +1,90 @@
 {
-  "version": 5,
+  "version": 6,
   "savedAtMs": 1723420800000,
   "state": {
-    "saveVersion": 5,
-    "simTimeMs": 12813000,
-    "tickCount": 128130,
-    "phaseId": "prestige",
-    "phaseEnteredAtMs": 11755100,
+    "saveVersion": 6,
+    "simTimeMs": 22301000,
+    "tickCount": 223010,
+    "phaseId": "end",
+    "phaseEnteredAtMs": 22027000,
     "rng": {
       "seed": 7,
       "count": 0
     },
     "resources": {
-      "parts": 3302,
-      "scrap": 0,
-      "money": 261012.8247839086,
+      "parts": 5747.599999999999,
+      "scrap": 90,
+      "money": 2554122.762859336,
       "designs": 2,
-      "products": 1,
-      "plates": 5
+      "products": 0,
+      "plates": 42.48
     },
-    "partsValue": 0,
-    "scrapValue": 0,
-    "productsValue": 12730.63683606969,
+    "partsValue": 4987.841955872474,
+    "scrapValue": 4.500000000000001,
+    "productsValue": 0,
     "filamentGrams": {
-      "pla": 40,
-      "petg": 0,
-      "resin": 1920,
-      "metal": 0
+      "pla": 781.6000000000013,
+      "petg": 1750,
+      "resin": 1250,
+      "metal": 831,
+      "composite": 720
     },
     "printers": {
-      "bench-mk1": 1
+      "bench-mk1": 19
     },
     "upgrades": {
+      "exotic-feedstock": 1,
+      "print-a-building": 1,
+      "print-a-factory": 1,
+      "universal-fabricator": 1,
+      "broker-licence": 2,
       "heated-bed": 1,
-      "enclosure": 1,
-      "sla-unit": 1,
-      "design-desk": 2
+      "recycler": 1,
+      "hardened-nozzle": 3,
+      "enclosure": 1
     },
-    "automation": {},
+    "automation": {
+      "auto-trade": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 250,
+        "cooldownMs": 24000
+      }
+    },
     "market": {
       "petg": {
-        "stockGrams": 6000,
-        "pressure": 0
+        "stockGrams": 5581.999999998789,
+        "pressure": -0.21618955559000846
       },
       "resin": {
-        "stockGrams": 5499.999999998636,
-        "pressure": -0.21067114586355257
+        "stockGrams": 5961.999999998898,
+        "pressure": -0.14097379975859817
       },
       "metal": {
-        "stockGrams": 800,
-        "pressure": 0
+        "stockGrams": 49.799999999994675,
+        "pressure": -0.10232166280988601
       }
     },
     "slots": [
       {
         "id": "slot-1",
-        "materialId": "resin",
+        "materialId": null,
         "objectId": null,
-        "designId": "money-plate",
-        "printerCount": 1,
-        "autoRestart": true,
-        "run": {
-          "remainingMs": 122727.2727272727,
-          "totalMs": 436363.63636363635,
-          "batch": 1
-        },
-        "failureCharge": 0.0168,
+        "designId": null,
+        "printerCount": 19,
+        "autoRestart": false,
+        "run": null,
+        "failureCharge": 0.697600000000001,
         "changeoverMs": 0,
         "queue": [],
         "queueIndex": 0,
         "queueBatches": 0
       }
     ],
-    "forkId": null,
+    "forkId": "goliath",
     "designs": {
       "money-plate": {
-        "level": 11,
+        "level": 13,
         "printsOnLevel": 2
       },
       "lamp-shade": {
@@ -83,14 +92,26 @@
         "printsOnLevel": 0
       }
     },
-    "studio": {
-      "designId": "phone-stand",
-      "remainingMs": 330000
-    },
+    "studio": null,
     "moneyPrinters": {
-      "bill-printer": 1
+      "bill-printer": 2,
+      "bundle-printer": 1
     },
     "selfAssembling": true,
+    "factoryProgress": 0.03333333333329944,
+    "fabricator": {
+      "sections": 1,
+      "sectionRun": null,
+      "run": {
+        "remainingMs": 1770000,
+        "totalMs": 1830000
+      },
+      "completedAtMs": null
+    },
+    "ngPlus": {
+      "run": 0,
+      "modifierIds": []
+    },
     "assembly": {
       "attachedPieceIds": [
         "frame",
@@ -104,19 +125,20 @@
       "cooldownMs": 0
     },
     "stats": {
-      "printsCompleted": 1,
-      "printsFailed": 0,
-      "partsProduced": 0,
+      "printsCompleted": 384,
+      "printsFailed": 44,
+      "partsProduced": 2433.6000000000004,
       "partsSold": 0,
-      "moneyEarned": 15000,
-      "filamentPurchasedGrams": 2000,
-      "filamentSoldGrams": 0,
-      "scrapProducedGrams": 0,
-      "scrapRecycledGrams": 0,
-      "productsProduced": 1,
+      "moneyEarned": 2561028.5967532517,
+      "filamentPurchasedGrams": 15261,
+      "filamentSoldGrams": 1500,
+      "scrapProducedGrams": 396,
+      "scrapRecycledGrams": 306,
+      "productsProduced": 0,
       "productsSold": 0,
-      "moneyPrinted": 15000,
-      "prestigeCount": 1
+      "moneyPrinted": 3526100.0000015264,
+      "prestigeCount": 5,
+      "platesEarned": 40
     }
   }
 }

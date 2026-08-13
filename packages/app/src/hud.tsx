@@ -68,6 +68,15 @@ export function Hud({ visual, content }: HudProps): ReactElement {
         {visual.ledger.plates > 0 ? (
           <Stat label="Plates" value={formatAmount(visual.ledger.plates)} testId="plates" />
         ) : null}
+        {/* On-screen inflation (spec §6 phase 5). It appears the moment the
+            economy starts devaluing itself and not a second before. */}
+        {visual.inflation.active ? (
+          <Stat
+            label="Prices"
+            value={`×${visual.inflation.multiplier.toFixed(2)}`}
+            testId="inflation"
+          />
+        ) : null}
         {stocked.length === 0 ? (
           <Stat label="Filament" value={formatGrams(0)} testId="filament" />
         ) : (

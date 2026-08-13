@@ -1153,6 +1153,8 @@ describe('property: money printing is monotone in Plates (spec §13)', () => {
             moneyPrintRate(
               {
                 ...base,
+                // Engraved, not held: the presses read the history (spec §5E).
+                stats: { ...base.stats, platesEarned: plates },
                 resources: { ...base.resources, plates },
                 moneyPrinters: { [press.id]: level },
               },
@@ -1184,7 +1186,7 @@ describe('property: money printing is monotone in Plates (spec §13)', () => {
     ).toBe(0);
   });
 
-  it('the money the presses actually print rises with the Plates held', () => {
+  it('the money the presses actually print rises with the Plates engraved', () => {
     const base = melting(1);
     const press = content.prestige.moneyPrinters[0];
     const minted = (plates: number): number => {
@@ -1192,7 +1194,7 @@ describe('property: money printing is monotone in Plates (spec §13)', () => {
         ...base,
         resources: { ...base.resources, plates, money: 0 },
         moneyPrinters: { [press?.id ?? '']: 1 },
-        stats: { ...base.stats, moneyPrinted: 0 },
+        stats: { ...base.stats, moneyPrinted: 0, platesEarned: plates },
       };
       for (let i = 0; i < 100; i += 1) {
         state = apply(state, tick(TICK_MS));

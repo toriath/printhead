@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "phaseId": "studio",
   "phaseName": "Studio",
   "simTimeMs": 4620000,
@@ -425,5 +425,83 @@
       "cost": 8,
       "costResource": "plates"
     }
-  ]
+  ],
+  "backdrop": "workshop",
+  "inflation": {
+    "active": true,
+    "multiplier": 3.5,
+    "moneyPrinted": 4200000
+  },
+  "fabricator": {
+    "unlocked": true,
+    "available": true,
+    "blockedReason": null,
+    "running": false,
+    "complete": false,
+    "progress": 0,
+    "layer": 0,
+    "layers": 140,
+    "remainingMs": 0,
+    "totalMs": 2040000,
+    "materialId": "composite",
+    "filamentGrams": 600,
+    "heldGrams": 900,
+    "sections": 2,
+    "maxSections": 4,
+    "sectionRunning": false,
+    "sectionProgress": 0,
+    "sectionAvailable": true,
+    "sectionBlockedReason": null,
+    "sectionCost": 250,
+    "sectionCostResource": "parts",
+    "forkAllows": true,
+    "slotsCommitted": true,
+    "committedPrinters": 9,
+    "requiredPrinters": 16
+  },
+  "ending": {
+    "stage": "none",
+    "active": false,
+    "progress": 0,
+    "stageProgress": 0,
+    "museumPrinterId": "bench-mk1",
+    "museumTier": 5,
+    "credits": [
+      "PRINTHEAD",
+      "a finite idle game about a 3D printer",
+      "",
+      "Printer #1 \u2014 assembled by hand, seven pieces",
+      "The Bench \u2014 where a Part was first worth something",
+      "The Farm \u2014 fourteen machines and a market",
+      "The Studio \u2014 resin, designs, products",
+      "The Melt-down \u2014 everything you built, engraved",
+      "The Absurd \u2014 the economy ate itself",
+      "The Fabricator \u2014 it printed the last thing left to print",
+      "",
+      "Every number you saw came out of content/*.json",
+      "Every phase you passed was a row in pacing.json",
+      "Nothing here was hard-coded. That was the point.",
+      "",
+      "Thank you for playing.",
+      "Now print your printer."
+    ],
+    "creditLines": 0,
+    "infinite": false,
+    "newGamePlusAvailable": false,
+    "newGamePlusRun": 0,
+    "modifiers": [
+      {
+        "modifierId": "veteran-workshop",
+        "name": "Veteran workshop",
+        "description": "You have built this bench before. Every machine runs half again as fast.",
+        "active": false
+      },
+      {
+        "modifierId": "brittle-filament",
+        "name": "Brittle filament",
+        "description": "The spools are worse and the parts are worth more. Prints fail twice as often.",
+        "active": false
+      }
+    ]
+  }
 }

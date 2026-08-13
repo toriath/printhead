@@ -199,7 +199,11 @@ describe('NEW_GAME_PLUS (spec §18 M6)', () => {
 describe('the phase FSM reaches Ended and rests there', () => {
   it('keeps running the workshop in the post-game sandbox', () => {
     const sim = endSim({ moneyPrinters: { 'bill-printer': 1 } });
-    sim.state = { ...sim.state, resources: { ...sim.state.resources, plates: 10 } };
+    sim.state = {
+      ...sim.state,
+      resources: { ...sim.state.resources, plates: 10 },
+      stats: { ...sim.state.stats, platesEarned: 10 },
+    };
     sim.do(startFabricator());
     sim.tickMs(fab.designMinutes * MS_PER_MINUTE + endingTotalMs(content) + MS_PER_SECOND);
     expect(sim.state.phaseId).toBe('ended');

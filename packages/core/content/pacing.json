@@ -197,16 +197,11 @@
         "SELL_PRODUCTS",
         "PRESTIGE",
         "BUY_MONEY_PRINTER",
-        "PRINT_SECTION",
-        "START_FABRICATOR"
+        "PRINT_SECTION"
       ],
       "advanceWhen": [
         {
           "metric": "endgameNodes",
-          "atLeast": 4
-        },
-        {
-          "metric": "prestigeCount",
           "atLeast": 4
         },
         {
@@ -215,7 +210,7 @@
         },
         {
           "metric": "moneyPrinted",
-          "atLeast": 2200000
+          "atLeast": 3000000
         }
       ]
     },

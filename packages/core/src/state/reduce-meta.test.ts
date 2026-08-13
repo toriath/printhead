@@ -365,7 +365,11 @@ describe('BUY_MONEY_PRINTER (spec §5E)', () => {
   });
 
   it('prints money every tick once it is installed', () => {
-    const sim = banked(200).do(buyMoneyPrinter(pressId));
+    // Engraved Plates, not banked ones: `banked` grants a balance, and the
+    // presses read the history (spec §5E), so the history is granted too.
+    const sim = banked(200);
+    sim.state = { ...sim.state, stats: { ...sim.state.stats, platesEarned: 200 } };
+    sim.do(buyMoneyPrinter(pressId));
     const before = sim.state.resources.money;
     sim.tickSeconds(10);
     expect(sim.state.resources.money).toBeGreaterThan(before);
@@ -400,6 +404,8 @@ describe('the tick order puts the presses after the printers', () => {
       phaseId: content.prestige.unlockPhaseId,
       resources: { ...ownsCapstone().state.resources, plates: 20 },
       moneyPrinters: { [pressId]: 1 },
+      // The presses read Plates engraved (spec §5E).
+      stats: { ...ownsCapstone().state.stats, platesEarned: 20 },
     });
     sim.do(createDesign('phone-stand'));
     const before = sim.state.resources.money;

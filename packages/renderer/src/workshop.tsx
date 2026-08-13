@@ -1,11 +1,17 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
+import { Fabricator } from './fabricator.js';
 import {
+  BACKDROP_HEIGHT,
+  BACKDROP_TOWERS,
+  BACKDROP_TOWER_WIDTH,
   BAY_HEIGHT,
   BILL_GAP,
   BILL_HEIGHT,
   BILL_STAGGER_SECONDS,
   BILL_WIDTH,
+  FABRICATOR_HEIGHT,
+  FABRICATOR_WIDTH,
   GOLIATH_SCALE,
   PRESS_HEIGHT,
   PRESS_PAD,
@@ -145,10 +151,51 @@ function Mint({ visual, width }: { visual: VisualState; width: number }): ReactE
   );
 }
 
+/**
+ * What the workshop is drawn against (spec §5E: "print a building (backdrop
+ * change)"). The renderer is handed a backdrop *id* and decides what that looks
+ * like — presentation, not simulation — so a new backdrop is a row here and a
+ * row in `endgame.json`, and an id with no drawing simply has none.
+ */
+function Backdrop({ visual, width }: { visual: VisualState; width: number }): ReactElement | null {
+  if (visual.backdrop !== 'skyline') {
+    return null;
+  }
+  return (
+    <g data-testid="backdrop" data-backdrop={visual.backdrop} className="ph-backdrop">
+      <title>A printed city</title>
+      {BACKDROP_TOWERS.map((tower) => (
+        <rect
+          key={tower.x}
+          className="ph-backdrop-tower"
+          x={tower.x * width}
+          y={BACKDROP_HEIGHT * (1 - tower.height)}
+          width={BACKDROP_TOWER_WIDTH * width}
+          height={BACKDROP_HEIGHT * tower.height}
+        />
+      ))}
+    </g>
+  );
+}
+
 export function Workshop({ visual }: WorkshopProps): ReactElement {
   const rack = bays(visual);
-  const width = visual.goliath ? workshopWidth(1) * GOLIATH_SCALE : workshopWidth(rack.length);
-  const rackHeight = visual.goliath ? BAY_HEIGHT * GOLIATH_SCALE : BAY_HEIGHT;
+  /*
+   * The final print takes the whole frame (spec §4: "a deliberate return to
+   * total commitment"). Every bay was cleared to start it, so drawing the rack
+   * underneath would be drawing machines that are not printing anything.
+   */
+  const building = visual.fabricator.running || visual.fabricator.complete;
+  const width = building
+    ? FABRICATOR_WIDTH
+    : visual.goliath
+      ? workshopWidth(1) * GOLIATH_SCALE
+      : workshopWidth(rack.length);
+  const rackHeight = building
+    ? FABRICATOR_HEIGHT
+    : visual.goliath
+      ? BAY_HEIGHT * GOLIATH_SCALE
+      : BAY_HEIGHT;
   const height = rackHeight + (installedPresses(visual).length > 0 ? PRESS_HEIGHT : 0);
   // During the intro the first bay holds the machine being built: the pieces
   // the player has clicked on, drawn on the printer that will keep them
@@ -163,7 +210,8 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
       data-visual-version={visual.version}
       data-phase={visual.phaseId}
       data-slot-capacity={visual.slotCapacity}
-      data-layout={visual.goliath ? 'goliath' : 'rack'}
+      data-layout={building ? 'fabricator' : visual.goliath ? 'goliath' : 'rack'}
+      data-backdrop={visual.backdrop}
       data-self-assembling={visual.assembly.selfAssembling}
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
@@ -171,7 +219,10 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
       <title>{`PRINTHEAD — ${visual.phaseName}`}</title>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant stylesheet, never user input */}
       <style dangerouslySetInnerHTML={{ __html: WORKSHOP_CSS }} />
-      {visual.goliath ? (
+      <Backdrop visual={visual} width={width} />
+      {building ? (
+        <Fabricator visual={visual} />
+      ) : visual.goliath ? (
         <Goliath visual={visual} />
       ) : (
         rack.map((slot, index) => (

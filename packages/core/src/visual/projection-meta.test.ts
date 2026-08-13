@@ -170,7 +170,10 @@ describe('the melt-down offer', () => {
   it('counts the runs already melted down, and quotes the print rate', () => {
     const state = meltable({
       moneyPrinters: { [pressId]: 2 },
-      stats: { ...base.stats, prestigeCount: 3 },
+      // The presses read Plates *engraved*, not Plates held (spec §5E), so a
+      // workshop that has melted down three times has a rate even after it has
+      // spent the proceeds.
+      stats: { ...base.stats, prestigeCount: 3, platesEarned: 12 },
     });
     const visual = toVisualState(state, content).prestige;
     expect(visual.runsCompleted).toBe(3);

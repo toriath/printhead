@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-1 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="6" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="7" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -85,6 +85,31 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 @media (prefers-reduced-motion: reduce) {
   .ph-bill { animation: none; opacity: 0.8; }
 }
+
+/* --- the printed city (spec §5E) ----------------------------------------- */
+.ph-backdrop-tower { fill: var(--ph-bay-edge); opacity: 0.5; }
+
+/* --- the Universal Fabricator (spec §6 phase 6) --------------------------- */
+.ph-fabricator-bed { fill: #1b232d; stroke: var(--ph-dim); stroke-width: 1; }
+.ph-fabricator-band { fill: var(--ph-accent); opacity: 0.9; }
+.ph-fabricator-band--pending { fill: none; stroke: var(--ph-bay-edge); stroke-width: 1; }
+.ph-fabricator-band--printing {
+  fill: var(--ph-hot);
+  animation: ph-pulse 1.2s ease-in-out infinite;
+}
+.ph-fabricator--complete .ph-fabricator-band { fill: var(--ph-gold); }
+
+/* --- the ending (spec §6 phase 6) ---------------------------------------- */
+.printhead-ending {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #05090d;
+}
+.ph-ending-title { fill: #e8c469; font-size: 48px; text-anchor: middle; }
+.ph-ending-line { fill: #d7dee6; font-size: 11px; text-anchor: middle; }
+.ph-museum-case { fill: rgba(159, 217, 255, 0.05); stroke: #7b8794; stroke-dasharray: 4 3; }
 
 /* --- the idle print-head animation --------------------------------------- */
 @keyframes ph-sweep {
@@ -119,7 +144,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-2 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="6" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="7" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -203,6 +228,31 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 @media (prefers-reduced-motion: reduce) {
   .ph-bill { animation: none; opacity: 0.8; }
 }
+
+/* --- the printed city (spec §5E) ----------------------------------------- */
+.ph-backdrop-tower { fill: var(--ph-bay-edge); opacity: 0.5; }
+
+/* --- the Universal Fabricator (spec §6 phase 6) --------------------------- */
+.ph-fabricator-bed { fill: #1b232d; stroke: var(--ph-dim); stroke-width: 1; }
+.ph-fabricator-band { fill: var(--ph-accent); opacity: 0.9; }
+.ph-fabricator-band--pending { fill: none; stroke: var(--ph-bay-edge); stroke-width: 1; }
+.ph-fabricator-band--printing {
+  fill: var(--ph-hot);
+  animation: ph-pulse 1.2s ease-in-out infinite;
+}
+.ph-fabricator--complete .ph-fabricator-band { fill: var(--ph-gold); }
+
+/* --- the ending (spec §6 phase 6) ---------------------------------------- */
+.printhead-ending {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #05090d;
+}
+.ph-ending-title { fill: #e8c469; font-size: 48px; text-anchor: middle; }
+.ph-ending-line { fill: #d7dee6; font-size: 11px; text-anchor: middle; }
+.ph-museum-case { fill: rgba(159, 217, 255, 0.05); stroke: #7b8794; stroke-dasharray: 4 3; }
 
 /* --- the idle print-head animation --------------------------------------- */
 @keyframes ph-sweep {
@@ -237,7 +287,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-3 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="6" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="7" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -321,6 +371,31 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 @media (prefers-reduced-motion: reduce) {
   .ph-bill { animation: none; opacity: 0.8; }
 }
+
+/* --- the printed city (spec §5E) ----------------------------------------- */
+.ph-backdrop-tower { fill: var(--ph-bay-edge); opacity: 0.5; }
+
+/* --- the Universal Fabricator (spec §6 phase 6) --------------------------- */
+.ph-fabricator-bed { fill: #1b232d; stroke: var(--ph-dim); stroke-width: 1; }
+.ph-fabricator-band { fill: var(--ph-accent); opacity: 0.9; }
+.ph-fabricator-band--pending { fill: none; stroke: var(--ph-bay-edge); stroke-width: 1; }
+.ph-fabricator-band--printing {
+  fill: var(--ph-hot);
+  animation: ph-pulse 1.2s ease-in-out infinite;
+}
+.ph-fabricator--complete .ph-fabricator-band { fill: var(--ph-gold); }
+
+/* --- the ending (spec §6 phase 6) ---------------------------------------- */
+.printhead-ending {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #05090d;
+}
+.ph-ending-title { fill: #e8c469; font-size: 48px; text-anchor: middle; }
+.ph-ending-line { fill: #d7dee6; font-size: 11px; text-anchor: middle; }
+.ph-museum-case { fill: rgba(159, 217, 255, 0.05); stroke: #7b8794; stroke-dasharray: 4 3; }
 
 /* --- the idle print-head animation --------------------------------------- */
 @keyframes ph-sweep {

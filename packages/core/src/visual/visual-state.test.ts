@@ -95,6 +95,25 @@ describe('toVisualState', () => {
       studio: toVisualState(state, content).studio,
       prestige: toVisualState(state, content).prestige,
       moneyPrinters: toVisualState(state, content).moneyPrinters,
+      // The endgame (spec §5E, §6 phases 5–6). A fresh save has the default
+      // backdrop, no inflation, no blueprint and no ending to play.
+      backdrop: content.endgame.backdrops[0]?.id,
+      inflation: { active: false, multiplier: 1, moneyPrinted: 0 },
+      fabricator: toVisualState(state, content).fabricator,
+      ending: {
+        stage: 'none',
+        active: false,
+        progress: 0,
+        stageProgress: 0,
+        museumPrinterId: content.endgame.ending.museumPrinterId,
+        museumTier: 0,
+        credits: content.endgame.ending.credits,
+        creditLines: 0,
+        infinite: false,
+        newGamePlusAvailable: false,
+        newGamePlusRun: 0,
+        modifiers: toVisualState(state, content).ending.modifiers,
+      },
     });
   });
 
@@ -330,6 +349,9 @@ describe('the frozen VisualState contract (spec §15)', () => {
       'goliath',
       'studio',
       'prestige',
+      'endgame',
+      'fabricator',
+      'ending',
       'showcase',
     ]);
     // The M3 states the renderer newly has to draw.

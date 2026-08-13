@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "phaseId": "bench",
   "phaseName": "Bench",
   "simTimeMs": 322500,
@@ -102,7 +102,8 @@
       "pla": 28,
       "petg": 0,
       "resin": 0,
-      "metal": 0
+      "metal": 0,
+      "composite": 0
     }
   },
   "market": [
@@ -148,6 +149,17 @@
       "sellPerGram": 1.5195680810966308,
       "priceMultiplier": 1.2769479673080932,
       "stockGrams": 800,
+      "heldGrams": 0
+    },
+    {
+      "materialId": "composite",
+      "materialName": "Composite feedstock",
+      "tradeable": false,
+      "available": false,
+      "buyPerGram": 0.004,
+      "sellPerGram": 0,
+      "priceMultiplier": 1,
+      "stockGrams": 0,
       "heldGrams": 0
     }
   ],
@@ -250,6 +262,50 @@
       "affordable": false,
       "cost": 500,
       "costResource": "money"
+    },
+    {
+      "upgradeId": "exotic-feedstock",
+      "name": "Exotic feedstock line",
+      "tree": "endgame",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 4,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "print-a-building",
+      "name": "Print a building",
+      "tree": "endgame",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 4,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "print-a-factory",
+      "name": "Print a factory",
+      "tree": "endgame",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 4,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "universal-fabricator",
+      "name": "Blueprint: Universal Fabricator",
+      "tree": "endgame",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 4,
+      "costResource": "plates"
     }
   ],
   "automation": [
@@ -388,6 +444,117 @@
       "affordable": false,
       "cost": 2,
       "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "bundle-printer",
+      "name": "Bundle press",
+      "tier": 2,
+      "level": 0,
+      "maxLevel": 5,
+      "available": false,
+      "affordable": false,
+      "cost": 6,
+      "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "pallet-printer",
+      "name": "Pallet press",
+      "tier": 3,
+      "level": 0,
+      "maxLevel": 5,
+      "available": false,
+      "affordable": false,
+      "cost": 18,
+      "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "central-bank",
+      "name": "The central bank",
+      "tier": 4,
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 60,
+      "costResource": "plates"
     }
-  ]
+  ],
+  "backdrop": "workshop",
+  "inflation": {
+    "active": false,
+    "multiplier": 1,
+    "moneyPrinted": 0
+  },
+  "fabricator": {
+    "unlocked": false,
+    "available": false,
+    "blockedReason": "locked",
+    "running": false,
+    "complete": false,
+    "progress": 0,
+    "layer": 0,
+    "layers": 140,
+    "remainingMs": 0,
+    "totalMs": 2040000,
+    "materialId": "composite",
+    "filamentGrams": 600,
+    "heldGrams": 0,
+    "sections": 0,
+    "maxSections": 4,
+    "sectionRunning": false,
+    "sectionProgress": 0,
+    "sectionAvailable": false,
+    "sectionBlockedReason": "locked",
+    "sectionCost": 250,
+    "sectionCostResource": "parts",
+    "forkAllows": false,
+    "slotsCommitted": false,
+    "committedPrinters": 1,
+    "requiredPrinters": 16
+  },
+  "ending": {
+    "stage": "none",
+    "active": false,
+    "progress": 0,
+    "stageProgress": 0,
+    "museumPrinterId": "bench-mk1",
+    "museumTier": 1,
+    "credits": [
+      "PRINTHEAD",
+      "a finite idle game about a 3D printer",
+      "",
+      "Printer #1 — assembled by hand, seven pieces",
+      "The Bench — where a Part was first worth something",
+      "The Farm — fourteen machines and a market",
+      "The Studio — resin, designs, products",
+      "The Melt-down — everything you built, engraved",
+      "The Absurd — the economy ate itself",
+      "The Fabricator — it printed the last thing left to print",
+      "",
+      "Every number you saw came out of content/*.json",
+      "Every phase you passed was a row in pacing.json",
+      "Nothing here was hard-coded. That was the point.",
+      "",
+      "Thank you for playing.",
+      "Now print your printer."
+    ],
+    "creditLines": 0,
+    "infinite": false,
+    "newGamePlusAvailable": false,
+    "newGamePlusRun": 0,
+    "modifiers": [
+      {
+        "modifierId": "veteran-workshop",
+        "name": "Veteran workshop",
+        "description": "You have built this bench before. Every machine runs half again as fast.",
+        "active": false
+      },
+      {
+        "modifierId": "brittle-filament",
+        "name": "Brittle filament",
+        "description": "The spools are worse and the parts are worth more. Prints fail twice as often.",
+        "active": false
+      }
+    ]
+  }
 }

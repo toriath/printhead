@@ -106,7 +106,7 @@
     "id": "fabricator-section-cost",
     "name": "Pre-printed fabricator section cost",
     "type": "exponential",
-    "base": 900,
+    "base": 250,
     "growth": 1.6
   },
   {

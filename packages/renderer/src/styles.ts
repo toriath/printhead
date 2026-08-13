@@ -97,6 +97,31 @@ export const WORKSHOP_CSS = `
   .ph-bill { animation: none; opacity: 0.8; }
 }
 
+/* --- the printed city (spec §5E) ----------------------------------------- */
+.ph-backdrop-tower { fill: var(--ph-bay-edge); opacity: 0.5; }
+
+/* --- the Universal Fabricator (spec §6 phase 6) --------------------------- */
+.ph-fabricator-bed { fill: #1b232d; stroke: var(--ph-dim); stroke-width: 1; }
+.ph-fabricator-band { fill: var(--ph-accent); opacity: 0.9; }
+.ph-fabricator-band--pending { fill: none; stroke: var(--ph-bay-edge); stroke-width: 1; }
+.ph-fabricator-band--printing {
+  fill: var(--ph-hot);
+  animation: ph-pulse 1.2s ease-in-out infinite;
+}
+.ph-fabricator--complete .ph-fabricator-band { fill: var(--ph-gold); }
+
+/* --- the ending (spec §6 phase 6) ---------------------------------------- */
+.printhead-ending {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #05090d;
+}
+.ph-ending-title { fill: #e8c469; font-size: 48px; text-anchor: middle; }
+.ph-ending-line { fill: #d7dee6; font-size: 11px; text-anchor: middle; }
+.ph-museum-case { fill: rgba(159, 217, 255, 0.05); stroke: #7b8794; stroke-dasharray: 4 3; }
+
 /* --- the idle print-head animation --------------------------------------- */
 @keyframes ph-sweep {
   from { transform: translateX(0); }

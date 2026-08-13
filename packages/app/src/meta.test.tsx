@@ -167,8 +167,11 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
 
   it('offers the melt-down when the projection says it is available', () => {
     const { store, dispatched } = stubStore();
-    render(<PrestigePanel store={store} visual={prestige} />);
-    expect(prestige.prestige.available).toBe(true);
+    // The studio fixture is the one caught with the capstone drafted and the
+    // melt-down worth taking; `prestige` is the run *after* one, which is
+    // saving up for the next.
+    render(<PrestigePanel store={store} visual={studio} />);
+    expect(studio.prestige.available).toBe(true);
     fireEvent.click(screen.getByTestId('melt-down'));
     expect(dispatched).toEqual([{ type: 'PRESTIGE' }]);
   });

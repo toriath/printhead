@@ -14,6 +14,7 @@ import {
   RAW_CONTENT,
   SAVE_SCHEMA_VERSION,
   TICK_MS,
+  countPrinters,
   createInitialState,
   loadContent,
   reduce,
@@ -244,6 +245,56 @@ if (spare !== undefined) {
   apply({ type: 'CREATE_DESIGN', designId: spare.id });
   tickSeconds(30);
 }
+
+/*
+ * The M6 state — an Endgame Tree bought with Plates, a printed factory turning
+ * over, sections pre-printed for the Fabricator and the final print itself in
+ * flight — sits behind two more phases of economy. The reference bot is handed
+ * the wheel one last time, as far as the phase that allows the print, and the
+ * M6 decisions after that go through the real reducer exactly as the M4 and M5
+ * ones did.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'end', seed: 7 }).finalState;
+
+/**
+ * Plates and Parts handed to the workshop so the last print can be captured in
+ * flight. A *fixture* concession like the rebuild grant above: every action
+ * below still goes through the real reducer and its real availability rules.
+ */
+const ENDGAME_FIXTURE_PLATES = 40;
+const ENDGAME_FIXTURE_PARTS = 5000;
+state = {
+  ...state,
+  resources: {
+    ...state.resources,
+    plates: state.resources.plates + ENDGAME_FIXTURE_PLATES,
+    parts: state.resources.parts + ENDGAME_FIXTURE_PARTS,
+  },
+};
+const fabricator = content.endgame.fabricator;
+for (const def of content.upgrades) {
+  if (def.tree === 'endgame' && state.upgrades[def.id] === undefined) {
+    apply({ type: 'BUY_UPGRADE', upgradeId: def.id });
+  }
+}
+const finalFork = content.forks.find((def) => def.requiredForFinalPrint);
+if (finalFork !== undefined && state.forkId === null) {
+  apply({ type: 'CHOOSE_FORK', forkId: finalFork.id });
+}
+apply({
+  type: 'BUY_FILAMENT',
+  materialId: fabricator.materialId,
+  grams: fabricator.filamentGrams + fabricator.sectionFilamentGrams,
+});
+// One pre-printed section, so the fixture carries the §7.3 state as well.
+apply({ type: 'PRINT_SECTION' });
+tickSeconds(fabricator.sectionDesignMinutes * 60 + 1);
+const finalBay = state.slots[0];
+while (finalBay !== undefined && countPrinters(state) < fabricator.requiredPrinters) {
+  apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId: finalBay.id });
+}
+apply({ type: 'START_FABRICATOR' });
+tickSeconds(60);
 
 const target = resolve(
   import.meta.dirname,
