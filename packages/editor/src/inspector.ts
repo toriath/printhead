@@ -22,12 +22,22 @@ export interface EditableField {
   /** Dotted rendering of the path, used as a React key and a test handle. */
   readonly id: string;
   readonly label: string;
-  readonly kind: 'number' | 'string' | 'boolean' | 'enum';
+  /**
+   * `literal` is a union's own discriminator — `curves[].type`,
+   * `automation[].behavior`. It is shown but never edited: changing it would
+   * mean rewriting every sibling field to match a different variant's shape,
+   * which is a different content def rather than an edit to this one. Hiding
+   * it instead was the old behaviour and was worse: the inspector then could
+   * not tell you whether a curve was exponential or a power law.
+   */
+  readonly kind: 'number' | 'string' | 'boolean' | 'enum' | 'literal';
   readonly value: number | string | boolean;
   readonly options?: readonly string[];
   readonly int?: boolean;
   readonly min?: number;
   readonly max?: number;
+  /** True for `literal`: the panel renders it as text, not a widget. */
+  readonly readOnly?: boolean;
 }
 
 /** A group of fields the inspector shows together — one def, one section. */
@@ -116,9 +126,13 @@ function leafOf(
       return typeof value === 'string'
         ? { ...base, kind: 'enum', value, options: descriptor.options }
         : null;
+    case 'literal':
+      // Reported, so the form says which variant this def is, but read-only.
+      return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+        ? { ...base, kind: 'literal', value, readOnly: true }
+        : null;
     default:
-      // Literals are the shape's own discriminators, and unknowns have no
-      // widget: neither is something a designer edits.
+      // An `unknown` has no widget, because the schema gave no shape to draw.
       return null;
   }
 }

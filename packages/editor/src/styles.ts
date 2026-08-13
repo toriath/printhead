@@ -44,4 +44,21 @@ export const EDITOR_CSS = `
 .ph-editor button { cursor: pointer; }
 .ph-editor button[aria-pressed="true"] { border-color: #4cc2ff; color: #4cc2ff; }
 .ph-editor output { color: #7b8794; }
+.ph-editor__literal { color: #e8c469; }
+.ph-editor__tree { padding-left: 8px; }
+.ph-editor__tree-leaf { display: flex; justify-content: space-between; gap: 8px; padding-left: 8px; }
+.ph-editor__spark { display: flex; align-items: center; gap: 6px; color: #4cc2ff; }
+.ph-editor__spark span:last-child { color: #d7dee6; margin-left: auto; }
+.ph-editor__log { margin: 0; padding-left: 18px; max-height: 120px; overflow: auto; }
+.ph-editor__log li { color: #7b8794; }
+.ph-editor textarea {
+  font: inherit;
+  color: inherit;
+  background: #111a24;
+  border: 1px solid #2b3a4d;
+  border-radius: 4px;
+  width: 100%;
+  min-height: 48px;
+}
+[data-over-budget="true"] { color: #ffb454; }
 `;

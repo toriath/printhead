@@ -7,7 +7,7 @@ import {
   toVisualState,
   validateContent,
 } from '@printhead/core';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContentWriteResult, EditorHost } from './host.js';
 import { EditorPanel } from './panel.js';
@@ -22,12 +22,18 @@ interface FakeHost extends EditorHost {
   readonly applied: RawContent[];
   readonly written: { file: string; value: unknown }[];
   readonly jumps: string[];
+  readonly seeds: number[];
+  readonly grants: { kind: string; amount: number }[];
+  readonly imported: string[];
 }
 
 function fakeHost(over: Partial<EditorHost> = {}): FakeHost {
   const applied: RawContent[] = [];
   const written: { file: string; value: unknown }[] = [];
   const jumps: string[] = [];
+  const seeds: number[] = [];
+  const grants: { kind: string; amount: number }[] = [];
+  const imported: string[] = [];
   let raw: RawContent = structuredClone(RAW_CONTENT);
   let paused = false;
   let scale = 1;
@@ -38,6 +44,9 @@ function fakeHost(over: Partial<EditorHost> = {}): FakeHost {
     applied,
     written,
     jumps,
+    seeds,
+    grants,
+    imported,
     getRawContent: () => raw,
     applyContent(next): ContentValidation {
       const validation = validateContent(next);
@@ -63,8 +72,17 @@ function fakeHost(over: Partial<EditorHost> = {}): FakeHost {
       scale = next;
     },
     jumpToPhase: (phaseId) => jumps.push(phaseId),
-    exportSave: () => '{}',
-    importSave: () => ({ ok: true, message: 'save loaded' }),
+    exportSave: () => '{"version":5}',
+    importSave: (json) => {
+      imported.push(json);
+      return { ok: true, message: 'save loaded' };
+    },
+    getActionLog: () => [
+      { type: 'SELL_PARTS', simTimeMs: 1500, detail: 'count=null' },
+      { type: 'BUY_PRINTER', simTimeMs: 2500, detail: 'printerId=bench-mk1 slotId=slot-1' },
+    ],
+    setSeed: (next) => seeds.push(next),
+    grantResource: (kind, amount) => grants.push({ kind, amount }),
     ...over,
   };
   return host;
@@ -129,15 +147,18 @@ describe('content inspector (forms generated from the zod schemas)', () => {
   it("switches files and shows that file's own fields", () => {
     open(fakeHost());
     fireEvent.change(screen.getByTestId('editor-file'), { target: { value: 'materials' } });
-    expect(screen.getByText('pla')).toBeDefined();
-    fireEvent.click(screen.getByText('pla'));
+    // Scoped to the inspector: the state tree below it also mentions "pla",
+    // because a workshop's filament ledger is keyed by material.
+    const groups = within(screen.getByTestId('editor-groups'));
+    expect(groups.getByText('pla')).toBeDefined();
+    fireEvent.click(groups.getByText('pla'));
     expect(screen.getByTestId('field-0.costPerGram')).toBeDefined();
   });
 
   it('renders an enum as a picker and a boolean as a checkbox', () => {
     open(fakeHost());
     fireEvent.change(screen.getByTestId('editor-file'), { target: { value: 'materials' } });
-    fireEvent.click(screen.getByText('pla'));
+    fireEvent.click(within(screen.getByTestId('editor-groups')).getByText('pla'));
     expect(screen.getByTestId('field-0.supply').tagName).toBe('SELECT');
     fireEvent.change(screen.getByTestId('field-0.supply'), { target: { value: 'market' } });
     expect(screen.getByTestId('editor-status').textContent).toBe('applied');
@@ -226,5 +247,116 @@ describe('state view', () => {
     const { unmount } = open(host);
     unmount();
     expect(unsubscribe).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Editor v2 (spec §14, M5): the state tools and the balance view — "the human
+ * twin of the bot reports". Everything below is driven through `EditorHost`,
+ * so the panel still needs no store, no clock and no server.
+ */
+describe('state tools', () => {
+  it('shows the GameState as a tree the shape of the state itself', () => {
+    open(fakeHost());
+    const tree = screen.getByTestId('tree-GameState');
+    expect(within(tree).getByTestId('tree-GameState.resources')).toBeDefined();
+    expect(within(tree).getByTestId('tree-GameState.saveVersion').textContent).toContain(
+      'saveVersion',
+    );
+    // A field added to GameState appears here with no editor change: the tree
+    // is recursive over whatever it is handed. Paths, not bare names, because
+    // `designs` is both a ledger and a balance and both have to be visible.
+    expect(within(tree).getByTestId('tree-GameState.designs')).toBeDefined();
+    expect(within(tree).getByTestId('tree-GameState.resources.designs')).toBeDefined();
+    expect(within(tree).getByTestId('tree-GameState.selfAssembling')).toBeDefined();
+  });
+
+  it('tails the action log, newest first', () => {
+    open(fakeHost());
+    const entries = within(screen.getByTestId('editor-action-log')).getAllByRole('listitem');
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.textContent).toContain('BUY_PRINTER');
+    expect(entries[0]?.textContent).toContain('bench-mk1');
+    expect(entries[1]?.textContent).toContain('SELL_PARTS');
+  });
+
+  it('sets the seed through the host, and refuses a non-number', () => {
+    const host = fakeHost();
+    open(host);
+    fireEvent.change(screen.getByTestId('editor-seed'), { target: { value: '4242' } });
+    fireEvent.click(screen.getByTestId('editor-seed-apply'));
+    expect(host.seeds).toEqual([4242]);
+    expect(screen.getByTestId('editor-state-status').textContent).toContain('4242');
+
+    fireEvent.change(screen.getByTestId('editor-seed'), { target: { value: 'nope' } });
+    fireEvent.click(screen.getByTestId('editor-seed-apply'));
+    expect(host.seeds).toEqual([4242]);
+    expect(screen.getByTestId('editor-state-status').textContent).toContain('must be a number');
+  });
+
+  it('offers a grant for every balance the ledger has, not a hard-coded list', () => {
+    const host = fakeHost();
+    open(host);
+    const options = within(screen.getByTestId('editor-grant-kind'))
+      .getAllByRole('option')
+      .map((node) => node.getAttribute('value'));
+    expect(options).toEqual(Object.keys(host.getState().resources));
+  });
+
+  it('grants the chosen resource through the host', () => {
+    const host = fakeHost();
+    open(host);
+    fireEvent.change(screen.getByTestId('editor-grant-kind'), { target: { value: 'parts' } });
+    fireEvent.click(screen.getByTestId('editor-grant-10000'));
+    expect(host.grants).toEqual([{ kind: 'parts', amount: 10_000 }]);
+  });
+
+  it('exports the save into the box and imports whatever is in it', () => {
+    const host = fakeHost();
+    open(host);
+    fireEvent.click(screen.getByTestId('editor-export'));
+    expect((screen.getByTestId('editor-save-json') as HTMLTextAreaElement).value).toBe(
+      '{"version":5}',
+    );
+    fireEvent.change(screen.getByTestId('editor-save-json'), { target: { value: '{"v":1}' } });
+    fireEvent.click(screen.getByTestId('editor-import'));
+    expect(host.imported).toEqual(['{"v":1}']);
+    expect(screen.getByTestId('editor-state-status').textContent).toBe('save loaded');
+  });
+});
+
+describe('balance view', () => {
+  it('times the current phase against the budget the running content declares', () => {
+    open(fakeHost());
+    const timer = screen.getByTestId('editor-phase-timer');
+    expect(timer.textContent).toContain('intro');
+    expect(timer.textContent).toContain('/ 5 design-min');
+    expect(timer.getAttribute('data-over-budget')).toBe('false');
+  });
+
+  it('reads the budget out of the edited content, not a copy of it', () => {
+    const host = fakeHost();
+    open(host);
+    fireEvent.change(screen.getByTestId('editor-file'), { target: { value: 'pacing' } });
+    // Editing the phase budget in the inspector moves the bar immediately.
+    fireEvent.change(screen.getByTestId('field-phases.0.budgetDesignMinutes'), {
+      target: { value: '9' },
+    });
+    expect(screen.getByTestId('editor-phase-timer').textContent).toContain('/ 9 design-min');
+  });
+
+  it('flags a phase that has overrun its budget', () => {
+    const content = loadContent(RAW_CONTENT);
+    const state = createInitialState(content, { seed: 1 });
+    const overrun = { ...state, simTimeMs: 99 * 60_000, phaseEnteredAtMs: 0 };
+    open(fakeHost({ getState: () => overrun }));
+    expect(screen.getByTestId('editor-phase-timer').getAttribute('data-over-budget')).toBe('true');
+  });
+
+  it('draws a sparkline per plotted balance, scaled to its own peak', () => {
+    open(fakeHost());
+    for (const name of ['money', 'parts', 'products', 'plates']) {
+      expect(screen.getByTestId(`spark-${name}`)).toBeDefined();
+    }
   });
 });
