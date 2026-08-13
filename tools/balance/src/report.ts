@@ -84,16 +84,28 @@ function summaryTable(table: BudgetTable, logs: readonly RunLog[]): string {
   const header = ['Phase', 'Budget', ...logs.map((log) => log.botId)];
   const rows = table.phases.map((phase) => [
     phase.name,
-    `${phase.budgetDesignMinutes} (${phase.minDesignMinutes.toFixed(0)}–${phase.maxDesignMinutes.toFixed(0)})`,
+    // The terminal sandbox has no window: nothing ends it, so how long a player
+    // stays there is a choice rather than a budget (see `terminalPhaseId`).
+    phase.phaseId === table.terminalPhaseId
+      ? 'sandbox'
+      : `${phase.budgetDesignMinutes} (${phase.minDesignMinutes.toFixed(0)}–${phase.maxDesignMinutes.toFixed(0)})`,
     ...logs.map((log) => {
       const actual = log.phaseDurations.get(phase.phaseId);
       return actual === undefined ? '—' : actual.toFixed(1);
     }),
   ]);
   rows.push([
-    '**Total**',
+    '**Total (the arc)**',
     `**${table.totalDesignMinutes}**`,
-    ...logs.map((log) => `**${log.designMinutes.toFixed(1)}**`),
+    // The arc is over when the sandbox is reached; the run goes on a little
+    // longer so the post-game can be observed, and that tail is not the arc.
+    ...logs.map((log) => {
+      const arc =
+        table.terminalPhaseId === undefined
+          ? undefined
+          : log.phaseEnteredAt.get(table.terminalPhaseId);
+      return `**${(arc ?? log.designMinutes).toFixed(1)}**`;
+    }),
   ]);
   return markdownTable(header, rows);
 }

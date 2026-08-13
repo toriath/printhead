@@ -106,9 +106,13 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     }
 
     // The feedstock is bought with Plates (spec §3) — the market row for it
-    // only appears once the tree has opened the material.
-    await page.getByTestId('buy-composite').click();
-    await warp(page, MS_PER_SECOND);
+    // only appears once the tree has opened the material, and one click buys a
+    // parcel, so the last print takes several.
+    const feedstock = page.getByTestId('buy-composite');
+    for (let parcel = 0; parcel < 4; parcel += 1) {
+      await feedstock.click();
+      await warp(page, MS_PER_SECOND);
+    }
 
     // A pre-printed section first (spec §7.3): it shortens the build.
     const section = page.getByTestId('print-section');

@@ -10,16 +10,17 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 %
 
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
-| Intro | 5 (4–6) | 420.0 | 5.0 | 5.0 | 90.0 |
+| Intro | 5 (4–6) | 510.0 | 5.0 | 5.0 | 90.0 |
 | Bench | 30 (24–36) | — | 22.9 | 25.9 | 140.0 |
-| Farm | 80 (64–96) | — | 79.7 | 80.3 | 190.0 |
+| Farm | 80 (64–96) | — | 79.7 | 80.3 | 280.0 |
 | Studio | 75 (60–90) | — | 74.2 | 74.6 | — |
-| Prestige runs 1-2 | 90 (72–108) | — | 66.7 | 89.9 | — |
-| The Absurd | 80 (64–96) | — | 80.0 | 80.0 | — |
-| The End | 60 (48–72) | — | 91.5 | 64.4 | — |
-| **Total** | **420** | **420.0** | **420.0** | **420.0** | **420.0** |
+| Prestige runs 1-2 | 90 (72–108) | — | 29.0 | 86.7 | — |
+| The Absurd | 80 (64–96) | — | 192.6 | 84.1 | — |
+| The End | 60 (48–72) | — | 105.6 | 63.1 | — |
+| Ended | sandbox | — | — | 89.3 | — |
+| **Total (the arc)** | **420** | **510.0** | **509.0** | **419.7** | **510.0** |
 
-The reference run took 420.0 design-minutes (7.00 wall-hours at targetHours=8) and ended in `end`.
+The reference run took 509.0 design-minutes (8.48 wall-hours at targetHours=8) and ended in `ended`.
 
 ## Wait walls
 
@@ -38,6 +39,7 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Prestige runs 1-2 | 0.0 | 6 | 0 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
+| Ended | 0.0 | 60 | 0 |
 
 ## Resource curves
 
@@ -54,10 +56,10 @@ magnitude and a shared axis would flatten one of them into the floor.
 
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
-| idle | 42 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 5040 | 818 | 158 | 24 | 13.2 % | end |
-| balanced | 5040 | 1023 | 529 | 61 | 10.3 % | end |
-| idle-heavy | 42 | 68 | 1059 | 113 | 9.6 % | farm |
+| idle | 51 | 0 | 0 | 0 | — | intro |
+| greedy-spender | 6108 | 765 | 1489 | 96 | 6.1 % | end |
+| balanced | 6108 | 1476 | 16877 | 1667 | 9.0 % | ended |
+| idle-heavy | 51 | 96 | 2076 | 198 | 8.7 % | farm |
 
 ---
 
