@@ -3,18 +3,22 @@
 A finite idle game about a 3D printer that eventually prints everything.
 The binding specification is [`docs/printhead-spec-v0.4.md`](docs/printhead-spec-v0.4.md).
 
-> **Status:** M5 — meta and editor v2. The game is playable in a browser through
-> phases 0–4: assemble printer #1 piece by piece, load the slot, print, watch the
-> pity timer fill and a print fail, recycle the scrap, climb the machine tree,
-> unlock PETG behind the heated bed, trade filament on a moving market, buy your
-> way out of the friction with automation, outgrow your first bay, buy a second,
-> spread the fleet across the rack, put a bay on a print rota and commit the run
-> to Farm or Goliath — and then open the Design Studio, draft the capstone Money
-> Plate, print Products from it, melt the whole workshop down for Plates and
-> watch the intro rebuild itself while the presses print money. It installs as a
-> PWA, autosaves to IndexedDB and shows a "welcome back" summary. `VisualState`
-> is frozen at v6; saves are at v5. The endgame tree and the Fabricator's final
-> print land in M6.
+> **Status:** M6 — the endgame. **The game is finishable.** Assemble printer #1
+> piece by piece, load the slot, print, watch the pity timer fill and a print
+> fail, recycle the scrap, climb the machine tree, unlock PETG behind the heated
+> bed, trade filament on a moving market, buy your way out of the friction with
+> automation, outgrow your first bay, spread the fleet across the rack and
+> commit the run to Farm or Goliath; open the Design Studio, draft the capstone
+> Money Plate, print Products from it, melt the whole workshop down for Plates
+> and watch the intro rebuild itself while the presses print money; then spend
+> those Plates on the Endgame Tree — exotic feedstock, a printed city, a factory
+> that prints printers, and the blueprint for the Universal Fabricator — watch
+> the prices inflate as the presses eat the economy, commit every bay to the
+> last print there is, and see the numbers go to ∞, printer #1 under glass and
+> the credits print out. Behind them: a post-game sandbox and New Game Plus.
+> It installs as a PWA, autosaves to IndexedDB and shows a "welcome back"
+> summary. `VisualState` is frozen at v7; saves are at v6. M7 is the ship:
+> PWA polish, save-corpus hardening and the printable STL of the printer itself.
 
 ## Quick start (inside the devcontainer)
 
@@ -80,9 +84,11 @@ v5 by a strict zod schema plus the fixture corpus in
 
 - **Materials are strategies chosen by data.** PLA is cheap, infinite and
   crash-prone; PETG is the balanced workhorse behind the heated bed; resin is
-  slow, reliable and behind the SLA unit; metal is a stub for M6. What makes
-  them different is entirely numbers in `materials.json` — plus
-  `requiresUpgradeId`, which is how the machine tree gates them.
+  slow, reliable and behind the SLA unit; sintered metal is the structural one;
+  and the endgame's composite feedstock is bought with **Plates** rather than
+  Money (§3), which is what `priceResource` says. What makes them different is
+  entirely numbers in `materials.json` — plus `requiresUpgradeId`, which is how
+  the machine tree gates them.
 - **Failure is a deterministic pity timer, never a dice roll** (§7.1). Each
   print adds a charge to its slot; when the charge crosses the threshold that
   print fails and yields Scrap. The renderer draws the charge as a hairline
