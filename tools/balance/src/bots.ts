@@ -840,7 +840,11 @@ const PRESTIGE_GROWTH = 1;
 /** Bays the player keeps on Products once the studio opens (spec §5D). */
 const DESIGN_BAYS = 1;
 
-/** Designs owned, cheapest useful first — the capstone is always worth most. */
+/**
+ * The owned Design worth the most per Product at its current level, skipping
+ * any whose material the machine tree has closed again — which a melt-down
+ * does, since it takes the SLA unit with everything else.
+ */
 function bestOwnedDesign(
   state: GameState,
   content: Content,
