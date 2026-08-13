@@ -121,6 +121,9 @@ export function meltDown(
   curves: CurveRegistry,
 ): PrestigeResult {
   const platesAwarded = platesFor(state, content, curves);
+  // The seed is handed over only to satisfy `createInitialState`; the run's own
+  // rng — position and all — is put back below, because a melt-down happens
+  // *inside* the arc and rewinding the stream would replay its dice.
   const fresh = createInitialState(content, { seed: state.rng.seed });
   let resources = fresh.resources;
   for (const kind of content.prestige.retainedResources) {
@@ -181,11 +184,9 @@ export function moneyPrintRate(state: GameState, content: Content, curves: Curve
   }
   let rate = NONE;
   for (const def of content.prestige.moneyPrinters) {
-    const level = moneyPrinterLevel(state, def.id);
-    if (level <= NONE) {
-      continue;
-    }
-    rate += evaluateCurveById(curves, def.rateCurveId, plates) * level;
+    // An uninstalled tier contributes `curve × 0`, so it needs no special case:
+    // a `continue` here would be an optimisation nothing could observe.
+    rate += evaluateCurveById(curves, def.rateCurveId, plates) * moneyPrinterLevel(state, def.id);
   }
   return rate;
 }

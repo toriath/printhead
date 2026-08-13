@@ -79,6 +79,24 @@ describe('what a melt-down is worth', () => {
     expect(platesFor(base, content, curves)).toBe(0);
   });
 
+  it('pays nothing for an empty run even under a curve with a floor', () => {
+    // The shipped power curve happens to return zero at zero, so the guard in
+    // `platesFor` is invisible against it. A curve with a constant term is
+    // exactly what it is there for: melting down a workshop worth nothing must
+    // never mint a free Plate.
+    const generous: Content = {
+      ...content,
+      curves: content.curves.map((curve) =>
+        curve.id === content.prestige.plateCurveId
+          ? { id: curve.id, name: curve.name, type: 'constant' as const, value: 5 }
+          : curve,
+      ),
+    };
+    const generousCurves = createCurveRegistry(generous.curves);
+    expect(platesFor(base, generous, generousCurves)).toBe(0);
+    expect(platesFor(rich(), generous, generousCurves)).toBe(5);
+  });
+
   it('never pays less for a bigger run', () => {
     let previous = 0;
     for (const money of [0, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]) {
@@ -112,6 +130,19 @@ describe('whether the workshop may melt itself down', () => {
 
   it('agrees once the run is big enough', () => {
     expect(prestigeAvailability(rich(), content, curves)).toBeNull();
+  });
+
+  it('agrees at exactly the minimum, not only above it', () => {
+    const exact: Content = {
+      ...content,
+      prestige: { ...content.prestige, minimumPlates: platesFor(rich(), content, curves) },
+    };
+    expect(prestigeAvailability(rich(), exact, curves)).toBeNull();
+    const oneMore: Content = {
+      ...content,
+      prestige: { ...content.prestige, minimumPlates: exact.prestige.minimumPlates + 1 },
+    };
+    expect(prestigeAvailability(rich(), oneMore, curves)).toBe('not-worth-it');
   });
 });
 
@@ -165,6 +196,18 @@ describe('the melt-down itself', () => {
     expect(meltDown(before, content, curves).state.moneyPrinters).toBe(before.moneyPrinters);
   });
 
+  it('ignores filament in the retained list, which has no single balance', () => {
+    const odd: Content = {
+      ...content,
+      prestige: { ...content.prestige, retainedResources: ['plates', 'filament'] },
+    };
+    const { state } = meltDown(rich(), odd, curves);
+    // Skipped rather than crashed or NaN'd: filament is per material, so there
+    // is nothing for `resources[kind]` to read.
+    expect(state.filamentGrams).toEqual(base.filamentGrams);
+    expect(state.resources.plates).toBeGreaterThan(0);
+  });
+
   it('keeps only the balances the content names', () => {
     const platesOnly: Content = {
       ...content,
@@ -213,6 +256,30 @@ describe('the money printers (spec §5E)', () => {
   it('prints nothing without Plates, however many presses are installed', () => {
     const platesless = rich({ resources: { ...rich().resources, plates: 0 } });
     expect(moneyPrintRate(platesless, content, curves)).toBe(0);
+  });
+
+  it('prints nothing without Plates even under a curve that pays at zero', () => {
+    // The shipped rate curve is linear from zero, so the Plate guard is
+    // invisible against it. The rule it protects is the whole conceit of
+    // spec §5E: the Plates *are* the plates, and a press with none to engrave
+    // prints nothing however good its curve looks at the origin.
+    const generous: Content = {
+      ...content,
+      curves: content.curves.map((curve) =>
+        curve.id === 'money-print-rate'
+          ? { id: curve.id, name: curve.name, type: 'constant' as const, value: 99 }
+          : curve,
+      ),
+    };
+    const generousCurves = createCurveRegistry(generous.curves);
+    expect(
+      moneyPrintRate(
+        rich({ resources: { ...rich().resources, plates: 0 } }),
+        generous,
+        generousCurves,
+      ),
+    ).toBe(0);
+    expect(moneyPrintRate(rich(), generous, generousCurves)).toBe(99 * 2);
   });
 
   it('prints nothing without a press, however many Plates are held', () => {
@@ -269,18 +336,46 @@ describe('buying a press', () => {
   });
 
   it('leaves a Money-priced press unrounded, because Money is not countable', () => {
+    // A fractional price, so "rounded up" and "left alone" are different
+    // numbers rather than the same one: with an integral curve this assertion
+    // would hold whichever branch ran.
+    const fractional = 'fractional-press-cost';
     const priced: Content = {
       ...content,
+      curves: [
+        ...content.curves,
+        { id: fractional, name: 'Fractional', type: 'constant' as const, value: 100.5 },
+      ],
       prestige: {
         ...content.prestige,
         moneyPrinters: content.prestige.moneyPrinters.map((def) => ({
           ...def,
           costResource: 'money' as const,
-          costCurveId: 'design-cost',
+          costCurveId: fractional,
         })),
       },
     };
-    expect(nextMoneyPrinterCost(base, priced, curves, pressId)?.resource).toBe('money');
+    const pricedCurves = createCurveRegistry(priced.curves);
+    expect(nextMoneyPrinterCost(base, priced, pricedCurves, pressId)).toEqual({
+      resource: 'money',
+      amount: 100.5,
+    });
+
+    // The same curve, priced in a countable resource, rounds up.
+    const counted: Content = {
+      ...priced,
+      prestige: {
+        ...priced.prestige,
+        moneyPrinters: priced.prestige.moneyPrinters.map((def) => ({
+          ...def,
+          costResource: 'plates' as const,
+        })),
+      },
+    };
+    expect(nextMoneyPrinterCost(base, counted, pricedCurves, pressId)).toEqual({
+      resource: 'plates',
+      amount: 101,
+    });
   });
 
   it('installs the next level and takes the Plates for it', () => {

@@ -174,14 +174,31 @@ describe('what a draft costs', () => {
   });
 
   it('rounds a countable resource up, and leaves Money alone', () => {
-    const counted: Content = {
+    // A fractional price, so "rounded up" and "left alone" are different
+    // numbers: against an integral curve this would pass either way.
+    const fractional = 'fractional-design-cost';
+    const priced: Content = {
       ...content,
-      designs: content.designs.map((def) => ({ ...def, costResource: 'parts' as const })),
+      curves: [
+        ...content.curves,
+        { id: fractional, name: 'Fractional', type: 'constant' as const, value: 100.5 },
+      ],
+      designs: content.designs.map((def) => ({ ...def, costCurveId: fractional })),
     };
-    const cost = nextDesignCost(base, counted, curves, capstoneId);
-    expect(cost?.resource).toBe('parts');
-    expect(Number.isInteger(cost?.amount)).toBe(true);
-    expect(nextDesignCost(base, content, curves, capstoneId)?.resource).toBe('money');
+    const pricedCurves = createCurveRegistry(priced.curves);
+    expect(nextDesignCost(base, priced, pricedCurves, capstoneId)).toEqual({
+      resource: 'money',
+      amount: 100.5,
+    });
+
+    const counted: Content = {
+      ...priced,
+      designs: priced.designs.map((def) => ({ ...def, costResource: 'parts' as const })),
+    };
+    expect(nextDesignCost(base, counted, pricedCurves, capstoneId)).toEqual({
+      resource: 'parts',
+      amount: 101,
+    });
   });
 
   it('has no price for a Design that is not in content', () => {
