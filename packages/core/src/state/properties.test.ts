@@ -414,31 +414,60 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
 
   const start = running();
 
+  /**
+   * A melted-down workshop, mid-rebuild, with a commission on the bench and the
+   * presses running. M5 put three new things inside the tick — the studio
+   * clock, the money printers and the self-assembling intro — and every one of
+   * them is exactly the sort of accumulator that quietly disagrees with itself
+   * when the tick stream is chunked. Fuzzing the bench loop alone would never
+   * touch any of them.
+   */
+  const rebuilding = (): GameState => {
+    const melted = apply(melting(3), prestige());
+    return {
+      ...melted,
+      studio: { designId: content.designs[0]?.id ?? '', remainingMs: 8 * MS_PER_MINUTE },
+    };
+  };
+
   const offline = (state: GameState, wallElapsedMs: number, carrySimMs: number) =>
     runOfflineCatchUp({ state, content, wallElapsedMs, nowMs: 0, carrySimMs });
 
   it('splits a catch-up into two halves with an identical result', () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 30 }), (minutes) => {
-        const half = minutes * MS_PER_MINUTE;
-        const once = offline(start, half * 2, 0);
-        const first = offline(start, half, 0);
-        const second = offline(first.state, half, first.carrySimMs);
-        expect(second.state).toEqual(once.state);
-        expect(second.carrySimMs).toBeCloseTo(once.carrySimMs, 9);
-      }),
-      { numRuns: 12 },
+      fc.property(
+        fc.constantFrom(start, rebuilding()),
+        fc.integer({ min: 0, max: 30 }),
+        (from, minutes) => {
+          const half = minutes * MS_PER_MINUTE;
+          const once = offline(from, half * 2, 0);
+          const first = offline(from, half, 0);
+          const second = offline(first.state, half, first.carrySimMs);
+          expect(second.state).toEqual(once.state);
+          expect(second.carrySimMs).toBeCloseTo(once.carrySimMs, 9);
+        },
+      ),
+      { numRuns: 16 },
     );
   });
 
   it('matches playing the same time online, tick for tick', () => {
     const wallMs = MS_PER_MINUTE * 20;
-    const summary = offline(start, wallMs, 0);
-    let online = start;
-    for (let i = 0; i < wallMs / TICK_MS; i += 1) {
-      online = apply(online, tick(TICK_MS));
+    for (const from of [start, rebuilding()]) {
+      const summary = offline(from, wallMs, 0);
+      let online = from;
+      for (let i = 0; i < wallMs / TICK_MS; i += 1) {
+        online = apply(online, tick(TICK_MS));
+      }
+      expect(summary.state).toEqual(online);
     }
-    expect(summary.state).toEqual(online);
+  });
+
+  it('rebuilds the workshop and runs the presses while the player is away', () => {
+    const away = offline(rebuilding(), MS_PER_MINUTE * 30, 0).state;
+    expect(away.assembly.attachedPieceIds.length).toBe(content.start.assemblyPieces.length);
+    expect(away.designs[content.designs[0]?.id ?? '']).toBeDefined();
+    expect(away.stats.moneyPrinted).toBeGreaterThan(0);
   });
 
   it('caps at pacing.offlineCapHours and reports the remainder as skipped', () => {
