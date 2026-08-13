@@ -10,6 +10,7 @@ import {
   forkAvailability,
   forkCost,
   hasRecycler,
+  isMaterialAvailable,
   isPieceReady,
   maxBuyableGrams,
   moneyPrinterAvailability,
@@ -200,10 +201,21 @@ export function meaningfulOptions(
     }
   }
 
+  /*
+   * A Design waiting for a bay only counts if the reducer would actually take
+   * it: the machine tree has to have the material open (spec §3), and a
+   * melt-down takes the SLA unit with everything else. Counting an owned Design
+   * the workshop cannot currently print would quietly declare the whole
+   * post-prestige rebuild "alive" on the strength of a button that refuses.
+   */
   if (
     allows(content, state.phaseId, 'SET_SLOT_DESIGN') &&
-    Object.keys(state.designs).length > 0 &&
-    state.slots.some((slot) => slot.designId === null && slot.printerCount > 0)
+    state.slots.some((slot) => slot.designId === null && slot.printerCount > 0) &&
+    content.designs.some(
+      (def) =>
+        state.designs[def.id] !== undefined &&
+        isMaterialAvailable(state, content, def.requiredMaterialId),
+    )
   ) {
     options.push('load-design');
   }
