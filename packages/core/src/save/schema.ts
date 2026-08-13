@@ -213,7 +213,7 @@ export const StatsStateV5Schema = StatsStateSchema.extend({
 }).strict();
 
 export const GameStateV5Schema = GameStateV4Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  saveVersion: z.literal(5),
   productsValue: NonNegative,
   slots: z.array(SlotStateSchema),
   designs: DesignLedgerSchema,
@@ -223,8 +223,49 @@ export const GameStateV5Schema = GameStateV4Schema.extend({
   stats: StatsStateV5Schema,
 }).strict();
 
+// --- v6 (M6) ----------------------------------------------------------------
+
+/** A timed build on the Fabricator: the final print, or one section (§7.3). */
+export const FabricatorRunStateSchema = z
+  .object({
+    remainingMs: z.number().finite(),
+    totalMs: z.number().finite().positive(),
+  })
+  .strict();
+
+export const FabricatorStateSchema = z
+  .object({
+    sections: z.number().int().nonnegative(),
+    sectionRun: FabricatorRunStateSchema.nullable(),
+    run: FabricatorRunStateSchema.nullable(),
+    /** Sim clock at the moment the final print finished; the ending times off it. */
+    completedAtMs: NonNegative.nullable(),
+  })
+  .strict();
+
+export const NewGamePlusStateSchema = z
+  .object({
+    run: z.number().int().nonnegative(),
+    modifierIds: z.array(z.string().min(1)),
+  })
+  .strict();
+
+export const StatsStateV6Schema = StatsStateV5Schema.extend({
+  /** Plates engraved across the whole game — what the presses read (spec §5E). */
+  platesEarned: NonNegative,
+}).strict();
+
+export const GameStateV6Schema = GameStateV5Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  stats: StatsStateV6Schema,
+  /** Fractional machines the printed factory has accrued (spec §5E). */
+  factoryProgress: NonNegative,
+  fabricator: FabricatorStateSchema,
+  ngPlus: NewGamePlusStateSchema,
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV5Schema;
+export const GameStateSchema = GameStateV6Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -240,3 +281,4 @@ export type GameStateV2 = z.infer<typeof GameStateV2Schema>;
 export type GameStateV3 = z.infer<typeof GameStateV3Schema>;
 export type GameStateV4 = z.infer<typeof GameStateV4Schema>;
 export type GameStateV5 = z.infer<typeof GameStateV5Schema>;
+export type GameStateV6 = z.infer<typeof GameStateV6Schema>;

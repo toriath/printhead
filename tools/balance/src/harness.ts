@@ -8,6 +8,7 @@ import {
   MS_PER_SECOND,
   type PaceMapping,
   type ReduceContext,
+  TICK_MS,
   advance,
   countEventsByType,
   createCurveRegistry,
@@ -17,9 +18,8 @@ import {
   createRng,
   reduce,
   restoreRng,
-  totalBudgetDesignMinutes,
 } from '@printhead/core';
-import { designMinutesOf, wallHoursOf } from './budget.js';
+import { buildBudgetTable, designMinutesOf, wallHoursOf } from './budget.js';
 import { type WaitWall, WaitWallTracker, meaningfulOptions } from './waitwall.js';
 
 /**
@@ -50,7 +50,12 @@ export interface RunOptions {
   readonly seed?: number;
   /**
    * Hard stop, in design minutes, so a stuck bot cannot spin forever.
-   * Defaults to the total §6 budget from `pacing.json`.
+   *
+   * Defaults to the spec §6 arc budget **plus its own tolerance**, plus the
+   * terminal sandbox's nominal length. A limit set to the budget exactly cannot
+   * observe a phase that legitimately runs to +20 %: the run is cut off mid-arc
+   * and the last phase is reported as never reached, which is a fact about the
+   * limit rather than about the game.
    */
   readonly limitDesignMinutes?: number;
   /** Stop as soon as this phase is entered — used to time the early phases. */
@@ -68,6 +73,8 @@ export interface ResourceSample {
   readonly filamentGrams: number;
   readonly printers: number;
   readonly printsCompleted: number;
+  /** Money the presses have printed — the reading inflation is read at (§6). */
+  readonly moneyPrinted: number;
 }
 
 export interface RunLog {
@@ -86,6 +93,12 @@ export interface RunLog {
   readonly decisionsByPhase: ReadonlyMap<string, number>;
   readonly actionsByType: Readonly<Partial<Record<ActionType, number>>>;
   readonly eventCounts: Readonly<Partial<Record<DomainEventType, number>>>;
+  /**
+   * Every domain event, in order, with the simulation clock it fired at. The
+   * counts answer "did it happen?"; the log answers "when?", which is the first
+   * question asked of a phase that overran its budget.
+   */
+  readonly events: readonly DomainEvent[];
   readonly samples: readonly ResourceSample[];
   /** Stretches with nothing meaningful to do (spec §12.2). */
   readonly waitWalls: readonly WaitWall[];
@@ -120,18 +133,33 @@ function sampleOf(state: GameState): ResourceSample {
     filamentGrams: totalFilament(state),
     printers: totalPrinters(state),
     printsCompleted: state.stats.printsCompleted,
+    moneyPrinted: state.stats.moneyPrinted,
   };
 }
 
 export function runHeadless(options: RunOptions): RunLog {
   const { content, bot } = options;
   const pace: PaceMapping = createPaceMapping(content.pacing);
-  const limit = options.limitDesignMinutes ?? totalBudgetDesignMinutes(content.pacing.phases);
+  const table = buildBudgetTable(content.pacing);
+  const sandbox =
+    content.pacing.phases.find((phase) => phase.id === table.terminalPhaseId)
+      ?.budgetDesignMinutes ?? 0;
+  const limit =
+    options.limitDesignMinutes ?? table.totalDesignMinutes * (1 + table.tolerance) + sandbox;
   const stepWallMs = pace.toWallDtMs(bot.checkInDesignSeconds * MS_PER_SECOND);
   const sampleEvery = options.sampleEveryDesignMinutes ?? DEFAULT_SAMPLE_EVERY_DESIGN_MINUTES;
   const bus = createEventBus();
 
   let state = createInitialState(content, { seed: options.seed ?? DEFAULT_SEED });
+  /*
+   * How much time the run has *simulated*, which is not the same as what the
+   * clock says: New Game Plus (spec §18 M6) starts the arc again with the clock
+   * back at zero, and a loop bounded by `state.simTimeMs` would never end —
+   * the bot finishes the game, restarts it, and rewinds the very number the
+   * harness was watching. Found exactly that way: a run that should have taken
+   * two seconds ran until the test timeout killed it.
+   */
+  let elapsedSimMs = 0;
   let carrySimMs = 0;
   let ticks = 0;
   let decisions = 0;
@@ -179,7 +207,7 @@ export function runHeadless(options: RunOptions): RunLog {
 
   maybeSample();
 
-  while (designMinutesOf(state.simTimeMs) < limit) {
+  while (designMinutesOf(elapsedSimMs) < limit) {
     if (options.stopAtPhaseId !== undefined && state.phaseId === options.stopAtPhaseId) {
       break;
     }
@@ -214,6 +242,9 @@ export function runHeadless(options: RunOptions): RunLog {
       tick: (current, simDtMs) =>
         reduce(current, { type: 'TICK', simDtMs }, { ...ctx(), rng: restoreRng(current.rng) }),
     });
+    // Ticks, not clocks: `advance` runs whole `TICK_MS` steps, so this is
+    // exactly the time simulated — and it cannot be rewound by a restart.
+    elapsedSimMs += result.ticks * TICK_MS;
     state = result.state;
     carrySimMs = result.carrySimMs;
     ticks += result.ticks;
@@ -240,6 +271,7 @@ export function runHeadless(options: RunOptions): RunLog {
     decisionsByPhase,
     actionsByType,
     eventCounts: countEventsByType(events),
+    events,
     samples,
     waitWalls: waitWalls.finish(),
     finalState: state,

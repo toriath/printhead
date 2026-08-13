@@ -15,7 +15,9 @@ import { REFERENCE_BOT, runHeadless } from '@printhead/balance';
 import type { Action, GameState, VisualState } from '@printhead/core';
 import {
   RAW_CONTENT,
+  SECONDS_PER_MINUTE,
   TICK_MS,
+  countPrinters,
   createCurveRegistry,
   createInitialState,
   loadContent,
@@ -206,6 +208,69 @@ capture('studio');
 state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'absurd', seed: 7 }).finalState;
 tickSeconds(5);
 capture('prestige');
+
+/**
+ * 10. The endgame (spec §5E, §6 phase 5): the Endgame Tree bought with Plates,
+ * the printed city behind the rack, and the on-screen inflation the presses
+ * caused. Reached by handing the wheel to the reference bot as far as the last
+ * phase, which is the only honest way to arrive with a Plate economy.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'end', seed: 7 }).finalState;
+tickSeconds(5);
+capture('endgame');
+
+/**
+ * 11. The one synced render (spec §6 phase 6): the Universal Fabricator, half
+ * printed. The workshop is handed the Plates and Parts the last print needs —
+ * a *fixture* concession, like the fork above — and every action after that
+ * goes through the real reducer and its real availability rules.
+ */
+const FABRICATOR_FIXTURE_PLATES = 40;
+const FABRICATOR_FIXTURE_PARTS = 5000;
+const fabricator = content.endgame.fabricator;
+const goliathFork = content.forks.find((def) => def.requiredForFinalPrint);
+state = {
+  ...state,
+  resources: {
+    ...state.resources,
+    plates: state.resources.plates + FABRICATOR_FIXTURE_PLATES,
+    parts: state.resources.parts + FABRICATOR_FIXTURE_PARTS,
+  },
+};
+if (goliathFork !== undefined && state.forkId === null) {
+  apply({ type: 'CHOOSE_FORK', forkId: goliathFork.id });
+}
+apply({ type: 'BUY_FILAMENT', materialId: fabricator.materialId, grams: fabricator.filamentGrams });
+const bay = state.slots[0];
+while (bay !== undefined && countPrinters(state) < fabricator.requiredPrinters) {
+  apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId: bay.id });
+}
+// A section may still be on the bed — the bot pre-prints them (spec §7.3) —
+// and the Fabricator will not start over the top of one. Wait it out rather
+// than issuing an action the reducer is right to refuse.
+while (state.fabricator.sectionRun !== null) {
+  tickSeconds(1);
+}
+apply({ type: 'START_FABRICATOR' });
+tickSeconds((fabricator.designMinutes * SECONDS_PER_MINUTE) / 2);
+capture('fabricator');
+
+/**
+ * 12. The credits, printing out (spec §6 phase 6). The build is run to the end
+ * and the clock carried past the museum shot, so the fixture catches the stage
+ * the renderer has the most to draw in.
+ */
+const ending = content.endgame.ending;
+// The rest of the build — however long it has left, since a pre-printed
+// section shortens it (spec §7.3) — then the numbers and the museum shot, and
+// halfway into the credits: the stage with the most for the renderer to draw.
+while (state.fabricator.run !== null) {
+  tickSeconds(1);
+}
+tickSeconds(
+  ending.numbersDesignSeconds + ending.museumDesignSeconds + ending.creditsDesignSeconds / 2,
+);
+capture('ending');
 
 console.log(`wrote ${written.length} fixtures to ${dir}:`);
 for (const line of written) {

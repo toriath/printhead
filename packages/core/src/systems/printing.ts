@@ -1,12 +1,13 @@
 import { indexById } from '../content/load.js';
 import type { Content, DesignDef, MaterialDef, ObjectDef } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
 import { creditDesignPrints, productValueOf } from './designs.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
+import { inflationMultiplier } from './inflation.js';
 import { isQueueRunning, nextQueueEntry, queueEntryDone, queueStockFloor } from './queue.js';
 import { addPool, withFilament } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
@@ -209,8 +210,12 @@ export interface BatchYield {
  *
  * An object yields its `partsYield` per print at the material's value; a Design
  * yields one Product per print at whatever its current level makes it worth
- * (spec §5D). `designLevel` is passed in rather than read here so this stays a
- * pure function of the recipe and the modifiers.
+ * (spec §5D). `designLevel` and `inflation` are passed in rather than read here
+ * so this stays a pure function of the recipe and the modifiers.
+ *
+ * `inflation` is the index of spec §6 phase 5: the goods coming off the bed are
+ * worth more *nominal* money as the presses devalue it, which is what keeps the
+ * print economy roughly neutral in real terms while the numbers run away.
  */
 export function batchYield(
   config: SlotConfig,
@@ -218,11 +223,12 @@ export function batchYield(
   modifiers: ModifierMap,
   curves: CurveRegistry,
   designLevel: number,
+  inflation: number,
 ): BatchYield {
   if (config.pool === 'products') {
     return {
       count: batch,
-      value: batch * productValueOf(config.design, curves, designLevel, modifiers),
+      value: batch * productValueOf(config.design, curves, designLevel, modifiers) * inflation,
       pool: config.pool,
     };
   }
@@ -230,7 +236,7 @@ export function batchYield(
     config.object.partsYield * batch * modifierOf(modifiers, 'partsYieldMultiplier', FULL);
   return {
     count,
-    value: count * config.object.basePartValue * config.material.valueMultiplier,
+    value: count * config.object.basePartValue * config.material.valueMultiplier * inflation,
     pool: config.pool,
   };
 }
@@ -416,7 +422,14 @@ function completeRun(
   const outcome = resolveBatchFailures(content.failure, slot.failureCharge, run.batch, perPrint);
   const level =
     config.pool === 'products' ? (state.designs[config.design.id]?.level ?? NONE) : NONE;
-  const produced = batchYield(config, outcome.succeeded, modifiers, curves, level);
+  const produced = batchYield(
+    config,
+    outcome.succeeded,
+    modifiers,
+    curves,
+    level,
+    inflationMultiplier(state, content, curves),
+  );
   const scrapped = scrapFromFailure(config.material, config.filamentGrams * outcome.failed);
 
   const banked = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
@@ -561,7 +574,7 @@ export function tickSlots(
   dtMs: number,
   emit: EventSink | undefined,
   modifiers: ModifierMap = computeModifiers(state, content),
-  curves: CurveRegistry = createCurveRegistry(content.curves),
+  curves: CurveRegistry = curveRegistryFor(content.curves),
 ): GameState {
   let next = state;
   for (let index = NONE; index < next.slots.length; index += FULL) {

@@ -168,7 +168,7 @@
         },
         {
           "metric": "moneyPrinted",
-          "atLeast": 50000
+          "atLeast": 250000
         }
       ]
     },
@@ -196,12 +196,21 @@
         "SET_SLOT_DESIGN",
         "SELL_PRODUCTS",
         "PRESTIGE",
-        "BUY_MONEY_PRINTER"
+        "BUY_MONEY_PRINTER",
+        "PRINT_SECTION"
       ],
       "advanceWhen": [
         {
-          "metric": "phaseDesignMinutes",
-          "atLeast": 80
+          "metric": "endgameNodes",
+          "atLeast": 4
+        },
+        {
+          "metric": "printers",
+          "atLeast": 8
+        },
+        {
+          "metric": "moneyPrinted",
+          "atLeast": 3000000
         }
       ]
     },
@@ -229,12 +238,50 @@
         "SET_SLOT_DESIGN",
         "SELL_PRODUCTS",
         "PRESTIGE",
-        "BUY_MONEY_PRINTER"
+        "BUY_MONEY_PRINTER",
+        "PRINT_SECTION",
+        "START_FABRICATOR"
       ],
       "advanceWhen": [
         {
-          "metric": "phaseDesignMinutes",
-          "atLeast": 60
+          "metric": "endingComplete",
+          "atLeast": 1
+        }
+      ]
+    },
+    {
+      "id": "ended",
+      "name": "Ended",
+      "budgetDesignMinutes": 5,
+      "waitWallBudgetDesignMinutes": 60,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP",
+        "BUY_SLOT",
+        "ASSIGN_PRINTER",
+        "SET_SLOT_QUEUE",
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS",
+        "PRESTIGE",
+        "BUY_MONEY_PRINTER",
+        "PRINT_SECTION",
+        "START_FABRICATOR",
+        "NEW_GAME_PLUS"
+      ],
+      "advanceWhen": [
+        {
+          "metric": "totalDesignMinutes",
+          "atLeast": 0
         }
       ]
     }

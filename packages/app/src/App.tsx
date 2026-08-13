@@ -2,6 +2,7 @@ import type { OfflineSummary } from '@printhead/core';
 import { Workshop } from '@printhead/renderer';
 import { type ReactElement, useEffect, useState } from 'react';
 import { Controls } from './controls.js';
+import { EndgamePanel, EndingScreen } from './endgame.js';
 import { FleetPanel } from './fleet.js';
 import { useVisualState } from './hooks.js';
 import { Hud } from './hud.js';
@@ -78,7 +79,13 @@ export function App({
         <MarketPanel store={store} visual={visual} />
         <RecyclerPanel store={store} visual={visual} />
         <AutomationPanel store={store} visual={visual} />
+        {/* The endgame (spec §5E, §6 phases 5–6): the Plate-priced tree and
+            the last print there is. Hidden until either is reachable. */}
+        <EndgamePanel store={store} visual={visual} />
       </div>
+
+      {/* The ending takes the screen when it arrives (spec §6 phase 6). */}
+      <EndingScreen store={store} visual={visual} />
 
       {offline === null ? null : (
         <OfflineSummaryScreen summary={offline} onDismiss={() => setOffline(null)} />

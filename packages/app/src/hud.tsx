@@ -46,15 +46,31 @@ function Stat({
   );
 }
 
+/**
+ * Spec §6 phase 6: once the last print lands, "the numbers fade to ∞". The
+ * projection says when (`ending.infinite`) — the HUD does not decide that a
+ * number has become absurd, it is told.
+ */
+const INFINITY = '∞';
+
 export function Hud({ visual, content }: HudProps): ReactElement {
   const stocked = content.materials.filter(
     (material) => (visual.ledger.filamentGrams[material.id] ?? 0) > 0,
   );
+  const ended = visual.ending.infinite;
   return (
     <section className="hud" aria-label="workshop status">
       <dl className="hud__ledger" data-testid="ledger">
-        <Stat label="Money" value={formatMoney(visual.ledger.money)} testId="money" />
-        <Stat label="Parts" value={formatAmount(visual.ledger.parts)} testId="parts" />
+        <Stat
+          label="Money"
+          value={ended ? INFINITY : formatMoney(visual.ledger.money)}
+          testId="money"
+        />
+        <Stat
+          label="Parts"
+          value={ended ? INFINITY : formatAmount(visual.ledger.parts)}
+          testId="parts"
+        />
         {/* Scrap only exists once a print has failed, and showing a permanent
             zero would advertise a mechanic the player has not met yet. */}
         {visual.ledger.scrap > 0 ? (
@@ -67,6 +83,15 @@ export function Hud({ visual, content }: HudProps): ReactElement {
         ) : null}
         {visual.ledger.plates > 0 ? (
           <Stat label="Plates" value={formatAmount(visual.ledger.plates)} testId="plates" />
+        ) : null}
+        {/* On-screen inflation (spec §6 phase 5). It appears the moment the
+            economy starts devaluing itself and not a second before. */}
+        {visual.inflation.active ? (
+          <Stat
+            label="Prices"
+            value={`×${visual.inflation.multiplier.toFixed(2)}`}
+            testId="inflation"
+          />
         ) : null}
         {stocked.length === 0 ? (
           <Stat label="Filament" value={formatGrams(0)} testId="filament" />

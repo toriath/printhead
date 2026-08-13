@@ -144,6 +144,9 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
         plates: 50,
         money: 0,
       },
+      // The presses read Plates *engraved*, not Plates held (spec §5E), so a
+      // placed workshop that has fifty in the tin has engraved at least fifty.
+      stats: { ...(readyToMelt(state) as StateShape).stats, platesEarned: 50 },
     }));
     await warp(page, MS_PER_SECOND);
 

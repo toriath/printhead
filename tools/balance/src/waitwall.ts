@@ -7,13 +7,16 @@ import {
   automationAvailability,
   computeModifiers,
   designAvailability,
+  fabricatorAvailability,
   forkAvailability,
   forkCost,
+  hasBlueprint,
   hasRecycler,
   isMaterialAvailable,
   isPieceReady,
   maxBuyableGrams,
   moneyPrinterAvailability,
+  newGamePlusAvailability,
   nextAutomationCost,
   nextDesignCost,
   nextMoneyPrinterCost,
@@ -25,6 +28,7 @@ import {
   prestigeAvailability,
   quoteFor,
   resolveSlotConfig,
+  sectionAvailability,
   slotUnlockAvailability,
   slotWithRoom,
   upgradeAvailability,
@@ -60,7 +64,12 @@ export type MeaningfulOption =
   | 'draft-design'
   | 'load-design'
   | 'prestige'
-  | 'buy-money-printer';
+  | 'buy-money-printer'
+  /** The endgame (spec §5E, §6 phase 6, §7.3). */
+  | 'buy-endgame-node'
+  | 'print-section'
+  | 'start-fabricator'
+  | 'new-game-plus';
 
 function phaseOf(content: Content, phaseId: string): PhaseDef | undefined {
   return content.pacing.phases.find((phase) => phase.id === phaseId);
@@ -237,6 +246,48 @@ export function meaningfulOptions(
         break;
       }
     }
+  }
+
+  /*
+   * The endgame (spec §5E, §6 phase 6). A node of the tree in reach, a section
+   * of the Fabricator worth pre-printing, the last print itself, or — once the
+   * credits have rolled — starting again. The Endgame Tree is checked
+   * separately from the machine tree above because it is priced in Plates: a
+   * player with Plates and nothing to spend Money on is not idle.
+   */
+  if (allows(content, state.phaseId, 'BUY_UPGRADE')) {
+    for (const def of content.upgrades) {
+      if (
+        def.tree === 'endgame' &&
+        upgradeAvailability(state, content, def.id) === null &&
+        affordable(nextUpgradeCost(state, content, curves, def.id))
+      ) {
+        options.push('buy-endgame-node');
+        break;
+      }
+    }
+  }
+
+  if (
+    hasBlueprint(state, content) &&
+    allows(content, state.phaseId, 'PRINT_SECTION') &&
+    sectionAvailability(state, content, curves) === null
+  ) {
+    options.push('print-section');
+  }
+
+  if (
+    allows(content, state.phaseId, 'START_FABRICATOR') &&
+    fabricatorAvailability(state, content) === null
+  ) {
+    options.push('start-fabricator');
+  }
+
+  if (
+    allows(content, state.phaseId, 'NEW_GAME_PLUS') &&
+    newGamePlusAvailability(state, content) === null
+  ) {
+    options.push('new-game-plus');
   }
 
   return options;

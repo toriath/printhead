@@ -1,7 +1,7 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import { MS_PER_MINUTE, MS_PER_SECOND } from '../engine/constants.js';
 import { clamp } from '../math/scalar.js';
 import type { GameState, SlotState } from '../state/game-state.js';
@@ -14,9 +14,25 @@ import {
   nextDesignCost,
   productValueOf,
 } from '../systems/designs.js';
+import {
+  allSlotsCommitted,
+  buildProgress,
+  committedPrinters,
+  currentBackdropId,
+  currentLayer,
+  fabricatorAvailability,
+  fabricatorDurationMs,
+  forkAllowsFinalPrint,
+  hasBlueprint,
+  newGamePlusAvailability,
+  nextSectionCost,
+  sectionAvailability,
+} from '../systems/endgame.js';
+import { endingElapsedMs, endingProgress, endingStage } from '../systems/ending.js';
 import { hasRecycler, recyclerYield } from '../systems/failure.js';
 import { assignedPrinters, fleetCapacity, printersPerSlot } from '../systems/fleet.js';
 import { chosenFork, forkAvailability, forkCost } from '../systems/forks.js';
+import { inflationMultiplier, isInflating } from '../systems/inflation.js';
 import { quoteAll } from '../systems/market.js';
 import { getPhase } from '../systems/phases.js';
 import {
@@ -48,11 +64,15 @@ import type {
   AssemblyVisual,
   AutomationVisual,
   DesignVisual,
+  EndingVisual,
+  FabricatorVisual,
   FleetVisual,
   ForkVisual,
+  InflationVisual,
   LedgerVisual,
   MarketVisual,
   MoneyPrinterVisual,
+  NewGamePlusModifierVisual,
   PrestigeVisual,
   QueueEntryVisual,
   RecyclerVisual,
@@ -163,7 +183,7 @@ function toSlotUnlockVisual(state: GameState, content: Content): SlotUnlockVisua
   if (def === null) {
     return null;
   }
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   const cost = nextSlotCost(content, curves, def.id);
   const blocked = slotUnlockAvailability(state, content, def.id);
   return {
@@ -179,7 +199,7 @@ function toSlotUnlockVisual(state: GameState, content: Content): SlotUnlockVisua
 
 /** Both branches of the per-run fork (spec §5B) — one of them may be taken. */
 function toForkVisuals(state: GameState, content: Content): readonly ForkVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.forks.map((def) => {
     const cost = forkCost(content, curves, def.id);
     return {
@@ -336,6 +356,7 @@ function toMarketVisual(state: GameState, content: Content): readonly MarketVisu
     materialId: quote.materialId,
     materialName: materials.get(quote.materialId)?.name ?? quote.materialId,
     tradeable: quote.tradeable,
+    priceResource: quote.priceResource,
     available: isMaterialAvailable(state, content, quote.materialId),
     buyPerGram: quote.buyPerGram,
     sellPerGram: quote.sellPerGram,
@@ -356,7 +377,7 @@ function affordable(state: GameState, resource: string, amount: number): boolean
 }
 
 function toUpgradeVisuals(state: GameState, content: Content): readonly UpgradeVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.upgrades.map((def) => {
     const cost = nextUpgradeCost(state, content, curves, def.id);
     return {
@@ -374,7 +395,7 @@ function toUpgradeVisuals(state: GameState, content: Content): readonly UpgradeV
 }
 
 function toAutomationVisuals(state: GameState, content: Content): readonly AutomationVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.automation.map((def) => {
     const owned = state.automation[def.id];
     const cost = nextAutomationCost(state, content, curves, def.id);
@@ -422,9 +443,131 @@ function toRecyclerVisual(
   };
 }
 
+/** On-screen inflation (spec §6 phase 5), and the reading that caused it. */
+function toInflationVisual(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): InflationVisual {
+  return {
+    active: isInflating(state, content),
+    multiplier: inflationMultiplier(state, content, curves),
+    moneyPrinted: state.stats.moneyPrinted,
+  };
+}
+
+/**
+ * The final print (spec §6 phase 6). Everything a renderer needs to draw the
+ * one synced build — including the layer it is on — plus everything a shell
+ * needs to offer it, with the reason it is not on offer already resolved by the
+ * same function the reducer consults.
+ */
+function toFabricatorVisual(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): FabricatorVisual {
+  const def = content.endgame.fabricator;
+  const run = state.fabricator.run;
+  const blocked = fabricatorAvailability(state, content);
+  const sectionBlocked = sectionAvailability(state, content, curves);
+  const sectionCost = nextSectionCost(state, content, curves);
+  return {
+    unlocked: hasBlueprint(state, content),
+    available: blocked === null,
+    blockedReason: blocked,
+    running: run !== null,
+    complete: state.fabricator.completedAtMs !== null,
+    progress: run === null && state.fabricator.completedAtMs !== null ? FULL : buildProgress(run),
+    layer: currentLayer(state, content),
+    layers: def.layers,
+    remainingMs: Math.max(run?.remainingMs ?? NONE, NONE),
+    totalMs: run?.totalMs ?? fabricatorDurationMs(state, content),
+    materialId: def.materialId,
+    filamentGrams: def.filamentGrams,
+    heldGrams: state.filamentGrams[def.materialId] ?? NONE,
+    sections: state.fabricator.sections,
+    maxSections: def.maxSections,
+    sectionRunning: state.fabricator.sectionRun !== null,
+    sectionProgress: buildProgress(state.fabricator.sectionRun),
+    sectionAvailable: sectionBlocked === null,
+    sectionBlockedReason: sectionBlocked,
+    sectionCost: sectionCost.amount,
+    sectionCostResource: sectionCost.resource,
+    forkAllows: forkAllowsFinalPrint(state, content),
+    slotsCommitted: allSlotsCommitted(state, content),
+    committedPrinters: committedPrinters(state, content),
+    requiredPrinters: def.requiredPrinters,
+  };
+}
+
+/** 0..1 through whichever stage the ending is in — what a fade runs on. */
+function stageProgressOf(state: GameState, content: Content): number {
+  const { numbersDesignSeconds, museumDesignSeconds, creditsDesignSeconds } =
+    content.endgame.ending;
+  const elapsed = endingElapsedMs(state);
+  const numbers = numbersDesignSeconds * MS_PER_SECOND;
+  const museum = museumDesignSeconds * MS_PER_SECOND;
+  const credits = creditsDesignSeconds * MS_PER_SECOND;
+  switch (endingStage(state, content)) {
+    case 'none':
+      return NONE;
+    case 'numbers':
+      return clamp(elapsed / numbers, NONE, FULL);
+    case 'museum':
+      return clamp((elapsed - numbers) / museum, NONE, FULL);
+    case 'credits':
+      return clamp((elapsed - numbers - museum) / credits, NONE, FULL);
+    case 'complete':
+      return FULL;
+  }
+}
+
+/**
+ * The ending (spec §6 phase 6). The credits are carried across so the renderer
+ * holds no copy of them, and the line count is derived from the stage's own
+ * progress — the credits literally print out, one line at a time.
+ */
+function toEndingVisual(state: GameState, content: Content, machineTier: number): EndingVisual {
+  const stage = endingStage(state, content);
+  const credits = content.endgame.ending.credits;
+  const stageProgress = stageProgressOf(state, content);
+  const printed =
+    stage === 'credits'
+      ? Math.min(Math.floor(stageProgress * credits.length) + FULL, credits.length)
+      : stage === 'complete'
+        ? credits.length
+        : NONE;
+  const modifiers: readonly NewGamePlusModifierVisual[] = content.endgame.newGamePlus.modifiers.map(
+    (def) => ({
+      modifierId: def.id,
+      name: def.name,
+      description: def.description,
+      active: state.ngPlus.modifierIds.includes(def.id),
+    }),
+  );
+  return {
+    stage,
+    active: stage !== 'none',
+    progress: endingProgress(state, content),
+    stageProgress,
+    museumPrinterId: content.endgame.ending.museumPrinterId,
+    museumTier: machineTier,
+    credits,
+    creditLines: printed,
+    // Spec §6: "numbers fade to ∞". The ledger stops meaning anything the
+    // moment the Fabricator lands, and the renderer is told so rather than
+    // being left to decide when a number has become absurd.
+    infinite: stage !== 'none',
+    newGamePlusAvailable: newGamePlusAvailability(state, content) === null,
+    newGamePlusRun: state.ngPlus.run,
+    modifiers,
+  };
+}
+
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   const machineTier = bestPrinterTier(state, content, modifiers);
   const fork = chosenFork(state, content);
   /*
@@ -464,6 +607,10 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     studio: toStudioVisual(state, content, modifiers, curves),
     prestige: toPrestigeVisual(state, content, curves),
     moneyPrinters: toMoneyPrinterVisuals(state, content, curves),
+    backdrop: currentBackdropId(state, content),
+    inflation: toInflationVisual(state, content, curves),
+    fabricator: toFabricatorVisual(state, content, curves),
+    ending: toEndingVisual(state, content, machineTier),
   };
 }
 

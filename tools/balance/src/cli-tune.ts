@@ -51,14 +51,23 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   { pointer: 'curves/money-printer-cost/base', min: 1, max: 60 },
   { pointer: 'curves/money-printer-cost/growth', min: 1.1, max: 8 },
   { pointer: 'curves/money-print-rate/step', min: 0.05, max: 40 },
+  // M6's endgame. Phase 5 is paced by how fast the presses print (its gate is
+  // a money-printed threshold) and by what the Endgame Tree costs in Plates;
+  // phase 6 is paced almost entirely by the length of the final print.
+  { pointer: 'curves/money-print-rate-bundles/step', min: 1, max: 4000 },
+  { pointer: 'curves/endgame-node-cost/base', min: 1, max: 40 },
+  { pointer: 'endgame/fabricator/designMinutes', min: 10, max: 40 },
+  { pointer: 'endgame/fabricator/sectionDesignMinutes', min: 1, max: 10 },
+  { pointer: 'pacing/phases/prestige/advanceWhen/2/atLeast', min: 10_000, max: 5_000_000 },
+  { pointer: 'pacing/phases/absurd/advanceWhen/3/atLeast', min: 100_000, max: 50_000_000 },
 ];
 
 /**
- * Phases with real gates. `absurd` and `end` still advance on elapsed time
- * alone (M6 fills them), so they sit on budget by construction and scoring
- * them would only teach the optimiser to chase noise.
+ * Phases with real gates — since M6 that is every phase of the arc. The
+ * terminal `ended` sandbox is not one of them: nothing ends it, so its
+ * "duration" is however long the player stays and there is nothing to fit.
  */
-const DEFAULT_PHASES = ['intro', 'bench', 'farm', 'studio', 'prestige'] as const;
+const DEFAULT_PHASES = ['intro', 'bench', 'farm', 'studio', 'prestige', 'absurd', 'end'] as const;
 
 function parseList(argv: readonly string[], flag: string): readonly string[] | undefined {
   const index = argv.indexOf(`--${flag}`);

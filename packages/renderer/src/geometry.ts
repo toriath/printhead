@@ -95,6 +95,40 @@ export const BILL_GAP = 6;
 /** Negative animation delay per bill, so the strip does not pulse in lockstep. */
 export const BILL_STAGGER_SECONDS = 0.4;
 
+/**
+ * The Universal Fabricator (spec §6 phase 6). It is drawn where the rack was —
+ * the whole workshop is printing one thing — so it borrows the rack's column
+ * width and is deliberately taller than a bay.
+ */
+export const FABRICATOR_WIDTH = 200;
+export const FABRICATOR_HEIGHT = 260;
+export const FABRICATOR_PAD = 14;
+export const FABRICATOR_BAND_GAP = 1.5;
+
+/** The ending sequence (spec §6): numbers, the museum shot, the credits. */
+export const ENDING_WIDTH = 420;
+export const ENDING_HEIGHT = 260;
+export const ENDING_LINE_HEIGHT = 13;
+
+/**
+ * The backdrop the workshop is drawn against (spec §5E, "print a building").
+ * A skyline of printed towers behind the rack: the widths and heights are a
+ * fixed, deterministic silhouette, because a renderer may not roll dice.
+ */
+export const BACKDROP_HEIGHT = 96;
+export const BACKDROP_TOWERS: readonly { readonly x: number; readonly height: number }[] = [
+  { x: 0.02, height: 0.55 },
+  { x: 0.13, height: 0.82 },
+  { x: 0.24, height: 0.4 },
+  { x: 0.34, height: 0.95 },
+  { x: 0.47, height: 0.62 },
+  { x: 0.58, height: 0.78 },
+  { x: 0.7, height: 0.45 },
+  { x: 0.8, height: 0.88 },
+  { x: 0.91, height: 0.6 },
+];
+export const BACKDROP_TOWER_WIDTH = 0.08;
+
 /** Total drawing width for `capacity` bays laid out in a row. */
 export function workshopWidth(capacity: number): number {
   return capacity * BAY_WIDTH + Math.max(capacity - 1, 0) * BAY_GAP;

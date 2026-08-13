@@ -1,9 +1,15 @@
-import { RAW_CONTENT, loadContent } from '@printhead/core';
+import {
+  RAW_CONTENT,
+  createCurveRegistry,
+  inflationMultiplier,
+  loadContent,
+} from '@printhead/core';
 import { describe, expect, it } from 'vitest';
 import {
   BOTS,
   REFERENCE_BOT,
   balancedBot,
+  createPolicyBot,
   findBot,
   greedySpenderBot,
   idleBot,
@@ -16,17 +22,43 @@ import {
   isPlaceholderPhase,
   placeholderPhaseIds,
 } from './budget.js';
-import { runHeadless } from './harness.js';
+import { type Bot, type RunLog, runHeadless } from './harness.js';
 import { checkWaitWalls } from './waitwall.js';
 
 const content = loadContent(RAW_CONTENT);
 const table = buildBudgetTable(content.pacing);
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/**
+ * A full arc is a quarter of a million ticks, and this file wants the same few
+ * runs from several angles. The harness is deterministic — same content, same
+ * bot, same seed, same log — so a run is memoised rather than repeated. Without
+ * this the suite replays the whole game a dozen times and CI feels it.
+ */
+const runs = new Map<string, RunLog>();
+
+function playthrough(bot: Bot, stopAtPhaseId?: string): RunLog {
+  const key = `${bot.id}:${stopAtPhaseId ?? 'end'}`;
+  const cached = runs.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const log = runHeadless({
+    content,
+    bot,
+    ...(stopAtPhaseId === undefined ? {} : { stopAtPhaseId }),
+  });
+  runs.set(key, log);
+  return log;
+}
+
 describe('budget table', () => {
   it('mirrors the spec §6 budgets with a ±20 % window', () => {
     expect(table.tolerance).toBe(0.2);
+    // The arc's budget. The terminal `ended` sandbox is outside it: nothing
+    // ends that phase, so it has no duration to budget (see `terminalPhaseId`).
     expect(table.totalDesignMinutes).toBe(420);
+    expect(table.terminalPhaseId).toBe('ended');
     const intro = table.phases[0];
     expect(intro?.budgetDesignMinutes).toBe(5);
     expect(intro?.minDesignMinutes).toBeCloseTo(4, 9);
@@ -41,12 +73,29 @@ describe('budget table', () => {
       ['studio', 75],
       ['prestige', 90],
       ['absurd', 80],
+      ['ended', 999],
     ]);
     const violations = checkPhaseBudgets(table, durations);
     expect(violations.map((violation) => [violation.phaseId, violation.reason])).toEqual([
       ['bench', 'too-fast'],
       ['farm', 'too-slow'],
       ['end', 'never-reached'],
+    ]);
+  });
+
+  /**
+   * The sandbox is judged on being *reached*, not on how long the player stays
+   * — but it is still judged. A run that never finishes the game must fail.
+   */
+  it('asks the terminal sandbox only to be reached', () => {
+    const reached = new Map(
+      table.phases.map((phase) => [phase.phaseId, phase.budgetDesignMinutes]),
+    );
+    reached.set('ended', 10_000);
+    expect(checkPhaseBudgets(table, reached)).toEqual([]);
+    reached.delete('ended');
+    expect(checkPhaseBudgets(table, reached).map((violation) => violation.phaseId)).toEqual([
+      'ended',
     ]);
   });
 });
@@ -72,16 +121,19 @@ describe('the bot roster', () => {
 
 describe('headless harness', () => {
   it('runs the real core and logs the run', () => {
-    const log = runHeadless({ content, bot: balancedBot });
+    const log = playthrough(balancedBot);
     expect(log.botId).toBe('balanced');
     expect(log.ticks).toBeGreaterThan(0);
     expect(log.designMinutes).toBeGreaterThanOrEqual(table.totalDesignMinutes);
-    expect(log.finalPhaseId).toBe('end');
+    expect(log.finalPhaseId).toBe('ended');
   });
 
   it('is deterministic for a given seed', () => {
-    const a = runHeadless({ content, bot: balancedBot, seed: 7 });
-    const b = runHeadless({ content, bot: balancedBot, seed: 7 });
+    // A hundred and twenty design-minutes is plenty to prove determinism —
+    // three phases, thousands of ticks, a market and a failure model — and it
+    // keeps the suite from replaying the whole game twice more.
+    const a = runHeadless({ content, bot: balancedBot, seed: 7, limitDesignMinutes: 120 });
+    const b = runHeadless({ content, bot: balancedBot, seed: 7, limitDesignMinutes: 120 });
     expect(b.phaseDurations).toEqual(a.phaseDurations);
     expect(b.ticks).toBe(a.ticks);
     expect(b.finalState).toEqual(a.finalState);
@@ -91,7 +143,7 @@ describe('headless harness', () => {
     const fastRaw = deepClone(RAW_CONTENT);
     (fastRaw.pacing as { targetHours: number }).targetHours = 4;
     const fast = loadContent(fastRaw);
-    const slow = runHeadless({ content, bot: balancedBot });
+    const slow = playthrough(balancedBot);
     const quick = runHeadless({ content: fast, bot: balancedBot });
     expect([...quick.phaseEnteredAt.keys()]).toEqual([...slow.phaseEnteredAt.keys()]);
     expect(quick.designMinutes).toBeCloseTo(slow.designMinutes, 6);
@@ -154,10 +206,24 @@ describe('headless harness', () => {
 const GATED_PHASES = gatedPhaseIds(content);
 
 describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
-  const log = runHeadless({ content, bot: REFERENCE_BOT });
+  const log = playthrough(REFERENCE_BOT);
 
-  it('finishes the whole arc', () => {
-    expect(log.finalPhaseId).toBe('end');
+  it('finishes the whole game — every phase, through to the post-game', () => {
+    expect(log.finalPhaseId).toBe('ended');
+    expect(log.eventCounts.FABRICATOR_COMPLETED).toBe(1);
+    expect(log.eventCounts.GAME_ENDED).toBe(1);
+  });
+
+  /**
+   * Spec §12.6 and the M6 brief: the whole arc inside ±20 % of the eight-hour
+   * budget, measured in design time at `targetHours = 8`. The arc ends when the
+   * FSM reaches the sandbox, not when the harness runs out of patience.
+   */
+  it('lands the whole arc inside ±20 % of the total budget', () => {
+    const arc = log.phaseEnteredAt.get('ended');
+    expect(arc).toBeDefined();
+    expect(arc ?? 0).toBeGreaterThanOrEqual(table.totalDesignMinutes * (1 - table.tolerance));
+    expect(arc ?? 0).toBeLessThanOrEqual(table.totalDesignMinutes * (1 + table.tolerance));
   });
 
   it('lands every phase inside its ±20 % window', () => {
@@ -186,17 +252,26 @@ describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
    * elapsed design minutes alone, so they sit on budget by construction and M6
    * is what makes their green light mean anything.
    */
-  it('leaves no dead zone anywhere, though two gates are still placeholders', () => {
+  it('leaves no dead zone anywhere, and has no placeholder gates left', () => {
     expect(checkWaitWalls(content, log.waitWalls)).toEqual([]);
-    // The gated phases really are the ones with mechanics behind them. M5 moved
-    // `studio` and `prestige` across this line, which is what the milestone was
-    // for; `absurd` and `end` are M6's.
-    expect([...GATED_PHASES]).toEqual(['intro', 'bench', 'farm', 'studio', 'prestige']);
-    expect(placeholderPhaseIds(content)).toEqual(['absurd', 'end']);
+    // Every phase of the arc now gates on something the player *did*. M5 moved
+    // `studio` and `prestige` across this line; M6 moved the last two, which
+    // is what makes the green light on phases 5–6 mean anything at all.
+    expect([...GATED_PHASES]).toEqual([
+      'intro',
+      'bench',
+      'farm',
+      'studio',
+      'prestige',
+      'absurd',
+      'end',
+      'ended',
+    ]);
+    expect(placeholderPhaseIds(content)).toEqual([]);
   });
 
-  it('keeps phases 0–4 — the ones the game actually gates — on budget', () => {
-    for (const phaseId of GATED_PHASES) {
+  it('keeps every gated phase of the arc on budget', () => {
+    for (const phaseId of GATED_PHASES.filter((id) => id !== table.terminalPhaseId)) {
       const phase = table.phases.find((candidate) => candidate.phaseId === phaseId);
       const actual = log.phaseDurations.get(phaseId);
       expect(actual, phaseId).toBeDefined();
@@ -211,7 +286,7 @@ describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
  * recycle, upgrade, automate, trade — driven by a bot through the real reducer.
  */
 describe('the balanced bot plays the M3 loop end to end', () => {
-  const log = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'studio' });
+  const log = playthrough(balancedBot, 'studio');
   const state = log.finalState;
 
   it('finishes the intro assembly by attaching every piece', () => {
@@ -275,22 +350,26 @@ describe('the balanced bot plays the M3 loop end to end', () => {
  * noticed.
  */
 describe('the strategies are genuinely different players', () => {
-  const balanced = runHeadless({ content, bot: balancedBot });
-  const greedy = runHeadless({ content, bot: greedySpenderBot });
-  const idleHeavy = runHeadless({ content, bot: idleHeavyBot });
+  const balanced = playthrough(balancedBot);
+  const greedy = playthrough(greedySpenderBot);
+  const idleHeavy = playthrough(idleHeavyBot);
   // Anything a melt-down resets — the fork, the rack, the production counters —
   // has to be read before one happens (spec §5D).
-  const balancedRunOne = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'prestige' });
-  const greedyRunOne = runHeadless({
-    content,
-    bot: greedySpenderBot,
-    stopAtPhaseId: 'prestige',
-  });
+  const balancedRunOne = playthrough(balancedBot, 'prestige');
+  const greedyRunOne = playthrough(greedySpenderBot, 'prestige');
 
-  it('the attentive players finish; the ten-minute check-in does not', () => {
-    expect(balanced.finalPhaseId).toBe('end');
+  /**
+   * The reference player finishes the game. `greedy-spender` reaches the last
+   * phase and starts the final print but does not see the credits inside the
+   * run limit: it takes Goliath early, so it spends phase 5 rebuilding one
+   * enormous bay rather than banking Plates, and arrives at the Fabricator
+   * later than the player the budget is written for. That is a real difference
+   * between the strategies, so it is asserted rather than papered over.
+   */
+  it('the reference player finishes; the impatient one is still printing', () => {
+    expect(balanced.finalPhaseId).toBe('ended');
     expect(greedy.finalPhaseId).toBe('end');
-    expect(idleHeavy.finalPhaseId).not.toBe('end');
+    expect(idleHeavy.finalPhaseId).not.toBe('ended');
   });
 
   /**
@@ -361,7 +440,7 @@ describe('the balanced bot plays the M4 loop end to end', () => {
    * (spec §5D), so the *final* state of a completed arc is a bare bench and
    * says nothing about whether the M4 loop was ever played.
    */
-  const log = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'prestige' });
+  const log = playthrough(REFERENCE_BOT, 'prestige');
   const state = log.finalState;
 
   it('outgrows its first bay and buys another (spec §4)', () => {
@@ -392,19 +471,93 @@ describe('the balanced bot plays the M4 loop end to end', () => {
   });
 });
 
+/**
+ * The M6 loop end to end (spec §19: a new mechanic means bot support). Every
+ * assertion is something the reference player *did*, through the same reducer
+ * the app dispatches into.
+ */
+describe('the balanced bot plays the M6 endgame end to end', () => {
+  const log = playthrough(REFERENCE_BOT);
+  const state = log.finalState;
+
+  it('buys the whole Endgame Tree with Plates (spec §5E)', () => {
+    for (const def of content.upgrades) {
+      if (def.tree === 'endgame') {
+        expect(state.upgrades[def.id] ?? 0, def.id).toBeGreaterThan(0);
+        expect(def.costResource).toBe('plates');
+      }
+    }
+  });
+
+  it('watches the economy eat itself (spec §6 phase 5)', () => {
+    const curves = createCurveRegistry(content.curves);
+    expect(state.stats.moneyPrinted).toBeGreaterThan(0);
+    expect(inflationMultiplier(state, content, curves)).toBeGreaterThan(1);
+  });
+
+  it('pre-prints sections and commits every bay to the last print (§4, §7.3)', () => {
+    expect(log.eventCounts.FABRICATOR_SECTION_PRINTED ?? 0).toBeGreaterThan(0);
+    expect(log.eventCounts.FABRICATOR_STARTED).toBe(1);
+    const fork = content.forks.find((def) => def.id === state.forkId);
+    expect(fork?.requiredForFinalPrint).toBe(true);
+  });
+
+  it('sees the credits out and lands in the post-game sandbox', () => {
+    expect(state.fabricator.completedAtMs).not.toBeNull();
+    expect(log.eventCounts.GAME_ENDED).toBe(1);
+    expect(state.phaseId).toBe('ended');
+  });
+
+  /**
+   * New Game Plus is not something the roster does — a bot that restarted the
+   * arc would overwrite the timeline the budget gate measures — so it is played
+   * by a bot built for exactly that, from the same policy with the knob on.
+   */
+  it('can start again on the far side of the credits (spec §18 M6)', () => {
+    const modifier = content.endgame.newGamePlus.modifiers[0];
+    if (modifier === undefined) {
+      throw new Error('content must offer a New Game Plus modifier');
+    }
+    const restarting = createPolicyBot({
+      id: 'new-game-plus',
+      checkInDesignSeconds: 5,
+      capacityFirst: false,
+      reserveBatches: 3,
+      chaseMargin: true,
+      preferFork: 'flexibility',
+      useQueues: false,
+      newGamePlusModifierIds: [modifier.id],
+    });
+    const replay = runHeadless({ content, bot: restarting });
+    expect(replay.eventCounts.NEW_GAME_PLUS_STARTED ?? 0).toBeGreaterThan(0);
+    expect(replay.finalState.ngPlus.run).toBeGreaterThan(0);
+    expect(replay.finalState.ngPlus.modifierIds).toEqual([modifier.id]);
+    // The Designs came with it; nothing else did.
+    expect(Object.keys(replay.finalState.designs).length).toBeGreaterThan(0);
+    expect(replay.finalState.upgrades['universal-fabricator']).toBeUndefined();
+  });
+});
+
 describe('placeholder phases (spec §18)', () => {
+  /**
+   * There are none left — M6 gave the last two phases real gates — so the test
+   * now proves the *detector* rather than the content: a phase gated only on
+   * the clock is a placeholder, and one gated on anything else is not. Keeping
+   * it means the rule still holds if a later milestone stubs a phase again.
+   */
   it('are recognised from their gate, not from a list of names', () => {
     const byId = new Map(content.pacing.phases.map((phase) => [phase.id, phase]));
-    const intro = byId.get('intro');
     const absurd = byId.get('absurd');
-    if (intro === undefined || absurd === undefined) {
+    if (absurd === undefined) {
       throw new Error('expected the spec §6 phases');
     }
-    expect(isPlaceholderPhase(intro)).toBe(false);
-    expect(isPlaceholderPhase(absurd)).toBe(true);
-    // Give the phase one real requirement and it stops being a placeholder,
-    // with no tool told anything — which is the point of deriving it. M5 did
-    // exactly this to `studio` and `prestige`, and no tool needed editing.
+    expect(isPlaceholderPhase(absurd)).toBe(false);
+    expect(
+      isPlaceholderPhase({
+        ...absurd,
+        advanceWhen: [{ metric: 'phaseDesignMinutes', atLeast: 80 } as never],
+      }),
+    ).toBe(true);
     expect(
       isPlaceholderPhase({ ...absurd, advanceWhen: [{ metric: 'designs', atLeast: 1 } as never] }),
     ).toBe(false);

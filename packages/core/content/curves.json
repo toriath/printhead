@@ -87,5 +87,68 @@
     "type": "exponential",
     "base": 2500,
     "growth": 4
+  },
+  {
+    "id": "inflation-index",
+    "name": "Inflation index by money printed",
+    "type": "power",
+    "base": 1,
+    "exponent": 0.35
+  },
+  {
+    "id": "endgame-node-cost",
+    "name": "Endgame tree node cost (plates)",
+    "type": "exponential",
+    "base": 4,
+    "growth": 2
+  },
+  {
+    "id": "fabricator-section-cost",
+    "name": "Pre-printed fabricator section cost",
+    "type": "exponential",
+    "base": 250,
+    "growth": 1.6
+  },
+  {
+    "id": "money-printer-cost-bundles",
+    "name": "Bundle press cost",
+    "type": "exponential",
+    "base": 6,
+    "growth": 3
+  },
+  {
+    "id": "money-printer-cost-pallets",
+    "name": "Pallet press cost",
+    "type": "exponential",
+    "base": 18,
+    "growth": 3
+  },
+  {
+    "id": "money-printer-cost-central-bank",
+    "name": "Central bank cost",
+    "type": "exponential",
+    "base": 60,
+    "growth": 3
+  },
+  {
+    "id": "money-print-rate-bundles",
+    "name": "Money printed per design-second per plate (bundles)",
+    "type": "linear",
+    "base": 0,
+    "step": 40
+  },
+  {
+    "id": "money-print-rate-pallets",
+    "name": "Money printed per design-second per plate (pallets)",
+    "type": "linear",
+    "base": 0,
+    "step": 400
+  },
+  {
+    "id": "money-print-rate-central-bank",
+    "name": "Money printed per design-second per plate (central bank)",
+    "type": "linear",
+    "base": 0,
+    "step": 4000
   }
 ]

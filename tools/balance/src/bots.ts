@@ -13,6 +13,7 @@ import {
   type SlotState,
   type UpgradeDef,
   affordableBatch,
+  affordableFilamentGrams,
   assignPrinter,
   attachPiece,
   automationAvailability,
@@ -28,8 +29,11 @@ import {
   createDesign,
   designAvailability,
   effectiveSlotCapacity,
+  fabricatorAvailability,
+  fabricatorDef,
   forkAvailability,
   forkCost,
+  hasBlueprint,
   hasRecycler,
   isForkChosen,
   isMaterialAvailable,
@@ -37,6 +41,8 @@ import {
   isPieceReady,
   maxBuyableGrams,
   moneyPrinterAvailability,
+  newGamePlus,
+  newGamePlusAvailability,
   nextAutomationCost,
   nextDesignCost,
   nextMoneyPrinterCost,
@@ -48,11 +54,13 @@ import {
   platesFor,
   prestige,
   prestigeAvailability,
+  printSection,
   printersPerSlot,
   productValueOf,
   quoteFor,
   recycleScrap,
   resolveSlotConfig,
+  sectionAvailability,
   sellParts,
   sellProducts,
   setAutomation,
@@ -61,6 +69,7 @@ import {
   setSlotQueue,
   slotUnlockAvailability,
   slotWithRoom,
+  startFabricator,
   startPrint,
   unitPartValue,
   upgradeAvailability,
@@ -162,8 +171,25 @@ function availableMaterials(state: GameState, content: Content): readonly Materi
   return content.materials.filter((material) => isMaterialAvailable(state, content, material.id));
 }
 
+/**
+ * Materials the production loop may actually run on.
+ *
+ * The endgame's exotic feedstock is bought with **Plates** (spec §3), and the
+ * print loop earns Money — so a bay loaded with it is a bay that will never be
+ * fed again. The bot found that hole the hard way: composite's value multiplier
+ * made it the best margin on paper, the rack switched to it the moment the
+ * feedstock line was installed, and the workshop then sat at zero grams and
+ * zero Plates for eighty design-minutes. A material is a production candidate
+ * only when the workshop's own sales can pay for it.
+ */
+function productionMaterials(state: GameState, content: Content): readonly MaterialDef[] {
+  return availableMaterials(state, content).filter(
+    (material) => material.priceResource === 'money',
+  );
+}
+
 function cheapestMaterial(state: GameState, content: Content): MaterialDef | undefined {
-  return availableMaterials(state, content).reduce<MaterialDef | undefined>(
+  return productionMaterials(state, content).reduce<MaterialDef | undefined>(
     (best, material) =>
       best === undefined || material.costPerGram < best.costPerGram ? material : best,
     undefined,
@@ -239,7 +265,7 @@ function bestMaterial(
   object: ObjectDef,
   loadedId: string | null,
 ): MaterialDef | undefined {
-  const candidates = availableMaterials(state, content);
+  const candidates = productionMaterials(state, content);
   const best = candidates.reduce<MaterialDef | undefined>(
     (winner, material) =>
       winner === undefined ||
@@ -278,7 +304,11 @@ function affordableUpgrade(
 ): UpgradeDef | undefined {
   let best: { def: UpgradeDef; amount: number } | undefined;
   for (const def of content.upgrades) {
-    if (upgradeAvailability(state, content, def.id) !== null) {
+    // The Endgame Tree has a policy of its own (`endgameTreeMove`): it is
+    // priced in Plates, which the presses also want, and a cheapest-first
+    // sweep across two currencies would compare four Plates with four hundred
+    // Parts and call the Plates a bargain.
+    if (def.tree === 'endgame' || upgradeAvailability(state, content, def.id) !== null) {
       continue;
     }
     const cost = nextUpgradeCost(state, content, curves, def.id);
@@ -606,6 +636,14 @@ export interface PolicyOptions {
    * it was designed for.
    */
   readonly useQueues: boolean;
+  /**
+   * Take New Game Plus (spec §18 M6) the moment the credits stop, with these
+   * modifiers. `null` is the ordinary player, who finishes the game and sits in
+   * the post-game sandbox — which is why the roster leaves it off: a bot that
+   * restarted the arc would overwrite the very timeline the harness is
+   * measuring.
+   */
+  readonly newGamePlusModifierIds: readonly string[] | null;
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -739,6 +777,32 @@ function forkMove(
   if (isForkChosen(state) || !phaseAllows(state, content, 'CHOOSE_FORK')) {
     return null;
   }
+  /*
+   * Once the Fabricator is in view the choice is not a preference any more
+   * (spec §7.3): only the branch that declares `requiredForFinalPrint` may
+   * attempt the last print, and a run that takes the other one cannot finish
+   * the game. This is exactly the decision the spec describes a Farm player
+   * making — pre-print your sections, then take the giant machine.
+   *
+   * "In view" is the phase that *sells the blueprint*, not the phase that
+   * allows the print: the fork is committed for a whole run, so a bot that
+   * waited for the last phase would already be locked into the wrong branch.
+   */
+  if (blueprintInView(state, content)) {
+    const required = content.forks.find(
+      (def) => def.requiredForFinalPrint && forkAvailability(state, content, def.id) === null,
+    );
+    const cost = required === undefined ? null : forkCost(content, curves, required.id);
+    if (
+      required !== undefined &&
+      cost !== null &&
+      cost.resource !== 'filament' &&
+      state.resources[cost.resource] >= cost.amount
+    ) {
+      return chooseFork(required.id);
+    }
+    return null;
+  }
   const affordable = content.forks.filter((def) => {
     if (forkAvailability(state, content, def.id) !== null) {
       return false;
@@ -782,7 +846,7 @@ function queueMoves(
   if (!owned || !phaseAllows(state, content, 'SET_SLOT_QUEUE')) {
     return [];
   }
-  const alternatives = availableMaterials(state, content).filter(
+  const alternatives = productionMaterials(state, content).filter(
     (material) => material.id !== primary.id,
   );
   const second = alternatives.reduce<MaterialDef | undefined>(
@@ -836,6 +900,19 @@ const PRESTIGE_MIN_AWARD = 2;
  * exactly the widening prestige spiral spec §6's phases 4–5 describe.
  */
 const PRESTIGE_GROWTH = 1;
+
+/**
+ * How much more each melt-down must be worth than the last, in Plates.
+ *
+ * `platesHeld` alone is not enough once there is somewhere to *spend* Plates.
+ * The Endgame Tree empties the pile the moment it is bought, which drops the
+ * bar back to the floor, and the bot then melted the workshop down for two
+ * Plates a time, seven times over, rebuilding from a bare bench in between —
+ * a treadmill that never accumulated anything. Measuring the bar against how
+ * many melt-downs have already happened is what makes the spiral widen instead
+ * (spec §6 phases 4–5).
+ */
+const PRESTIGE_AWARD_PER_RUN = 2;
 
 /** Bays the player keeps on Products once the studio opens (spec §5D). */
 const DESIGN_BAYS = 1;
@@ -911,7 +988,23 @@ function designBayMove(state: GameState, content: Content, curves: CurveRegistry
   }
   const bays = activeSlots(state, content);
   const onDesign = bays.filter((slot) => slot.designId !== null);
-  if (onDesign.length >= Math.min(DESIGN_BAYS, Math.max(bays.length - 1, 1))) {
+  /*
+   * Once the endgame is in view, one bay always keeps making Parts.
+   *
+   * Products are worth Money, and Money is worth nothing to a workshop that
+   * needs a *fork* and *Fabricator sections* — both priced in Parts (spec §5B,
+   * §7.3). The reference player reached the last phase with 149 million in the
+   * bank, zero Parts, one bay printing Designs and no way to buy the giant
+   * printer the final print requires.
+   *
+   * Before then the studio may have the only bay, and must be allowed to: the
+   * studio phase is gated on *selling Products* (spec §6 phase 3), and a
+   * Goliath run has exactly one bay to sell them from. Reserving a Parts bay
+   * that early is how the greedy player got stuck in the studio for ever.
+   */
+  const floor = phaseAllows(state, content, 'START_FABRICATOR') ? 0 : 1;
+  const studioBays = Math.min(DESIGN_BAYS, Math.max(bays.length - 1, floor));
+  if (onDesign.length >= studioBays) {
     // Already committed as many bays as the policy allows — but keep the one it
     // has pointed at the best design it now owns.
     const stale = onDesign.find((slot) => slot.designId !== design.id);
@@ -965,6 +1058,34 @@ function prestigeMove(state: GameState, content: Content, curves: CurveRegistry)
   if (!phaseAllows(state, content, 'PRESTIGE')) {
     return null;
   }
+  /*
+   * Once the workshop can *fund* the last print, it stops melting itself down.
+   *
+   * A melt-down keeps the tree, the Plates and the pre-printed sections (spec
+   * §5D's `retainedLedgers`) but scraps the fleet — and the final print needs a
+   * fleet (spec §4). Refusing on the blueprint alone was too early: the tree is
+   * bought with Plates and Plates only come from melt-downs, so a bot that
+   * downed tools the moment it owned the blueprint could no longer afford the
+   * feedstock. It keeps cycling until it can pay for the print, and then it
+   * commits.
+   */
+  // A print in flight, or one already finished, ends the melt-downs outright:
+  // prestige scraps the fleet *and* the build (spec §5D keeps only the
+  // sections), so a bot that melted down mid-print would restart the last
+  // print for ever. It did exactly that before this guard existed.
+  if (state.fabricator.run !== null || state.fabricator.completedAtMs !== null) {
+    return null;
+  }
+  /*
+   * ...and the blueprint itself ends them. It is the last node of the tree, so
+   * once it is owned there is nothing left to spend Plates on but the feedstock
+   * — and a melt-down would scrap the fleet the print needs (spec §4). The bot
+   * buys the blueprint only when it can afford that feedstock too
+   * (`endgameTreeMove`), so stopping here cannot strand it.
+   */
+  if (hasBlueprint(state, content)) {
+    return null;
+  }
   if (prestigeAvailability(state, content, curves) !== null) {
     return null;
   }
@@ -973,8 +1094,127 @@ function prestigeMove(state: GameState, content: Content, curves: CurveRegistry)
     PRESTIGE_MIN_AWARD,
     content.prestige.minimumPlates,
     state.resources.plates * PRESTIGE_GROWTH,
+    PRESTIGE_AWARD_PER_RUN * (state.stats.prestigeCount + 1),
   );
   return award >= worthwhile ? prestige() : null;
+}
+
+// --- the endgame (spec §5E, §6 phases 5–6, §7.3) -----------------------------
+
+/**
+ * The Endgame Tree comes before the presses.
+ *
+ * Both are priced in Plates and the presses are the easier reflex, but a player
+ * who spends every Plate on money printing never buys the blueprint and never
+ * finishes the game. The tree is bought in content order — it is a chain of
+ * prerequisites ending at the Fabricator — so this is simply "keep climbing".
+ */
+/**
+ * Has the phase that sells the Fabricator's blueprint arrived? Read off the
+ * node's own `unlockPhaseId`, so moving the endgame earlier or later in
+ * `pacing.json` moves the bot's whole endgame with it.
+ */
+function blueprintInView(state: GameState, content: Content): boolean {
+  const def = content.upgrades.find((node) => node.id === fabricatorDef(content).requiresUpgradeId);
+  return (
+    def !== undefined && isPhaseReached(content.pacing.phases, state.phaseId, def.unlockPhaseId)
+  );
+}
+
+function endgameTreeMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
+  if (!phaseAllows(state, content, 'BUY_UPGRADE')) {
+    return null;
+  }
+  const fabricator = fabricatorDef(content);
+  const feedstock = content.materials.find((def) => def.id === fabricator.materialId);
+  for (const def of content.upgrades) {
+    if (def.tree !== 'endgame' || upgradeAvailability(state, content, def.id) !== null) {
+      continue;
+    }
+    /*
+     * One level of each node, and no more. The tree is a chain of
+     * prerequisites ending at the blueprint, so the first level of every node
+     * is what the *ending* needs; further levels are a nice-to-have that
+     * competes for the same Plates as the presses. Climbing the factory to
+     * level three instead of buying a bundle press cost the reference player
+     * the whole of phase 5 — it never printed enough money to leave it.
+     */
+    if ((state.upgrades[def.id] ?? 0) > 0) {
+      continue;
+    }
+    const cost = nextUpgradeCost(state, content, curves, def.id);
+    if (cost === null || cost.resource === 'filament') {
+      continue;
+    }
+    /*
+     * Buying the blueprint is the point of no return: from here the bot stops
+     * melting the workshop down, so the Plates it holds are the last it will
+     * see. It therefore waits until it can afford the feedstock as well —
+     * otherwise it owns a Fabricator it can never feed.
+     */
+    const reserve =
+      def.id === fabricator.requiresUpgradeId && feedstock?.priceResource === cost.resource
+        ? fabricator.filamentGrams * feedstock.costPerGram
+        : 0;
+    if (state.resources[cost.resource] >= cost.amount + reserve) {
+      return buyUpgrade(def.id);
+    }
+  }
+  return null;
+}
+
+/**
+ * Keep enough exotic feedstock in stock for the last print and one section.
+ *
+ * It is the one material bought with Plates (spec §3), so it competes with the
+ * tree and the presses for the same balance — and it is bought only once the
+ * blueprint is owned, because before that it has nothing to be for.
+ */
+function feedstockMoves(state: GameState, content: Content): readonly Action[] {
+  if (!hasBlueprint(state, content) || !phaseAllows(state, content, 'BUY_FILAMENT')) {
+    return [];
+  }
+  const def = fabricatorDef(content);
+  const wanted = def.filamentGrams + def.sectionFilamentGrams;
+  const held = state.filamentGrams[def.materialId] ?? 0;
+  if (held >= wanted) {
+    return [];
+  }
+  const grams = Math.floor(
+    Math.min(wanted - held, affordableFilamentGrams(state, content, def.materialId)),
+  );
+  return grams > 0 ? [buyFilament(def.materialId, grams)] : [];
+}
+
+/**
+ * The last print (spec §6 phase 6). Start it the moment the workshop qualifies;
+ * otherwise pre-print a section, which is never wasted — it shortens the build
+ * and it survives the melt-down (spec §7.3).
+ */
+function fabricatorMoves(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): readonly Action[] {
+  if (!hasBlueprint(state, content)) {
+    return [];
+  }
+  if (
+    phaseAllows(state, content, 'START_FABRICATOR') &&
+    fabricatorAvailability(state, content) === null
+  ) {
+    return [startFabricator()];
+  }
+  if (
+    phaseAllows(state, content, 'PRINT_SECTION') &&
+    sectionAvailability(state, content, curves) === null &&
+    // A section is only worth its Parts while the build is still ahead: it
+    // buys design-minutes off a print that has not started.
+    state.fabricator.run === null
+  ) {
+    return [printSection()];
+  }
+  return [];
 }
 
 /**
@@ -1063,7 +1303,30 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (state.resources.products > 0 && phaseAllows(state, content, 'SELL_PRODUCTS')) {
         moves.push(sellProducts(null));
       }
-      const press = moneyPrinterMove(state, content, curves);
+      /*
+       * The endgame, in the order a player who wants to *finish* would reach
+       * for it (spec §5E, §6 phase 6): climb the tree, keep the feedstock in,
+       * put the last print on — and only then spend what is left on presses.
+       */
+      const node = endgameTreeMove(state, content, curves);
+      if (node !== null) {
+        moves.push(node);
+      }
+      moves.push(...feedstockMoves(state, content));
+      const finalPrint = fabricatorMoves(state, content, curves);
+      if (finalPrint.length > 0) {
+        moves.push(...finalPrint);
+        return moves;
+      }
+      if (
+        options.newGamePlusModifierIds !== null &&
+        newGamePlusAvailability(state, content) === null &&
+        phaseAllows(state, content, 'NEW_GAME_PLUS')
+      ) {
+        moves.push(newGamePlus(options.newGamePlusModifierIds));
+        return moves;
+      }
+      const press = node === null ? moneyPrinterMove(state, content, curves) : null;
       if (press !== null) {
         moves.push(press);
       }
@@ -1204,6 +1467,7 @@ export const greedySpenderBot = createPolicyBot({
   chaseMargin: false,
   preferFork: 'throughput',
   useQueues: false,
+  newGamePlusModifierIds: null,
 });
 
 /**
@@ -1221,6 +1485,7 @@ export const balancedBot = createPolicyBot({
   // branch, so between them the roster exercises both sides of the fork.
   preferFork: 'flexibility',
   useQueues: false,
+  newGamePlusModifierIds: null,
 });
 
 /**
@@ -1236,6 +1501,7 @@ export const idleHeavyBot = createPolicyBot({
   chaseMargin: true,
   preferFork: 'flexibility',
   useQueues: true,
+  newGamePlusModifierIds: null,
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];

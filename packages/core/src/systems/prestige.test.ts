@@ -49,7 +49,9 @@ const rich = (over: Partial<GameState> = {}): GameState => ({
     'phone-stand': { level: 2, printsOnLevel: 1 },
   },
   moneyPrinters: { [pressId]: 2 },
-  stats: { ...base.stats, prestigeCount: 1, printsCompleted: 400 },
+  // The presses read Plates *engraved*, not Plates held (spec §5E), so a
+  // workshop with three in the pile has at least three in its history.
+  stats: { ...base.stats, prestigeCount: 1, printsCompleted: 400, platesEarned: 3 },
   ...over,
 });
 
@@ -253,9 +255,20 @@ describe('the money printers (spec §5E)', () => {
     expect(moneyPrinterDef(content, 'no-such-press')).toBeUndefined();
   });
 
-  it('prints nothing without Plates, however many presses are installed', () => {
-    const platesless = rich({ resources: { ...rich().resources, plates: 0 } });
+  it('prints nothing before a Plate has ever been engraved', () => {
+    const platesless = rich({ stats: { ...base.stats, platesEarned: 0 } });
     expect(moneyPrintRate(platesless, content, curves)).toBe(0);
+  });
+
+  /**
+   * Spending Plates does not switch the presses off. It is the whole reason the
+   * rate reads the engraving history: the Endgame Tree is bought with Plates
+   * (spec §5E), and a rate that fell when the player used them would make the
+   * only thing Plates are for a punishment.
+   */
+  it('keeps printing after the Plates have been spent', () => {
+    const spent = rich({ resources: { ...rich().resources, plates: 0 } });
+    expect(moneyPrintRate(spent, content, curves)).toBe(moneyPrintRate(rich(), content, curves));
   });
 
   it('prints nothing without Plates even under a curve that pays at zero', () => {
@@ -273,16 +286,12 @@ describe('the money printers (spec §5E)', () => {
     };
     const generousCurves = createCurveRegistry(generous.curves);
     expect(
-      moneyPrintRate(
-        rich({ resources: { ...rich().resources, plates: 0 } }),
-        generous,
-        generousCurves,
-      ),
+      moneyPrintRate(rich({ stats: { ...base.stats, platesEarned: 0 } }), generous, generousCurves),
     ).toBe(0);
     expect(moneyPrintRate(rich(), generous, generousCurves)).toBe(99 * 2);
   });
 
-  it('prints nothing without a press, however many Plates are held', () => {
+  it('prints nothing without a press, however many Plates were engraved', () => {
     expect(moneyPrintRate(rich({ moneyPrinters: {} }), content, curves)).toBe(0);
   });
 

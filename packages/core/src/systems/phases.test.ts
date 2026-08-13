@@ -25,12 +25,15 @@ describe('phase FSM', () => {
       'prestige',
       'absurd',
       'end',
+      // The FSM runs "Intro → … → Ended" (spec §15). `ended` is the terminal
+      // state: the post-game sandbox, which nothing advances out of.
+      'ended',
     ]);
   });
 
   it('finds first, last and index', () => {
     expect(firstPhaseId(phases)).toBe('intro');
-    expect(lastPhaseId(phases)).toBe('end');
+    expect(lastPhaseId(phases)).toBe('ended');
     expect(phaseIndex(phases, 'farm')).toBe(2);
     expect(isKnownPhase(phases, 'farm')).toBe(true);
     expect(isKnownPhase(phases, 'nope')).toBe(false);
@@ -39,7 +42,8 @@ describe('phase FSM', () => {
   it('walks forward and stops at the end', () => {
     expect(nextPhaseId(phases, 'intro')).toBe('bench');
     expect(nextPhaseId(phases, 'absurd')).toBe('end');
-    expect(nextPhaseId(phases, 'end')).toBeNull();
+    expect(nextPhaseId(phases, 'end')).toBe('ended');
+    expect(nextPhaseId(phases, 'ended')).toBeNull();
   });
 
   it('gates unlocks by phase order', () => {
@@ -67,6 +71,8 @@ describe('phase FSM', () => {
     expect(budgetThroughPhase(phases, 'intro')).toBe(5);
     expect(budgetThroughPhase(phases, 'bench')).toBe(35);
     expect(budgetThroughPhase(phases, 'end')).toBe(420);
-    expect(totalBudgetDesignMinutes(phases)).toBe(420);
+    // The terminal sandbox is outside the arc's 420-minute budget (spec §6);
+    // its nominal five minutes are what the harness uses as a run-out.
+    expect(totalBudgetDesignMinutes(phases)).toBe(425);
   });
 });

@@ -1,6 +1,6 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, isPieceReady, nextPiece, tickAssembly } from '../systems/assembly.js';
 import {
@@ -17,6 +17,19 @@ import {
   sellPartsFrom,
   sellProductsFrom,
 } from '../systems/economy.js';
+import {
+  beginFabricatorPrint,
+  fabricatorAvailability,
+  fabricatorDurationMs,
+  isFabricating,
+  newGamePlusAvailability,
+  sectionAvailability,
+  startNewGamePlus,
+  startSection,
+  tickFabricator,
+  tickFactory,
+} from '../systems/endgame.js';
+import { isEndingComplete } from '../systems/ending.js';
 import { recycleScrapInto } from '../systems/failure.js';
 import { assignPrinters, slotRoom } from '../systems/fleet.js';
 import { commitFork, forkAvailability } from '../systems/forks.js';
@@ -38,7 +51,7 @@ import {
   withSlot,
 } from '../systems/printing.js';
 import { changeoverAutomationDefs, queueEntriesResolve } from '../systems/queue.js';
-import { meetsRequirements } from '../systems/requirements.js';
+import { meetsRequirements, totalDesignMinutes } from '../systems/requirements.js';
 import { purchaseSlot, slotUnlockAvailability } from '../systems/slots.js';
 import {
   computeModifiers,
@@ -125,6 +138,12 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applyPrestige(state, ctx);
     case 'BUY_MONEY_PRINTER':
       return applyBuyMoneyPrinter(state, action.moneyPrinterId, ctx);
+    case 'PRINT_SECTION':
+      return applyPrintSection(state, ctx);
+    case 'START_FABRICATOR':
+      return applyStartFabricator(state, ctx);
+    case 'NEW_GAME_PLUS':
+      return applyNewGamePlus(state, action.modifierIds, ctx);
   }
 }
 
@@ -134,12 +153,13 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
  * One fixed timestep. The order is fixed and load-bearing, because it is what
  * makes a replay reproducible:
  *
- *   assembly → studio → printers → market drift → money press → automation → FSM
+ *   assembly → studio → printers → market drift → money press → factory →
+ *   fabricator → automation → FSM
  *
  * Automation runs *after* the market has drifted and the printers have paid
  * out, so a bot inside the machine sees exactly the world a player checking in
  * at that instant would see. The FSM runs last, so a phase can only advance on
- * a fully settled state.
+ * a fully settled state — including on the tick where the credits finish.
  */
 function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameState {
   if (!Number.isFinite(simDtMs) || simDtMs < 0) {
@@ -155,9 +175,12 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const drafted = tickDesignStudio(rebuilt, simDtMs, ctx);
   const printed = tickSlots(drafted, ctx.content, simDtMs, ctx.emit);
   const traded = tickMarket(printed, ctx.content, simDtMs);
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const minted = tickMoneyPrinting(traded, ctx.content, simDtMs, curves);
-  const automated = tickAutomation(minted, ctx.content, simDtMs, ctx.emit);
+  const modifiers = computeModifiers(minted, ctx.content);
+  const manufactured = tickFactory(minted, ctx.content, simDtMs, modifiers, ctx.emit);
+  const built = tickTheFinalPrint(state, manufactured, simDtMs, ctx);
+  const automated = tickAutomation(built, ctx.content, simDtMs, ctx.emit);
   return advanceWhileReady(automated, ctx);
 }
 
@@ -182,6 +205,37 @@ function selfAssemble(state: GameState, ctx: ReduceContext): GameState {
   }
   const piece = nextPiece(state.assembly, ctx.content);
   return piece === null ? state : applyAttachPiece(state, piece.id, ctx);
+}
+
+/**
+ * Advance the Universal Fabricator and announce the moment the credits stop
+ * rolling (spec §6 phase 6). `GAME_ENDED` is emitted exactly once — on the tick
+ * the sequence crosses its last stage — because the ending is derived from the
+ * clock and would otherwise be "true" forever after.
+ */
+function tickTheFinalPrint(
+  before: GameState,
+  state: GameState,
+  simDtMs: number,
+  ctx: ReduceContext,
+): GameState {
+  /*
+   * `before` is the state as it was *at the start of the tick*, and it has to
+   * be: the ending is derived from the clock, and by the time the systems run
+   * the clock has already moved. Asking the post-tick state whether the credits
+   * had finished answers "yes" on the very tick they finish, and the
+   * announcement would never be made.
+   */
+  const wasComplete = isEndingComplete(before, ctx.content);
+  const built = tickFabricator(state, ctx.content, simDtMs, ctx.emit);
+  if (!wasComplete && isEndingComplete(built, ctx.content)) {
+    ctx.emit?.({
+      type: 'GAME_ENDED',
+      simTimeMs: built.simTimeMs,
+      totalDesignMinutes: totalDesignMinutes(built),
+    });
+  }
+  return built;
 }
 
 /** Advance the studio bench; a finished draft becomes an owned Design. */
@@ -296,6 +350,10 @@ function applySetSlotConfig(
   if (availability !== null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', availability);
   }
+  if (isFabricating(state)) {
+    // Every bay is committed to the final print (spec §4).
+    return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
+  }
   if (slot.changeoverMs > 0) {
     // A purge cannot be interrupted; the nozzle is already half-flushed.
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
@@ -359,6 +417,9 @@ function applySetSlotDesign(
   if (!isMaterialAvailable(state, ctx.content, def.requiredMaterialId)) {
     return reject(ctx, state, 'SET_SLOT_DESIGN', 'locked');
   }
+  if (isFabricating(state)) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'slot-busy');
+  }
   if (slot.changeoverMs > 0) {
     return reject(ctx, state, 'SET_SLOT_DESIGN', 'slot-busy');
   }
@@ -419,7 +480,7 @@ function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): 
   if (index < 0 || slot === undefined) {
     return reject(ctx, state, 'START_PRINT', 'unknown-target');
   }
-  if (slot.run !== null || slot.changeoverMs > 0) {
+  if (slot.run !== null || slot.changeoverMs > 0 || isFabricating(state)) {
     return reject(ctx, state, 'START_PRINT', 'slot-busy');
   }
   const started = beginRun(state, ctx.content, index, 0, ctx.emit);
@@ -532,7 +593,7 @@ function applyBuyPrinter(
   if (slotRoom(state, ctx.content, slot) <= 0) {
     return reject(ctx, state, 'BUY_PRINTER', 'slot-full');
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchasePrinter(state, ctx.content, curves, printerId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_PRINTER', 'insufficient-resources');
@@ -563,7 +624,7 @@ function applyBuyUpgrade(state: GameState, upgradeId: string, ctx: ReduceContext
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_UPGRADE', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseUpgrade(state, ctx.content, curves, upgradeId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_UPGRADE', 'insufficient-resources');
@@ -583,7 +644,7 @@ function applyBuyAutomation(state: GameState, automationId: string, ctx: ReduceC
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_AUTOMATION', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseAutomation(state, ctx.content, curves, automationId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_AUTOMATION', 'insufficient-resources');
@@ -628,7 +689,7 @@ function applyBuySlot(state: GameState, unlockId: string, ctx: ReduceContext): G
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_SLOT', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseSlot(state, ctx.content, curves, unlockId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_SLOT', 'insufficient-resources');
@@ -726,7 +787,7 @@ function applyChooseFork(state: GameState, forkId: string, ctx: ReduceContext): 
   if (blocked !== null) {
     return reject(ctx, state, 'CHOOSE_FORK', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const choice = commitFork(state, ctx.content, curves, forkId);
   if (choice === null) {
     return reject(ctx, state, 'CHOOSE_FORK', 'insufficient-resources');
@@ -770,7 +831,7 @@ function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContex
   if (blocked !== null) {
     return reject(ctx, state, 'CREATE_DESIGN', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const draft = startDesignDraft(state, ctx.content, curves, designId);
   if (draft === null) {
     return reject(ctx, state, 'CREATE_DESIGN', 'insufficient-resources');
@@ -791,7 +852,7 @@ function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContex
  * itself because the workshop has now done it once.
  */
 function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const blocked = prestigeAvailability(state, ctx.content, curves);
   if (blocked !== null) {
     return reject(ctx, state, 'PRESTIGE', blocked);
@@ -808,6 +869,64 @@ function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
   return result.state;
 }
 
+/**
+ * Pre-print one section of the Fabricator (spec §7.3) — the Farm build's way of
+ * staying in the running for a print only Goliath may attempt.
+ */
+function applyPrintSection(state: GameState, ctx: ReduceContext): GameState {
+  const curves = curveRegistryFor(ctx.content.curves);
+  const blocked = sectionAvailability(state, ctx.content, curves);
+  if (blocked !== null) {
+    return reject(ctx, state, 'PRINT_SECTION', blocked);
+  }
+  const started = startSection(state, ctx.content, curves);
+  if (started === null) {
+    return reject(ctx, state, 'PRINT_SECTION', 'insufficient-resources');
+  }
+  return started.state;
+}
+
+/** Commit every bay to the last print there is (spec §4, §6 phase 6). */
+function applyStartFabricator(state: GameState, ctx: ReduceContext): GameState {
+  const blocked = fabricatorAvailability(state, ctx.content);
+  if (blocked !== null) {
+    return reject(ctx, state, 'START_FABRICATOR', blocked);
+  }
+  const committed = beginFabricatorPrint(state, ctx.content);
+  if (committed === null) {
+    return reject(ctx, state, 'START_FABRICATOR', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'FABRICATOR_STARTED',
+    simTimeMs: state.simTimeMs,
+    durationMs: fabricatorDurationMs(state, ctx.content),
+    sections: state.fabricator.sections,
+    slotsCommitted: committed.slots.filter((slot) => slot.printerCount > 0).length,
+  });
+  return committed;
+}
+
+/** Start again on the far side of the credits (spec §18 M6). */
+function applyNewGamePlus(
+  state: GameState,
+  modifierIds: readonly string[],
+  ctx: ReduceContext,
+): GameState {
+  const blocked = newGamePlusAvailability(state, ctx.content);
+  if (blocked !== null) {
+    return reject(ctx, state, 'NEW_GAME_PLUS', blocked);
+  }
+  const restarted = startNewGamePlus(state, ctx.content, modifierIds);
+  ctx.emit?.({
+    type: 'NEW_GAME_PLUS_STARTED',
+    simTimeMs: state.simTimeMs,
+    run: restarted.run,
+    modifierIds: restarted.modifierIds,
+    designsKept: Object.keys(restarted.state.designs).length,
+  });
+  return restarted.state;
+}
+
 function applyBuyMoneyPrinter(
   state: GameState,
   moneyPrinterId: string,
@@ -817,7 +936,7 @@ function applyBuyMoneyPrinter(
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_MONEY_PRINTER', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseMoneyPrinter(state, ctx.content, curves, moneyPrinterId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_MONEY_PRINTER', 'insufficient-resources');

@@ -75,7 +75,8 @@ describe('readMetric', () => {
       'money-plate': { level: 1, printsOnLevel: 0 },
     },
     moneyPrinters: { 'bill-printer': 2 },
-    upgrades: { 'heated-bed': 1, 'hardened-nozzle': 2 },
+    upgrades: { 'heated-bed': 1, 'hardened-nozzle': 2, 'exotic-feedstock': 1 },
+    fabricator: { sections: 3, sectionRun: null, run: null, completedAtMs: MS_PER_MINUTE },
     automation: { 'auto-sell': { level: 1, enabled: true, threshold: 40, cooldownMs: 0 } },
     stats: {
       ...base.stats,
@@ -111,7 +112,7 @@ describe('readMetric', () => {
     printsFailed: 3,
     piecesAttached: 2,
     assemblyProgress: 2 / pieceCount,
-    upgradesInstalled: 3,
+    upgradesInstalled: 4,
     automationsInstalled: 1,
     scrapRecycledGrams: 9,
     filamentTradedGrams: 125,
@@ -125,6 +126,12 @@ describe('readMetric', () => {
     prestigeCount: 2,
     moneyPrinted: 33,
     moneyPrintersInstalled: 2,
+    endgameNodes: 1,
+    fabricatorSections: 3,
+    fabricatorComplete: 1,
+    // The Fabricator finished one design-minute in and the clock now reads
+    // eight, which is well past the whole ending sequence.
+    endingComplete: 1,
   };
 
   it('reads every metric content is allowed to gate on', () => {

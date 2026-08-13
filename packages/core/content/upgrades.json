@@ -161,5 +161,73 @@
         "value": 1.25
       }
     ]
+  },
+  {
+    "id": "exotic-feedstock",
+    "name": "Exotic feedstock line",
+    "tree": "endgame",
+    "maxLevel": 1,
+    "costCurveId": "endgame-node-cost",
+    "costResource": "plates",
+    "requiresUpgradeIds": [],
+    "unlockPhaseId": "absurd",
+    "effects": [
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 4
+      }
+    ]
+  },
+  {
+    "id": "print-a-building",
+    "name": "Print a building",
+    "tree": "endgame",
+    "maxLevel": 1,
+    "costCurveId": "endgame-node-cost",
+    "costResource": "plates",
+    "requiresUpgradeIds": ["exotic-feedstock"],
+    "unlockPhaseId": "absurd",
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "combine": "multiply",
+        "value": 1.5
+      }
+    ]
+  },
+  {
+    "id": "print-a-factory",
+    "name": "Print a factory",
+    "tree": "endgame",
+    "maxLevel": 3,
+    "costCurveId": "endgame-node-cost",
+    "costResource": "plates",
+    "requiresUpgradeIds": ["print-a-building"],
+    "unlockPhaseId": "absurd",
+    "effects": [
+      {
+        "type": "printerFactoryRate",
+        "combine": "add",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "universal-fabricator",
+    "name": "Blueprint: Universal Fabricator",
+    "tree": "endgame",
+    "maxLevel": 1,
+    "costCurveId": "endgame-node-cost",
+    "costResource": "plates",
+    "requiresUpgradeIds": ["print-a-factory"],
+    "unlockPhaseId": "absurd",
+    "effects": [
+      {
+        "type": "machineTier",
+        "combine": "max",
+        "value": 5
+      }
+    ]
   }
 ]

@@ -1,6 +1,9 @@
 import assembled from './__fixtures__/assembled.json' with { type: 'json' };
 import assembling from './__fixtures__/assembling.json' with { type: 'json' };
 import economy from './__fixtures__/economy.json' with { type: 'json' };
+import endgame from './__fixtures__/endgame.json' with { type: 'json' };
+import ending from './__fixtures__/ending.json' with { type: 'json' };
+import fabricator from './__fixtures__/fabricator.json' with { type: 'json' };
 import fresh from './__fixtures__/fresh.json' with { type: 'json' };
 import goliath from './__fixtures__/goliath.json' with { type: 'json' };
 import prestige from './__fixtures__/prestige.json' with { type: 'json' };
@@ -70,6 +73,22 @@ const RAW_FIXTURES: readonly { name: string; describes: string; raw: unknown }[]
     describes:
       'after the melt-down: Plates banked, a press installed, the Designs kept, the intro rebuilding itself',
     raw: prestige,
+  },
+  {
+    name: 'endgame',
+    describes:
+      'the M6 endgame: the Plate-bought tree, a printed city behind the rack, prices inflating',
+    raw: endgame,
+  },
+  {
+    name: 'fabricator',
+    describes: 'the one synced render: the Universal Fabricator, half printed, layer by layer',
+    raw: fabricator,
+  },
+  {
+    name: 'ending',
+    describes: 'the credits printing out, one line at a time',
+    raw: ending,
   },
   {
     name: 'showcase',

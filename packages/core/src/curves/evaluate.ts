@@ -38,6 +38,28 @@ export function createCurveRegistry(curves: readonly CurveDef[]): CurveRegistry 
   return new Map(curves.map((curve) => [curve.id, curve]));
 }
 
+/**
+ * The registry for a content set, built once.
+ *
+ * A curve registry is a pure function of `content.curves`, and building one is
+ * a Map over every curve in the game. Systems that need one deep inside a hot
+ * path — the market prices a gram on every quote, and a bot asks for hundreds
+ * of quotes per check-in — would otherwise rebuild it hundreds of thousands of
+ * times per simulated run. Keyed weakly on the array itself, so a hot-reloaded
+ * content set gets its own registry and the old one is collected.
+ */
+const registries = new WeakMap<readonly CurveDef[], CurveRegistry>();
+
+export function curveRegistryFor(curves: readonly CurveDef[]): CurveRegistry {
+  const cached = registries.get(curves);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const registry = createCurveRegistry(curves);
+  registries.set(curves, registry);
+  return registry;
+}
+
 export function getCurve(registry: CurveRegistry, curveId: string): CurveDef {
   const curve = registry.get(curveId);
   if (curve === undefined) {

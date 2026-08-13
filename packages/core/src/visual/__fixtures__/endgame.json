@@ -1,0 +1,565 @@
+{
+  "version": 7,
+  "phaseId": "end",
+  "phaseName": "The End",
+  "simTimeMs": 22035000,
+  "slotCapacity": 4,
+  "goliath": false,
+  "slots": [
+    {
+      "slotId": "slot-1",
+      "index": 0,
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "gearset",
+      "objectName": "Gear set",
+      "output": "parts",
+      "designId": null,
+      "machineTier": 5,
+      "printerCount": 9,
+      "printerCapacity": 8,
+      "phaseOffset": 0,
+      "occupied": true,
+      "running": true,
+      "progress": 0.7070833333333312,
+      "batch": 9,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0.6624000000000008,
+      "queue": [],
+      "queueBatches": 0
+    }
+  ],
+  "fleet": {
+    "printers": 9,
+    "assigned": 9,
+    "slotsOwned": 1,
+    "slotsActive": 1,
+    "slotsMaximum": 4,
+    "printerCapacity": 8
+  },
+  "slotUnlock": {
+    "unlockId": "slot-2",
+    "name": "Second config slot",
+    "available": true,
+    "affordable": false,
+    "cost": 900,
+    "costResource": "parts",
+    "blockedReason": null
+  },
+  "forks": [
+    {
+      "forkId": "farm-path",
+      "name": "The Farm",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "layout": "rack",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 585,
+      "costResource": "parts",
+      "requiredForFinalPrint": false
+    },
+    {
+      "forkId": "goliath",
+      "name": "Goliath",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "layout": "goliath",
+      "chosen": false,
+      "available": true,
+      "affordable": false,
+      "cost": 585,
+      "costResource": "parts",
+      "requiredForFinalPrint": true
+    }
+  ],
+  "assembly": {
+    "attachedPieceIds": [
+      "frame",
+      "gantry",
+      "bed",
+      "extruder",
+      "hotend",
+      "spool-holder",
+      "controller"
+    ],
+    "totalPieces": 7,
+    "nextPieceId": null,
+    "nextPieceName": null,
+    "cooldownMs": 0,
+    "ready": false,
+    "selfAssembling": true,
+    "progress": 1,
+    "complete": true
+  },
+  "ledger": {
+    "parts": 27,
+    "money": 2043338.0128908758,
+    "scrap": 0,
+    "products": 0,
+    "plates": 5.119999999999999,
+    "filamentGrams": {
+      "pla": 2923.6000000000013,
+      "petg": 500,
+      "resin": 1500,
+      "metal": 831,
+      "composite": 660
+    }
+  },
+  "market": [
+    {
+      "materialId": "pla",
+      "materialName": "PLA",
+      "tradeable": false,
+      "priceResource": "money",
+      "available": true,
+      "buyPerGram": 0.16660915584661376,
+      "sellPerGram": 0,
+      "priceMultiplier": 1,
+      "stockGrams": 0,
+      "heldGrams": 2923.6000000000013
+    },
+    {
+      "materialId": "petg",
+      "materialName": "PETG",
+      "tradeable": true,
+      "priceResource": "money",
+      "available": true,
+      "buyPerGram": 0.26954909883293904,
+      "sellPerGram": 0.249737240068718,
+      "priceMultiplier": 1.0111580357905698,
+      "stockGrams": 6759.999999998854,
+      "heldGrams": 500
+    },
+    {
+      "materialId": "resin",
+      "materialName": "Resin (SLA)",
+      "tradeable": true,
+      "priceResource": "money",
+      "available": false,
+      "buyPerGram": 1.1341011117063577,
+      "sellPerGram": 1.0507446799959403,
+      "priceMultiplier": 0.9724222159713473,
+      "stockGrams": 5179.9999999993815,
+      "heldGrams": 1500
+    },
+    {
+      "materialId": "metal",
+      "materialName": "Sintered metal",
+      "tradeable": true,
+      "priceResource": "money",
+      "available": false,
+      "buyPerGram": 4.302819043034327,
+      "sellPerGram": 3.9865618433713035,
+      "priceMultiplier": 0.9223509230265432,
+      "stockGrams": 14.333333333326951,
+      "heldGrams": 831
+    },
+    {
+      "materialId": "composite",
+      "materialName": "Composite feedstock",
+      "tradeable": false,
+      "priceResource": "plates",
+      "available": true,
+      "buyPerGram": 0.004,
+      "sellPerGram": 0,
+      "priceMultiplier": 1,
+      "stockGrams": 0,
+      "heldGrams": 660
+    }
+  ],
+  "upgrades": [
+    {
+      "upgradeId": "heated-bed",
+      "name": "Heated bed",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 158,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "recycler",
+      "name": "Scrap recycler",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 158,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "hardened-nozzle",
+      "name": "Hardened nozzle",
+      "tree": "machine",
+      "level": 3,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 405,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "enclosure",
+      "name": "Enclosure",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 158,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sla-unit",
+      "name": "SLA unit",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": true,
+      "affordable": false,
+      "cost": 500,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "sintering-head",
+      "name": "Sintering head",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 500,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "broker-licence",
+      "name": "Broker licence",
+      "tree": "automation",
+      "level": 2,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": true,
+      "cost": 252.73574400000007,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "design-desk",
+      "name": "Design desk",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": true,
+      "cost": 2500,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "polish-station",
+      "name": "Polish station",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": true,
+      "cost": 500,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "exotic-feedstock",
+      "name": "Exotic feedstock line",
+      "tree": "endgame",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 8,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "print-a-building",
+      "name": "Print a building",
+      "tree": "endgame",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 8,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "print-a-factory",
+      "name": "Print a factory",
+      "tree": "endgame",
+      "level": 1,
+      "maxLevel": 3,
+      "available": true,
+      "affordable": false,
+      "cost": 8,
+      "costResource": "plates"
+    },
+    {
+      "upgradeId": "universal-fabricator",
+      "name": "Blueprint: Universal Fabricator",
+      "tree": "endgame",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 8,
+      "costResource": "plates"
+    }
+  ],
+  "automation": [
+    {
+      "automationId": "auto-sell",
+      "name": "Auto-sell parts",
+      "behavior": "sell-parts",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 40,
+      "available": true,
+      "affordable": false,
+      "cost": 390,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-buy-filament",
+      "name": "Auto-buy filament",
+      "behavior": "buy-filament",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 400,
+      "available": true,
+      "affordable": false,
+      "cost": 390,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-trade",
+      "name": "Auto-trading desk",
+      "behavior": "trade-filament",
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 250,
+      "available": false,
+      "affordable": true,
+      "cost": 819,
+      "costResource": "money"
+    },
+    {
+      "automationId": "auto-changeover",
+      "name": "Auto-changeover rota",
+      "behavior": "auto-changeover",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 60,
+      "available": true,
+      "affordable": false,
+      "cost": 390,
+      "costResource": "parts"
+    }
+  ],
+  "recycler": {
+    "installed": true,
+    "scrapGrams": 0,
+    "yieldGrams": 0,
+    "yieldMaterialId": "pla"
+  },
+  "studio": {
+    "slots": 1,
+    "freeSlots": 0,
+    "draftingDesignId": null,
+    "draftingName": null,
+    "draftProgress": 0,
+    "designs": [
+      {
+        "designId": "phone-stand",
+        "name": "Phone stand",
+        "materialId": "resin",
+        "level": 0,
+        "maxLevel": 20,
+        "owned": false,
+        "levelProgress": 0,
+        "productValue": 40,
+        "capstone": false,
+        "available": false,
+        "affordable": true,
+        "cost": 140800,
+        "costResource": "money",
+        "blockedReason": "missing-prerequisite"
+      },
+      {
+        "designId": "lamp-shade",
+        "name": "Lamp shade",
+        "materialId": "resin",
+        "level": 1,
+        "maxLevel": 20,
+        "owned": true,
+        "levelProgress": 0,
+        "productValue": 90,
+        "capstone": false,
+        "available": false,
+        "affordable": true,
+        "cost": 140800,
+        "costResource": "money",
+        "blockedReason": "already-owned"
+      },
+      {
+        "designId": "money-plate",
+        "name": "Money plate",
+        "materialId": "resin",
+        "level": 13,
+        "maxLevel": 20,
+        "owned": true,
+        "levelProgress": 0.5,
+        "productValue": 15951.206228985922,
+        "capstone": true,
+        "available": false,
+        "affordable": true,
+        "cost": 140800,
+        "costResource": "money",
+        "blockedReason": "already-owned"
+      }
+    ]
+  },
+  "prestige": {
+    "available": true,
+    "platesOnOffer": 22,
+    "platesHeld": 5.119999999999999,
+    "runsCompleted": 5,
+    "moneyPerDesignSecond": 1920,
+    "blockedReason": null
+  },
+  "moneyPrinters": [
+    {
+      "moneyPrinterId": "bill-printer",
+      "name": "Bill printer",
+      "tier": 1,
+      "level": 2,
+      "maxLevel": 5,
+      "available": true,
+      "affordable": false,
+      "cost": 29,
+      "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "bundle-printer",
+      "name": "Bundle press",
+      "tier": 2,
+      "level": 1,
+      "maxLevel": 5,
+      "available": true,
+      "affordable": false,
+      "cost": 18,
+      "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "pallet-printer",
+      "name": "Pallet press",
+      "tier": 3,
+      "level": 0,
+      "maxLevel": 5,
+      "available": true,
+      "affordable": false,
+      "cost": 18,
+      "costResource": "plates"
+    },
+    {
+      "moneyPrinterId": "central-bank",
+      "name": "The central bank",
+      "tier": 4,
+      "level": 0,
+      "maxLevel": 3,
+      "available": true,
+      "affordable": false,
+      "cost": 60,
+      "costResource": "plates"
+    }
+  ],
+  "backdrop": "skyline",
+  "inflation": {
+    "active": true,
+    "multiplier": 3.332183116932275,
+    "moneyPrinted": 3015380.0000015264
+  },
+  "fabricator": {
+    "unlocked": true,
+    "available": false,
+    "blockedReason": "slot-busy",
+    "running": false,
+    "complete": false,
+    "progress": 0,
+    "layer": 0,
+    "layers": 140,
+    "remainingMs": 0,
+    "totalMs": 2040000,
+    "materialId": "composite",
+    "filamentGrams": 600,
+    "heldGrams": 660,
+    "sections": 0,
+    "maxSections": 4,
+    "sectionRunning": true,
+    "sectionProgress": 0.9285714285714286,
+    "sectionAvailable": false,
+    "sectionBlockedReason": "slot-busy",
+    "sectionCost": 250,
+    "sectionCostResource": "parts",
+    "forkAllows": false,
+    "slotsCommitted": false,
+    "committedPrinters": 9,
+    "requiredPrinters": 16
+  },
+  "ending": {
+    "stage": "none",
+    "active": false,
+    "progress": 0,
+    "stageProgress": 0,
+    "museumPrinterId": "bench-mk1",
+    "museumTier": 5,
+    "credits": [
+      "PRINTHEAD",
+      "a finite idle game about a 3D printer",
+      "",
+      "Printer #1 — assembled by hand, seven pieces",
+      "The Bench — where a Part was first worth something",
+      "The Farm — fourteen machines and a market",
+      "The Studio — resin, designs, products",
+      "The Melt-down — everything you built, engraved",
+      "The Absurd — the economy ate itself",
+      "The Fabricator — it printed the last thing left to print",
+      "",
+      "Every number you saw came out of content/*.json",
+      "Every phase you passed was a row in pacing.json",
+      "Nothing here was hard-coded. That was the point.",
+      "",
+      "Thank you for playing.",
+      "Now print your printer."
+    ],
+    "creditLines": 0,
+    "infinite": false,
+    "newGamePlusAvailable": false,
+    "newGamePlusRun": 0,
+    "modifiers": [
+      {
+        "modifierId": "veteran-workshop",
+        "name": "Veteran workshop",
+        "description": "You have built this bench before. Every machine runs half again as fast.",
+        "active": false
+      },
+      {
+        "modifierId": "brittle-filament",
+        "name": "Brittle filament",
+        "description": "The spools are worse and the parts are worth more. Prints fail twice as often.",
+        "active": false
+      }
+    ]
+  }
+}

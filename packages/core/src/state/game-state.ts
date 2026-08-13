@@ -122,6 +122,16 @@ export interface StatsState {
   readonly moneyPrinted: number;
   /** Melt-downs completed. Survives prestige: it *counts* prestige (spec §5D). */
   readonly prestigeCount: number;
+  /**
+   * Plates engraved across the whole game, spent or not (spec §5E).
+   *
+   * The money printers read *this*, not the Plates in the pile. Reading the
+   * balance made the endgame punish the only thing it sells: the Endgame Tree
+   * is bought with Plates, so buying it switched the presses off and the run
+   * could never earn its way back. An engraved plate keeps printing once it has
+   * been made; what the tree spends is the metal, not the engraving.
+   */
+  readonly platesEarned: number;
 }
 
 /**
@@ -145,6 +155,60 @@ export interface StudioProjectState {
   /** Design-milliseconds of drafting left. Integer ms, like every clock here. */
   readonly remainingMs: number;
 }
+
+/**
+ * A timed build on the Universal Fabricator (spec §6 phase 6): either the final
+ * print itself or one pre-printed section. Milliseconds, like every other clock
+ * in the state, so it lands on zero exactly.
+ */
+export interface FabricatorRunState {
+  readonly remainingMs: number;
+  readonly totalMs: number;
+}
+
+/**
+ * The final print (spec §6 phase 6, §7.3).
+ *
+ * `sections` are the pieces a Farm build pre-printed to stay viable: each one
+ * takes `sectionDesignMinutes` off the build, and whether they survive a
+ * melt-down is `prestige.retainedLedgers`' decision, not this file's. That is
+ * the mechanism behind "Goliath is required for the final print, but a Farm
+ * build can pre-print sections" — the sections cross the melt-down, the fork
+ * does not.
+ *
+ * `completedAtMs` is the simulation clock at the moment the Fabricator finished.
+ * The ending sequence is timed from it (spec §6: numbers → museum → credits),
+ * so the whole ending is a pure function of the clock rather than a script with
+ * a state machine of its own.
+ */
+export interface FabricatorState {
+  readonly sections: number;
+  /** The section currently on the bed, or `null`. One at a time. */
+  readonly sectionRun: FabricatorRunState | null;
+  /** The final print in flight, or `null`. */
+  readonly run: FabricatorRunState | null;
+  readonly completedAtMs: number | null;
+}
+
+/**
+ * New Game Plus (spec §18 M6). `run` counts how many times the game has been
+ * finished and started again; `modifierIds` are the optional modifiers the
+ * player took, folded into the modifier map by the same interpreter the upgrade
+ * trees use — so a modifier is content, not a branch in the reducer.
+ */
+export interface NewGamePlusState {
+  readonly run: number;
+  readonly modifierIds: readonly string[];
+}
+
+export const EMPTY_FABRICATOR: FabricatorState = {
+  sections: 0,
+  sectionRun: null,
+  run: null,
+  completedAtMs: null,
+};
+
+export const EMPTY_NEW_GAME_PLUS: NewGamePlusState = { run: 0, modifierIds: [] };
 
 export type ResourceLedger = Readonly<Record<ScalarResourceKind, number>>;
 export type FilamentLedger = Readonly<Record<string, number>>;
@@ -218,6 +282,17 @@ export interface GameState {
    * have to know the rule.
    */
   readonly selfAssembling: boolean;
+  /**
+   * The printed factory's accumulator (spec §5E). It turns out a fraction of a
+   * machine per tick; the whole machines are banked into the fleet and the
+   * remainder is carried here, which is what keeps the factory exactly
+   * time-additive across an offline catch-up.
+   */
+  readonly factoryProgress: number;
+  /** The Universal Fabricator and the sections pre-printed for it (spec §7.3). */
+  readonly fabricator: FabricatorState;
+  /** Which run of the game this is, and on what terms (spec §18 M6). */
+  readonly ngPlus: NewGamePlusState;
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
 }
@@ -252,6 +327,7 @@ export const EMPTY_STATS: StatsState = {
   productsSold: 0,
   moneyPrinted: 0,
   prestigeCount: 0,
+  platesEarned: 0,
 };
 
 export function zeroResources(): ResourceLedger {
@@ -338,6 +414,9 @@ export function createInitialState(content: Content, options: InitialStateOption
     studio: null,
     moneyPrinters: {},
     selfAssembling: false,
+    factoryProgress: 0,
+    fabricator: EMPTY_FABRICATOR,
+    ngPlus: EMPTY_NEW_GAME_PLUS,
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,
   };

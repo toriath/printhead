@@ -11,8 +11,12 @@
  * - v5 (M5): the Design Studio (owned designs, the bench, per-slot design),
  *   Products as a valued pool, the money printers, the prestige counter and
  *   the self-assembling intro flag.
+ * - v6 (M6): the Endgame — the printed factory's accumulator, the Universal
+ *   Fabricator (its pre-printed sections, the build in flight and the moment it
+ *   finished), the New Game Plus run counter with its chosen modifiers, and
+ *   the count of Plates ever engraved (which is what the presses read).
  */
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 6;
 
 /** Every version this build can still load — the fixture corpus mirrors it. */
-export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5] as const;
+export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6] as const;

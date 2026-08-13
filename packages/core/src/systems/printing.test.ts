@@ -25,6 +25,8 @@ const content = TEST_CONTENT;
 const base = createInitialState(content, { seed: 1 });
 /** Nothing installed: the fleet's own numbers, unmodified. */
 const bare = new Map<never, never>();
+/** Prices are only devalued once phase 5 arrives (spec §6); the index is 1 here. */
+const NO_INFLATION = 1;
 const curves = createCurveRegistry(content.curves);
 
 const material = (over: Partial<MaterialDef> = {}): MaterialDef =>
@@ -155,7 +157,7 @@ describe('batching', () => {
       object: { partsYield: 2, basePartValue: 3 },
       material: { valueMultiplier: 1.5 },
     });
-    expect(batchYield(c, 4, bare, curves, 0)).toEqual({
+    expect(batchYield(c, 4, bare, curves, 0, NO_INFLATION)).toEqual({
       count: 8,
       value: 8 * 3 * 1.5,
       pool: 'parts',
@@ -165,9 +167,13 @@ describe('batching', () => {
   it('yields Products from a Design, valued by its level (spec §5D)', () => {
     const c = designConfig();
     // One Product per print, and the level curve reads 1× at level 1.
-    expect(batchYield(c, 3, bare, curves, 1)).toEqual({ count: 3, value: 300, pool: 'products' });
+    expect(batchYield(c, 3, bare, curves, 1, NO_INFLATION)).toEqual({
+      count: 3,
+      value: 300,
+      pool: 'products',
+    });
     // A higher level is worth strictly more per Product, from content alone.
-    const levelled = batchYield(c, 3, bare, curves, 4);
+    const levelled = batchYield(c, 3, bare, curves, 4, NO_INFLATION);
     expect(levelled.value).toBeGreaterThan(300);
     expect(levelled.pool).toBe('products');
   });
