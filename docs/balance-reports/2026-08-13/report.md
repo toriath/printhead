@@ -58,7 +58,7 @@ magnitude and a shared axis would flatten one of them into the floor.
 |---|---|---|---|---|---|---|
 | idle | 51 | 0 | 0 | 0 | — | intro |
 | greedy-spender | 6108 | 765 | 1489 | 96 | 6.1 % | end |
-| balanced | 6108 | 1476 | 16877 | 1667 | 9.0 % | ended |
+| balanced | 6108 | 1673 | 14161 | 1400 | 9.0 % | ended |
 | idle-heavy | 51 | 96 | 2076 | 198 | 8.7 % | farm |
 
 ---
