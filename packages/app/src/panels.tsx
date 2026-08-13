@@ -38,6 +38,22 @@ function priceTrend(multiplier: number): string {
   return 'steady';
 }
 
+/**
+ * A gram is not always paid for in Money: the endgame's exotic feedstock costs
+ * **Plates** (spec §3). The projection says which till, so the panel prices the
+ * row in it and disables the button against the right balance rather than
+ * assuming the ledger's Money is what matters.
+ */
+function balanceFor(visual: VisualState, resource: string): number {
+  return resource === 'plates' ? visual.ledger.plates : visual.ledger.money;
+}
+
+function priceLabel(row: VisualState['market'][number]): string {
+  return row.priceResource === 'money'
+    ? formatMoney(row.buyPerGram)
+    : `${formatAmount(row.buyPerGram)} ${row.priceResource}`;
+}
+
 export function MarketPanel({ store, visual }: PanelProps): ReactElement | null {
   const rows = visual.market.filter((row) => row.available);
   if (rows.length === 0) {
@@ -52,14 +68,14 @@ export function MarketPanel({ store, visual }: PanelProps): ReactElement | null 
             <span className="panel__name">
               {row.materialName}
               <span className="panel__note">
-                {` ${formatMoney(row.buyPerGram)}/g · ${priceTrend(row.priceMultiplier)}`}
+                {` ${priceLabel(row)}/g · ${priceTrend(row.priceMultiplier)}`}
               </span>
             </span>
             <span className="panel__actions">
               <button
                 type="button"
                 data-testid={`buy-${row.materialId}`}
-                disabled={visual.ledger.money < row.buyPerGram * TRADE_GRAMS}
+                disabled={balanceFor(visual, row.priceResource) < row.buyPerGram * TRADE_GRAMS}
                 onClick={() => store.dispatch(buyFilament(row.materialId, TRADE_GRAMS))}
               >
                 {`Buy ${formatGrams(TRADE_GRAMS)}`}

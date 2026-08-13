@@ -356,6 +356,7 @@ function toMarketVisual(state: GameState, content: Content): readonly MarketVisu
     materialId: quote.materialId,
     materialName: materials.get(quote.materialId)?.name ?? quote.materialId,
     tradeable: quote.tradeable,
+    priceResource: quote.priceResource,
     available: isMaterialAvailable(state, content, quote.materialId),
     buyPerGram: quote.buyPerGram,
     sellPerGram: quote.sellPerGram,

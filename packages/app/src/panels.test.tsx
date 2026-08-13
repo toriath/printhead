@@ -68,6 +68,33 @@ describe('MarketPanel', () => {
     expect(screen.getByTestId('sell-petg').hasAttribute('disabled')).toBe(true);
   });
 
+  /**
+   * A gram is not always paid for in Money (spec §3): the endgame's feedstock
+   * costs Plates, so the row is priced in Plates and the button is disabled
+   * against the Plate pile rather than against the till.
+   */
+  it('prices a Plate-bought material in Plates, and checks the right balance', () => {
+    const { store } = stubStore();
+    const endgame = visualFixture('endgame');
+    render(<MarketPanel store={store} visual={endgame} />);
+    const composite = endgame.market.find((row) => row.priceResource === 'plates');
+    if (composite === undefined) {
+      throw new Error('the endgame fixture must offer a Plate-priced material');
+    }
+    expect(screen.getByTestId(`buy-${composite.materialId}`).closest('li')?.textContent).toContain(
+      'plates/g',
+    );
+    const broke = {
+      ...endgame,
+      ledger: { ...endgame.ledger, plates: 0, money: 1_000_000 },
+    };
+    cleanup();
+    render(<MarketPanel store={store} visual={broke} />);
+    expect((screen.getByTestId(`buy-${composite.materialId}`) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
   it('says whether a price is cheap, steady or dear', () => {
     const { store } = stubStore();
     const priced = (multiplier: number): VisualState => ({

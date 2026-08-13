@@ -167,6 +167,12 @@ export const MarketVisualSchema = z
     materialName: NonEmpty,
     /** Listed materials can be sold back; the rest are shelf-price only. */
     tradeable: z.boolean(),
+    /**
+     * Which balance a gram comes out of (spec §3). Money for everything the
+     * workshop prints with; **Plates** for the endgame's exotic feedstock — so
+     * a shell that assumed Money would offer a button the till cannot pay.
+     */
+    priceResource: NonEmpty,
     /** Whether the phase and the machine tree have opened this material. */
     available: z.boolean(),
     buyPerGram: NonNegative,
