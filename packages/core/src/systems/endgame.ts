@@ -333,6 +333,16 @@ export function beginFabricatorPrint(state: GameState, content: Content): GameSt
   };
 }
 
+/**
+ * Is the workshop in the middle of the last print? While it is, the bays are
+ * *committed* (spec §4): they cannot be re-loaded or set printing again, because
+ * the whole fleet is printing one thing and letting a player quietly put a bay
+ * back on brackets would make "total commitment" a slogan rather than a rule.
+ */
+export function isFabricating(state: GameState): boolean {
+  return state.fabricator.run !== null;
+}
+
 function advance(run: FabricatorRunState, dtMs: number): FabricatorRunState {
   return { ...run, remainingMs: run.remainingMs - dtMs };
 }

@@ -21,6 +21,7 @@ import {
   beginFabricatorPrint,
   fabricatorAvailability,
   fabricatorDurationMs,
+  isFabricating,
   newGamePlusAvailability,
   sectionAvailability,
   startNewGamePlus,
@@ -349,6 +350,10 @@ function applySetSlotConfig(
   if (availability !== null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', availability);
   }
+  if (isFabricating(state)) {
+    // Every bay is committed to the final print (spec §4).
+    return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
+  }
   if (slot.changeoverMs > 0) {
     // A purge cannot be interrupted; the nozzle is already half-flushed.
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
@@ -412,6 +417,9 @@ function applySetSlotDesign(
   if (!isMaterialAvailable(state, ctx.content, def.requiredMaterialId)) {
     return reject(ctx, state, 'SET_SLOT_DESIGN', 'locked');
   }
+  if (isFabricating(state)) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'slot-busy');
+  }
   if (slot.changeoverMs > 0) {
     return reject(ctx, state, 'SET_SLOT_DESIGN', 'slot-busy');
   }
@@ -472,7 +480,7 @@ function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): 
   if (index < 0 || slot === undefined) {
     return reject(ctx, state, 'START_PRINT', 'unknown-target');
   }
-  if (slot.run !== null || slot.changeoverMs > 0) {
+  if (slot.run !== null || slot.changeoverMs > 0 || isFabricating(state)) {
     return reject(ctx, state, 'START_PRINT', 'slot-busy');
   }
   const started = beginRun(state, ctx.content, index, 0, ctx.emit);

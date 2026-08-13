@@ -4,7 +4,14 @@ import { MS_PER_MINUTE, MS_PER_SECOND } from '../engine/constants.js';
 import { nextSectionCost } from '../systems/endgame.js';
 import { endingTotalMs } from '../systems/ending.js';
 import { TEST_CONTENT, createSim, testSlot } from './__fixtures__/sim.js';
-import { newGamePlus, printSection, startFabricator, tick } from './actions.js';
+import {
+  newGamePlus,
+  printSection,
+  setSlotConfig,
+  startFabricator,
+  startPrint,
+  tick,
+} from './actions.js';
 import type { GameState } from './game-state.js';
 
 /**
@@ -134,6 +141,28 @@ describe('START_FABRICATOR (spec §4, §6 phase 6)', () => {
     // ...and the announcement is made exactly once, however long it runs on.
     sim.tickMs(MS_PER_MINUTE);
     expect(sim.eventsOf('GAME_ENDED')).toHaveLength(1);
+  });
+
+  /**
+   * Spec §4: "a deliberate return to total commitment". While the last print
+   * runs, the bays belong to it — a player cannot quietly put one back on
+   * brackets, and the shell is told so by the same rejection it shows anywhere
+   * else a bay is busy.
+   */
+  it('holds every bay for the duration: no reload, no second print', () => {
+    const sim = endSim();
+    sim.do(startFabricator());
+    sim.do(setSlotConfig('slot-1', 'pla', 'bracket'));
+    expect(sim.eventsOf('ACTION_REJECTED').at(-1)).toMatchObject({
+      actionType: 'SET_SLOT_CONFIG',
+      reason: 'slot-busy',
+    });
+    sim.do(startPrint('slot-1'));
+    expect(sim.eventsOf('ACTION_REJECTED').at(-1)).toMatchObject({
+      actionType: 'START_PRINT',
+      reason: 'slot-busy',
+    });
+    expect(sim.state.slots[0]?.materialId).toBeNull();
   });
 
   it('cannot be started twice', () => {
