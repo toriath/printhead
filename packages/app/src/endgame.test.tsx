@@ -111,6 +111,18 @@ describe('the ending (spec §6 phase 6)', () => {
   });
 });
 
+describe('the HUD lets the numbers go (spec §6 phase 6)', () => {
+  it('reads ∞ once the last print has landed, and reads the ledger before', () => {
+    render(<Hud visual={ending} content={content} />);
+    expect(ending.ending.infinite).toBe(true);
+    expect(screen.getByTestId('money').textContent).toBe('∞');
+    expect(screen.getByTestId('parts').textContent).toBe('∞');
+    cleanup();
+    render(<Hud visual={endgame} content={content} />);
+    expect(screen.getByTestId('money').textContent).not.toBe('∞');
+  });
+});
+
 describe('the HUD shows the economy eating itself (spec §6 phase 5)', () => {
   it('prints the inflation index once it is running, and not before', () => {
     render(<Hud visual={endgame} content={content} />);
