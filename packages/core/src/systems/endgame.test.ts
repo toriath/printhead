@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Content } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_MINUTE, MS_PER_SECOND } from '../engine/constants.js';
 import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
@@ -6,6 +7,7 @@ import { type GameState, createInitialState } from '../state/game-state.js';
 import {
   allSlotsCommitted,
   beginFabricatorPrint,
+  committedSlots,
   buildProgress,
   currentBackdropId,
   currentLayer,
@@ -23,7 +25,13 @@ import {
   tickFabricator,
   tickFactory,
 } from './endgame.js';
-import { endingProgress, endingStage, endingTotalMs, isEndingComplete } from './ending.js';
+import {
+  endingElapsedMs,
+  endingProgress,
+  endingStage,
+  endingTotalMs,
+  isEndingComplete,
+} from './ending.js';
 import { computeModifiers, countEndgameNodes } from './upgrades.js';
 
 /**
@@ -85,6 +93,133 @@ describe('the Endgame Tree (spec §5E)', () => {
     expect(currentBackdropId(base, content)).toBe(first.id);
     const built = { ...base, upgrades: { [printed.requiresUpgradeId]: 1 } };
     expect(currentBackdropId(built, content)).toBe(printed.id);
+  });
+});
+
+/**
+ * The corners the happy path does not reach. Each of these was a surviving
+ * mutant: a boundary, a fallback or a branch that only a differently-shaped
+ * content set can take.
+ */
+describe('the endgame’s edges', () => {
+  it('falls back to the first backdrop when no node has been printed', () => {
+    // A list whose *first* entry is gated: nothing is installed, so nothing in
+    // the list wins, and the head of the list is still what gets drawn.
+    const gatedFirst = {
+      ...content,
+      endgame: {
+        ...content.endgame,
+        backdrops: [
+          { id: 'workshop', name: 'The workshop', requiresUpgradeId: 'print-a-building' },
+        ],
+      },
+    };
+    expect(currentBackdropId(base, gatedFirst)).toBe('workshop');
+  });
+
+  it('does nothing in a tick of no length', () => {
+    const state = endgameState();
+    const modifiers = computeModifiers(state, content);
+    expect(tickFactory(state, content, 0, modifiers, undefined)).toBe(state);
+    expect(tickFabricator(state, content, 0, undefined)).toBe(state);
+  });
+
+  it('announces the machines the factory printed', () => {
+    const built: string[] = [];
+    const state = endgameState({ printers: {}, slots: [testSlot({ id: 'slot-1' })] });
+    const modifiers = computeModifiers(state, content);
+    tickFactory(state, content, 10 * MS_PER_MINUTE, modifiers, (event) => {
+      if (event.type === 'PRINTER_BUILT') {
+        built.push(event.slotId);
+        // Nobody paid for it: that is the point of a factory.
+        expect(event.paid).toBe(0);
+      }
+    });
+    expect(built.length).toBeGreaterThan(0);
+  });
+
+  it('prices a section in whole units, unless content prices it in Money', () => {
+    // A deliberately fractional curve: Parts are countable and round up, Money
+    // is not and does not.
+    const fractional: Content = {
+      ...content,
+      curves: content.curves.map((curve) =>
+        curve.id === fab.sectionCostCurveId
+          ? { id: curve.id, name: curve.name, type: 'constant' as const, value: 12.5 }
+          : curve,
+      ),
+    };
+    const registry = createCurveRegistry(fractional.curves);
+    expect(nextSectionCost(endgameState(), fractional, registry)).toEqual({
+      resource: 'parts',
+      amount: 13,
+    });
+    const inMoney: Content = {
+      ...fractional,
+      endgame: {
+        ...fractional.endgame,
+        fabricator: { ...fab, sectionCostResource: 'money' as const },
+      },
+    };
+    expect(nextSectionCost(endgameState(), inMoney, registry)).toEqual({
+      resource: 'money',
+      amount: 12.5,
+    });
+  });
+
+  it('takes a section on exactly enough feedstock and exactly enough Parts', () => {
+    const cost = nextSectionCost(endgameState(), content, curves);
+    const exact = endgameState({
+      filamentGrams: { ...base.filamentGrams, composite: fab.sectionFilamentGrams },
+      resources: { ...base.resources, parts: cost.amount },
+      partsValue: cost.amount,
+    });
+    expect(sectionAvailability(exact, content, curves)).toBeNull();
+    const short = endgameState({
+      filamentGrams: { ...base.filamentGrams, composite: fab.sectionFilamentGrams },
+      resources: { ...base.resources, parts: cost.amount - 1 },
+      partsValue: cost.amount,
+    });
+    expect(sectionAvailability(short, content, curves)).toBe('insufficient-resources');
+  });
+
+  it('commits only the bays the run is actually using (spec §5B)', () => {
+    // Goliath caps the rack at one bay; the second is inert, so it is neither
+    // counted towards the commitment nor stripped by it.
+    const two = endgameState({
+      slots: [
+        testSlot({ id: 'slot-1', printerCount: fab.requiredPrinters }),
+        testSlot({ id: 'slot-2', materialId: 'pla', objectId: 'bracket', autoRestart: true }),
+      ],
+    });
+    expect(committedSlots(two, content)).toHaveLength(1);
+    const started = beginFabricatorPrint(two, content);
+    expect(started?.slots[0]?.autoRestart).toBe(false);
+    expect(started?.slots[1]?.materialId).toBe('pla');
+  });
+
+  it('is not committed by a workshop with no bays at all', () => {
+    expect(allSlotsCommitted(endgameState({ slots: [] }), content)).toBe(false);
+  });
+
+  it('reads no progress from a build of no length', () => {
+    expect(buildProgress({ remainingMs: 0, totalMs: 0 })).toBe(0);
+    expect(buildProgress(null)).toBe(0);
+  });
+
+  it('dates the finished print by the clock, in design minutes', () => {
+    const started = beginFabricatorPrint(endgameState(), content);
+    if (started === null) {
+      throw new Error('expected the print to start');
+    }
+    const ticked = { ...started, simTimeMs: 7 * MS_PER_MINUTE };
+    let announced = -1;
+    tickFabricator(ticked, content, fab.designMinutes * MS_PER_MINUTE, (event) => {
+      if (event.type === 'FABRICATOR_COMPLETED') {
+        announced = event.designMinutes;
+      }
+    });
+    expect(announced).toBe(7);
   });
 });
 
@@ -326,6 +461,27 @@ describe('the ending (spec §6 phase 6)', () => {
     expect(isEndingComplete(endgameState(), content)).toBe(false);
   });
 
+  it('has no elapsed time at all before the print lands', () => {
+    expect(endingElapsedMs(endgameState())).toBe(0);
+  });
+
+  it('runs for exactly as long as the three stages content declares', () => {
+    const { numbersDesignSeconds, museumDesignSeconds, creditsDesignSeconds } =
+      content.endgame.ending;
+    expect(endingTotalMs(content)).toBe(
+      (numbersDesignSeconds + museumDesignSeconds + creditsDesignSeconds) * MS_PER_SECOND,
+    );
+    // Half way through the whole sequence is half way through the fade.
+    expect(endingProgress(finishedAt(endingTotalMs(content) / MS_PER_SECOND / 2), content)).toBeCloseTo(
+      0.5,
+      6,
+    );
+  });
+
+  it('is still on the numbers a second in — the stages are seconds, not milliseconds', () => {
+    expect(endingStage(finishedAt(1), content)).toBe('numbers');
+  });
+
   it('walks numbers → museum → credits → complete on the clock alone', () => {
     expect(endingStage(finishedAt(0), content)).toBe('numbers');
     expect(endingStage(finishedAt(numbersDesignSeconds), content)).toBe('museum');
@@ -368,6 +524,35 @@ describe('New Game Plus (spec §18 M6)', () => {
     // The workshop remembers how to build itself — that is a fact about the
     // player, not about the run (spec §6 phase 4).
     expect(restarted.state.selfAssembling).toBe(true);
+  });
+
+  it('carries the ledgers and balances content names, and no others', () => {
+    const keepsPresses = {
+      ...content,
+      endgame: {
+        ...content.endgame,
+        newGamePlus: {
+          // A different set entirely: the presses survive, the Designs do not.
+          retainedResources: ['plates' as const, 'filament' as const],
+          retainedLedgers: ['moneyPrinters' as const],
+          modifiers: content.endgame.newGamePlus.modifiers,
+        },
+      },
+    };
+    const before = finished();
+    const restarted = startNewGamePlus(
+      { ...before, moneyPrinters: { 'bill-printer': 3 } },
+      keepsPresses,
+      [],
+    );
+    expect(restarted.state.moneyPrinters).toEqual({ 'bill-printer': 3 });
+    expect(restarted.state.designs).toEqual({});
+    expect(restarted.state.resources.plates).toBe(before.resources.plates);
+    // Filament is per material and has no single balance, so naming it in the
+    // list is a no-op rather than a crash (the rule the melt-down follows).
+    expect(restarted.state.filamentGrams).toEqual(
+      createInitialState(content, { seed: before.rng.seed }).filamentGrams,
+    );
   });
 
   it('carries only the modifiers content offers, and folds them into the run', () => {

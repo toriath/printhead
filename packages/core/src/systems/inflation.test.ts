@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { Content } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { TEST_CONTENT } from '../state/__fixtures__/sim.js';
 import { type GameState, createInitialState } from '../state/game-state.js';
-import { inflationInput, inflationMultiplier, isInflating } from './inflation.js';
+import { inflationInput, inflationMultiplier, inflationReading, isInflating } from './inflation.js';
 import { quoteFor } from './market.js';
 
 /**
@@ -49,6 +50,24 @@ describe('the inflation index', () => {
       1_000_000 * content.endgame.inflation.inputScale,
       9,
     );
+  });
+
+  /**
+   * The selector is content's choice (`endgame.inflation.metric`), so every
+   * reading it offers has to work — not just the one the shipped game uses.
+   */
+  it('can be driven by any reading the selector offers', () => {
+    const state = printed(1_000, {
+      stats: { ...base.stats, moneyPrinted: 1_000, moneyEarned: 2_000, platesEarned: 30 },
+    });
+    expect(inflationReading(state, 'moneyPrinted')).toBe(1_000);
+    expect(inflationReading(state, 'moneyEarned')).toBe(2_000);
+    expect(inflationReading(state, 'platesEarned')).toBe(30);
+    const byPlates: Content = {
+      ...content,
+      endgame: { ...content.endgame, inflation: { ...content.endgame.inflation, metric: 'platesEarned' } },
+    };
+    expect(inflationInput(state, byPlates)).toBeCloseTo(30 * content.endgame.inflation.inputScale, 9);
   });
 
   it('never runs past the ceiling content declares', () => {
