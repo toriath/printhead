@@ -1,8 +1,8 @@
 {
-  "version": 5,
+  "version": 6,
   "phaseId": "bench",
   "phaseName": "Bench",
-  "simTimeMs": 3743000,
+  "simTimeMs": 3789500,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
@@ -13,6 +13,8 @@
       "materialName": "PETG",
       "objectId": "bracket",
       "objectName": "Bracket",
+      "output": "parts",
+      "designId": null,
       "machineTier": 2,
       "printerCount": 4,
       "printerCapacity": 8,
@@ -41,7 +43,7 @@
     "name": "Second config slot",
     "available": false,
     "affordable": false,
-    "cost": 400,
+    "cost": 900,
     "costResource": "parts",
     "blockedReason": "locked"
   },
@@ -54,7 +56,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 1200,
+      "cost": 585,
       "costResource": "parts",
       "requiredForFinalPrint": false
     },
@@ -66,7 +68,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 1200,
+      "cost": 585,
       "costResource": "parts",
       "requiredForFinalPrint": true
     }
@@ -86,15 +88,18 @@
     "nextPieceName": null,
     "cooldownMs": 0,
     "ready": false,
+    "selfAssembling": false,
     "progress": 1,
     "complete": true
   },
   "ledger": {
-    "parts": 3,
+    "parts": 1,
     "money": 0,
-    "scrap": 280,
+    "scrap": 286,
+    "products": 0,
+    "plates": 0,
     "filamentGrams": {
-      "pla": 1758,
+      "pla": 1770,
       "petg": 0,
       "resin": 0,
       "metal": 0
@@ -110,16 +115,16 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 1758
+      "heldGrams": 1770
     },
     {
       "materialId": "petg",
       "materialName": "PETG",
       "tradeable": true,
       "available": true,
-      "buyPerGram": 0.05838535440814687,
-      "sellPerGram": 0.04962755124692484,
-      "priceMultiplier": 0.7298169301018359,
+      "buyPerGram": 0.05592763899005302,
+      "sellPerGram": 0.04753849314154507,
+      "priceMultiplier": 0.6990954873756627,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -128,10 +133,10 @@
       "materialName": "Resin (SLA)",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 0.4652618708382841,
-      "sellPerGram": 0.39547259021254144,
-      "priceMultiplier": 1.329319630966526,
-      "stockGrams": 2400,
+      "buyPerGram": 0.40634795642500826,
+      "sellPerGram": 0.345395762961257,
+      "priceMultiplier": 1.1609941612143093,
+      "stockGrams": 6000,
       "heldGrams": 0
     },
     {
@@ -139,9 +144,9 @@
       "materialName": "Sintered metal",
       "tradeable": true,
       "available": false,
-      "buyPerGram": 1.6627444162422313,
-      "sellPerGram": 1.4133327538058966,
-      "priceMultiplier": 1.1876745830301654,
+      "buyPerGram": 1.71158042146658,
+      "sellPerGram": 1.454843358246593,
+      "priceMultiplier": 1.2225574439047,
       "stockGrams": 800,
       "heldGrams": 0
     }
@@ -155,7 +160,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 169,
+      "cost": 158,
       "costResource": "parts"
     },
     {
@@ -166,7 +171,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 169,
+      "cost": 158,
       "costResource": "parts"
     },
     {
@@ -177,7 +182,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": false,
-      "cost": 106,
+      "cost": 99,
       "costResource": "parts"
     },
     {
@@ -188,7 +193,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 106,
+      "cost": 99,
       "costResource": "parts"
     },
     {
@@ -199,7 +204,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 900,
+      "cost": 500,
       "costResource": "parts"
     },
     {
@@ -210,7 +215,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 900,
+      "cost": 500,
       "costResource": "parts"
     },
     {
@@ -221,7 +226,29 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 105.172,
+      "cost": 98.7249,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "design-desk",
+      "name": "Design desk",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 2500,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "polish-station",
+      "name": "Polish station",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 500,
       "costResource": "money"
     }
   ],
@@ -236,7 +263,7 @@
       "threshold": 40,
       "available": false,
       "affordable": false,
-      "cost": 696,
+      "cost": 819,
       "costResource": "parts"
     },
     {
@@ -249,7 +276,7 @@
       "threshold": 400,
       "available": true,
       "affordable": false,
-      "cost": 332,
+      "cost": 390,
       "costResource": "parts"
     },
     {
@@ -262,7 +289,7 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 331.303,
+      "cost": 390,
       "costResource": "money"
     },
     {
@@ -275,14 +302,92 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 332,
+      "cost": 390,
       "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": true,
-    "scrapGrams": 280,
-    "yieldGrams": 104.99999999999973,
+    "scrapGrams": 286,
+    "yieldGrams": 107.24999999999973,
     "yieldMaterialId": "petg"
-  }
+  },
+  "studio": {
+    "slots": 1,
+    "freeSlots": 1,
+    "draftingDesignId": null,
+    "draftingName": null,
+    "draftProgress": 0,
+    "designs": [
+      {
+        "designId": "phone-stand",
+        "name": "Phone stand",
+        "materialId": "resin",
+        "level": 0,
+        "maxLevel": 20,
+        "owned": false,
+        "levelProgress": 0,
+        "productValue": 40,
+        "capstone": false,
+        "available": false,
+        "affordable": false,
+        "cost": 2200,
+        "costResource": "money",
+        "blockedReason": "locked"
+      },
+      {
+        "designId": "lamp-shade",
+        "name": "Lamp shade",
+        "materialId": "resin",
+        "level": 0,
+        "maxLevel": 20,
+        "owned": false,
+        "levelProgress": 0,
+        "productValue": 90,
+        "capstone": false,
+        "available": false,
+        "affordable": false,
+        "cost": 2200,
+        "costResource": "money",
+        "blockedReason": "locked"
+      },
+      {
+        "designId": "money-plate",
+        "name": "Money plate",
+        "materialId": "resin",
+        "level": 0,
+        "maxLevel": 20,
+        "owned": false,
+        "levelProgress": 0,
+        "productValue": 500,
+        "capstone": true,
+        "available": false,
+        "affordable": false,
+        "cost": 2200,
+        "costResource": "money",
+        "blockedReason": "locked"
+      }
+    ]
+  },
+  "prestige": {
+    "available": false,
+    "platesOnOffer": 0,
+    "platesHeld": 0,
+    "runsCompleted": 0,
+    "moneyPerDesignSecond": 0,
+    "blockedReason": "locked"
+  },
+  "moneyPrinters": [
+    {
+      "moneyPrinterId": "bill-printer",
+      "name": "Bill printer",
+      "tier": 1,
+      "level": 0,
+      "maxLevel": 5,
+      "available": false,
+      "affordable": false,
+      "cost": 2,
+      "costResource": "plates"
+    }
+  ]
 }

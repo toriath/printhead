@@ -3,6 +3,7 @@ import type {
   ContentValidation,
   GameState,
   RawContent,
+  ScalarResourceKind,
   VisualState,
 } from '@printhead/core';
 
@@ -18,6 +19,17 @@ import type {
 export interface ContentWriteResult {
   readonly ok: boolean;
   readonly message: string;
+}
+
+/**
+ * One entry of the action-log tail (spec §14). The action itself plus when it
+ * happened, in design time — the pair a `(seed, actionLog)` bug report needs
+ * (spec §13).
+ */
+export interface LoggedAction {
+  readonly type: string;
+  readonly simTimeMs: number;
+  readonly detail: string;
 }
 
 export interface EditorHost {
@@ -48,4 +60,12 @@ export interface EditorHost {
   /** The current save, as JSON, for export/import. */
   exportSave(): string;
   importSave(json: string): ContentWriteResult;
+
+  // --- state tools (spec §14) -----------------------------------------------
+  /** The most recent player actions, oldest first. Ticks are not actions here. */
+  getActionLog(): readonly LoggedAction[];
+  /** Re-seed the deterministic stream, and rewind its position to the start. */
+  setSeed(seed: number): void;
+  /** Hand the workshop a resource outright — the cheat, named as one. */
+  grantResource(kind: ScalarResourceKind, amount: number): void;
 }

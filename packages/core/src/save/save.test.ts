@@ -6,6 +6,7 @@ import fixtureV1 from './__fixtures__/save-v1.json' with { type: 'json' };
 import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
 import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
 import fixtureV4 from './__fixtures__/save-v4.json' with { type: 'json' };
+import fixtureV5 from './__fixtures__/save-v5.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -51,11 +52,12 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
     expect(fixtureV4.version).toBe(4);
+    expect(fixtureV5.version).toBe(5);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -104,14 +106,40 @@ describe('save fixture corpus', () => {
     expect(loaded.slots[0]?.queueBatches).toBe(0);
   });
 
-  it('loads the released v4 fixture untouched', () => {
+  it('loads the released v4 fixture by migrating it forward', () => {
     const loaded = fromSaveFile(fixtureV4);
-    expect(loaded).toEqual(fixtureV4.state);
-    // The M4 shape the fixture exists to pin: a rack, a fleet spread across it,
-    // a print rota and a fork the run has already committed to.
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    // The M4 shape the fixture exists to pin survives verbatim: a rack, a fleet
+    // spread across it, a print rota and a committed fork.
     expect(loaded.slots.length).toBeGreaterThan(1);
-    expect(loaded.forkId).not.toBeNull();
+    expect(loaded.forkId).toBe(fixtureV4.state.forkId);
     expect(loaded.slots.some((slot) => slot.queue.length > 0)).toBe(true);
+    // ...and everything M5 added starts empty: that workshop never drafted a
+    // Design, never melted itself down, and would still be clicked out by hand.
+    expect(loaded.designs).toEqual({});
+    expect(loaded.studio).toBeNull();
+    expect(loaded.moneyPrinters).toEqual({});
+    expect(loaded.selfAssembling).toBe(false);
+    expect(loaded.productsValue).toBe(0);
+    expect(loaded.slots.every((slot) => slot.designId === null)).toBe(true);
+    expect(loaded.stats.prestigeCount).toBe(0);
+    expect(loaded.stats.moneyPrinted).toBe(0);
+  });
+
+  it('loads the released v5 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV5);
+    expect(loaded).toEqual(fixtureV5.state);
+    // The M5 shape the fixture exists to pin: Designs owned and levelled, a bay
+    // making Products, a commission on the bench, Plates banked, a press
+    // installed, and an intro that now rebuilds itself (spec §5D, §5E).
+    expect(Object.keys(loaded.designs).length).toBeGreaterThan(0);
+    expect(loaded.slots.some((slot) => slot.designId !== null)).toBe(true);
+    expect(loaded.studio).not.toBeNull();
+    expect(loaded.resources.plates).toBeGreaterThan(0);
+    expect(loaded.productsValue).toBeGreaterThan(0);
+    expect(Object.keys(loaded.moneyPrinters).length).toBeGreaterThan(0);
+    expect(loaded.selfAssembling).toBe(true);
+    expect(loaded.stats.prestigeCount).toBeGreaterThan(0);
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

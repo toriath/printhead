@@ -3,9 +3,11 @@ import assembling from './__fixtures__/assembling.json' with { type: 'json' };
 import economy from './__fixtures__/economy.json' with { type: 'json' };
 import fresh from './__fixtures__/fresh.json' with { type: 'json' };
 import goliath from './__fixtures__/goliath.json' with { type: 'json' };
+import prestige from './__fixtures__/prestige.json' with { type: 'json' };
 import printing from './__fixtures__/printing.json' with { type: 'json' };
 import rack from './__fixtures__/rack.json' with { type: 'json' };
 import showcase from './__fixtures__/showcase.json' with { type: 'json' };
+import studio from './__fixtures__/studio.json' with { type: 'json' };
 import type { VisualState } from './schema.js';
 import { validateVisualState } from './schema.js';
 
@@ -56,6 +58,18 @@ const RAW_FIXTURES: readonly { name: string; describes: string; raw: unknown }[]
     name: 'goliath',
     describes: 'the Farm/Goliath fork taken the other way: one giant printer, no rack',
     raw: goliath,
+  },
+  {
+    name: 'studio',
+    describes:
+      'the M5 studio: Designs owned and levelling, a bay making Products, the melt-down on offer',
+    raw: studio,
+  },
+  {
+    name: 'prestige',
+    describes:
+      'after the melt-down: Plates banked, a press installed, the Designs kept, the intro rebuilding itself',
+    raw: prestige,
   },
   {
     name: 'showcase',

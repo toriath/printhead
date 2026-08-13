@@ -17,28 +17,28 @@
     "id": "upgrade-cost-sla",
     "name": "SLA / sintering head cost",
     "type": "exponential",
-    "base": 900,
+    "base": 500,
     "growth": 2.4
   },
   {
     "id": "automation-cost",
     "name": "Automation upgrade cost",
     "type": "exponential",
-    "base": 381.818,
+    "base": 390,
     "growth": 2.1
   },
   {
     "id": "slot-cost",
     "name": "Config slot cost",
     "type": "exponential",
-    "base": 400,
-    "growth": 6
+    "base": 900,
+    "growth": 2.5
   },
   {
     "id": "fork-cost",
     "name": "Farm / Goliath commitment cost",
     "type": "constant",
-    "value": 1200
+    "value": 585
   },
   {
     "id": "design-level-value",
@@ -51,7 +51,7 @@
     "id": "prestige-plates",
     "name": "Plates granted at melt-down",
     "type": "power",
-    "base": 0.4,
+    "base": 0.5,
     "exponent": 0.5
   },
   {
@@ -59,12 +59,33 @@
     "name": "Money printed per design-second per plate",
     "type": "linear",
     "base": 0,
-    "step": 2.5
+    "step": 4
   },
   {
     "id": "no-op",
     "name": "Identity multiplier",
     "type": "constant",
     "value": 1
+  },
+  {
+    "id": "design-cost",
+    "name": "Design draft cost",
+    "type": "exponential",
+    "base": 2200,
+    "growth": 8
+  },
+  {
+    "id": "money-printer-cost",
+    "name": "Money printer cost",
+    "type": "exponential",
+    "base": 2,
+    "growth": 3.75
+  },
+  {
+    "id": "design-slot-cost",
+    "name": "Design desk cost",
+    "type": "exponential",
+    "base": 2500,
+    "growth": 4
   }
 ]

@@ -1,9 +1,10 @@
 import type { ContentFileName, RawContent } from '@printhead/core';
 import { CONTENT_FILE_NAMES } from '@printhead/core';
-import { type ReactElement, useCallback, useEffect, useState } from 'react';
+import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import type { EditorHost } from './host.js';
 import { type EditableField, type PathSegment, editableGroups, setAtPath } from './inspector.js';
 import { describeContent } from './schema-form.js';
+import { BalanceView, StateTools } from './state-tools.js';
 import { EDITOR_CSS } from './styles.js';
 
 /**
@@ -31,6 +32,12 @@ export interface EditorPanelProps {
 /** Warp factors offered on top of pace (spec §14). */
 const WARPS = [1, 10, 100] as const;
 
+/** How many samples the balance view's sparklines keep. */
+const SPARK_SAMPLES = 80;
+
+/** Balances worth plotting. Everything else is a count, not a curve. */
+const SPARK_SERIES = ['money', 'parts', 'products', 'plates'] as const;
+
 function FieldInput({
   field,
   onChange,
@@ -39,6 +46,15 @@ function FieldInput({
   onChange: (path: readonly PathSegment[], value: number | string | boolean) => void;
 }): ReactElement {
   const testId = `field-${field.id}`;
+  if (field.kind === 'literal') {
+    // A union's discriminator: shown so the form says which variant this is,
+    // but not a widget — see `EditableField`.
+    return (
+      <span data-testid={testId} className="ph-editor__literal">
+        {String(field.value)}
+      </span>
+    );
+  }
   if (field.kind === 'boolean') {
     return (
       <input
@@ -102,6 +118,14 @@ export function EditorPanel({ host, initiallyOpen = false }: EditorPanelProps): 
   const [raw, setRaw] = useState<RawContent>(() => host.getRawContent());
   const [status, setStatus] = useState('');
   const [, forceRender] = useState(0);
+  /**
+   * The sparkline ring buffers. A ref rather than state on purpose: the panel
+   * already re-renders on every store notification, and putting the samples in
+   * state would make each sample schedule a second render of its own.
+   */
+  const series = useRef<Record<string, number[]>>(
+    Object.fromEntries(SPARK_SERIES.map((name) => [name, [] as number[]])),
+  );
 
   /**
    * The panel shows live state (phase, clock, warp), so it follows the store —
@@ -109,7 +133,19 @@ export function EditorPanel({ host, initiallyOpen = false }: EditorPanelProps): 
    * one action that stops the store from ever notifying it again.
    */
   const bump = useCallback(() => forceRender((tick) => tick + 1), []);
-  useEffect(() => host.subscribe(bump), [host, bump]);
+  const sample = useCallback(() => {
+    const ledger = host.getState().resources;
+    for (const name of SPARK_SERIES) {
+      const points = series.current[name] ?? [];
+      points.push(ledger[name]);
+      if (points.length > SPARK_SAMPLES) {
+        points.shift();
+      }
+      series.current[name] = points;
+    }
+    bump();
+  }, [bump, host]);
+  useEffect(() => host.subscribe(sample), [host, sample]);
 
   const described = describeContent();
   const groups = editableGroups(described[file], raw[file]);
@@ -232,7 +268,7 @@ export function EditorPanel({ host, initiallyOpen = false }: EditorPanelProps): 
         <output data-testid="editor-status">{status}</output>
       </section>
 
-      <div className="ph-editor__scroll">
+      <div className="ph-editor__scroll" data-testid="editor-groups">
         {groups.map((group) => (
           <details key={group.id} open={groups.length === 1}>
             <summary>{group.label}</summary>
@@ -250,11 +286,14 @@ export function EditorPanel({ host, initiallyOpen = false }: EditorPanelProps): 
         ))}
       </div>
 
-      <section className="ph-editor__section" aria-label="state tools">
+      <section className="ph-editor__section" aria-label="ledger summary">
         <span data-testid="editor-state">
           {`parts ${state.resources.parts.toFixed(0)} · money ${state.resources.money.toFixed(0)} · scrap ${state.resources.scrap.toFixed(0)}`}
         </span>
       </section>
+
+      <BalanceView host={host} series={series.current} />
+      <StateTools host={host} onChanged={bump} />
     </aside>
   );
 }

@@ -56,7 +56,7 @@ describe('beginRun', () => {
     expect(events[0]).toMatchObject({
       type: 'PRINT_STARTED',
       slotId: 'slot-1',
-      objectId,
+      recipeId: objectId,
       materialId,
       batch: 1,
       durationMs: RUN_MS,
@@ -192,7 +192,8 @@ describe('tickSlots', () => {
       type: 'PRINT_COMPLETED',
       slotId: 'slot-1',
       batch: 1,
-      parts: object?.partsYield,
+      produced: object?.partsYield,
+      pool: 'parts',
     });
   });
 

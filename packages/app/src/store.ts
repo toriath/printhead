@@ -40,6 +40,13 @@ export interface GameStore {
   subscribe(listener: () => void): () => void;
   /** Domain events (Observer, spec §15) — for sound, flourishes, achievements. */
   onEvent(listener: (event: DomainEvent) => void): () => void;
+  /**
+   * Every dispatched `Action`, as it happens. Ticks do not appear: they arrive
+   * through `advanceWallClock`, so this is exactly the player's clicks — which
+   * is what the editor's action-log tail (spec §14) is for, and what a
+   * `(seed, actionLog)` bug report (spec §13) would need.
+   */
+  onAction(listener: (action: Action) => void): () => void;
 }
 
 export interface GameStoreOptions {
@@ -61,6 +68,7 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
   let visual = toVisualState(state, content);
   let carrySimMs = 0;
   const listeners = new Set<() => void>();
+  const actionListeners = new Set<(action: Action) => void>();
 
   contentSource.subscribe((next) => {
     content = next;
@@ -93,6 +101,9 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
     getContent: () => content,
     dispatch(action) {
       setState(reduce(state, action, context()));
+      for (const listener of actionListeners) {
+        listener(action);
+      }
       notify();
     },
     replaceState(next) {
@@ -146,6 +157,12 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
     },
     onEvent(listener) {
       return bus.subscribe(listener);
+    },
+    onAction(listener) {
+      actionListeners.add(listener);
+      return () => {
+        actionListeners.delete(listener);
+      };
     },
   };
 }

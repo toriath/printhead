@@ -40,9 +40,15 @@ describe('editableFields', () => {
     expect(supply?.options).toContain('market');
   });
 
-  it('never offers a literal — a discriminator is the shape, not a setting', () => {
+  it('shows a discriminator but never lets it be edited', () => {
     const fields = editableFields(described.curves, RAW_CONTENT.curves);
-    expect(fields.some((field) => field.label === 'type')).toBe(false);
+    const discriminators = fields.filter((field) => field.label === 'type');
+    // Visible — the form has to say whether a curve is exponential or a power
+    // law — but read-only: changing it would mean a different variant's whole
+    // shape, which is a new def rather than an edit to this one.
+    expect(discriminators.length).toBeGreaterThan(0);
+    expect(discriminators.every((field) => field.kind === 'literal')).toBe(true);
+    expect(discriminators.every((field) => field.readOnly === true)).toBe(true);
     // ...but the variant's own numbers are editable.
     expect(fields.some((field) => field.label === 'growth')).toBe(true);
   });

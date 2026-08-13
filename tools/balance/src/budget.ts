@@ -107,6 +107,11 @@ export function gatedPhaseIds(content: Content): readonly string[] {
     .map((phase) => phase.id);
 }
 
+/** The complement: phases still waiting for a later milestone to fill them. */
+export function placeholderPhaseIds(content: Content): readonly string[] {
+  return content.pacing.phases.filter(isPlaceholderPhase).map((phase) => phase.id);
+}
+
 export const designMinutesOf = (simTimeMs: number): number => simTimeMs / MS_PER_MINUTE;
 
 /** What the budget means for a real player at the configured `targetHours`. */

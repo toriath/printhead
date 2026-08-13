@@ -104,6 +104,36 @@ export interface SetSlotQueueAction {
   readonly entries: readonly SlotQueueEntry[];
 }
 
+/** Draft a Design in the studio (spec §5D). Costs Money and the bench's time. */
+export interface CreateDesignAction {
+  readonly type: 'CREATE_DESIGN';
+  readonly designId: string;
+}
+
+/** Point a bay at one of your Designs (spec §5D): it starts making Products. */
+export interface SetSlotDesignAction {
+  readonly type: 'SET_SLOT_DESIGN';
+  readonly slotId: string;
+  readonly designId: string;
+}
+
+export interface SellProductsAction {
+  readonly type: 'SELL_PRODUCTS';
+  /** Clamped to the products in stock; `null` sells everything. */
+  readonly count: number | null;
+}
+
+/** Melt the workshop down for Plates (spec §5D). The run ends; Designs stay. */
+export interface PrestigeAction {
+  readonly type: 'PRESTIGE';
+}
+
+/** Install or upgrade a money printer (spec §5E), paid for in Plates. */
+export interface BuyMoneyPrinterAction {
+  readonly type: 'BUY_MONEY_PRINTER';
+  readonly moneyPrinterId: string;
+}
+
 /** Commit to Farm or Goliath for this run (spec §5B). One choice, forever. */
 export interface ChooseForkAction {
   readonly type: 'CHOOSE_FORK';
@@ -127,7 +157,12 @@ export type Action =
   | BuySlotAction
   | AssignPrinterAction
   | SetSlotQueueAction
-  | ChooseForkAction;
+  | ChooseForkAction
+  | CreateDesignAction
+  | SetSlotDesignAction
+  | SellProductsAction
+  | PrestigeAction
+  | BuyMoneyPrinterAction;
 
 export type ActionType = Action['type'];
 
@@ -195,3 +230,21 @@ export const setSlotQueue = (
   entries: readonly SlotQueueEntry[],
 ): SetSlotQueueAction => ({ type: 'SET_SLOT_QUEUE', slotId, entries });
 export const chooseFork = (forkId: string): ChooseForkAction => ({ type: 'CHOOSE_FORK', forkId });
+export const createDesign = (designId: string): CreateDesignAction => ({
+  type: 'CREATE_DESIGN',
+  designId,
+});
+export const setSlotDesign = (slotId: string, designId: string): SetSlotDesignAction => ({
+  type: 'SET_SLOT_DESIGN',
+  slotId,
+  designId,
+});
+export const sellProducts = (count: number | null = null): SellProductsAction => ({
+  type: 'SELL_PRODUCTS',
+  count,
+});
+export const prestige = (): PrestigeAction => ({ type: 'PRESTIGE' });
+export const buyMoneyPrinter = (moneyPrinterId: string): BuyMoneyPrinterAction => ({
+  type: 'BUY_MONEY_PRINTER',
+  moneyPrinterId,
+});

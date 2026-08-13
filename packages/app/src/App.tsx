@@ -5,6 +5,7 @@ import { Controls } from './controls.js';
 import { FleetPanel } from './fleet.js';
 import { useVisualState } from './hooks.js';
 import { Hud } from './hud.js';
+import { PrestigePanel, StudioPanel } from './meta.js';
 import { OfflineSummaryScreen } from './offline-summary.js';
 import { AutomationPanel, MarketPanel, RecyclerPanel, UpgradePanel } from './panels.js';
 import type { GameStore } from './store.js';
@@ -69,6 +70,10 @@ export function App({
         {/* The fleet allocator appears the moment the rack becomes a decision
             (spec §4): a second bay on sale, or more than one already owned. */}
         <FleetPanel store={store} visual={visual} />
+        {/* The meta layer (spec §5D/§5E): each hides itself until the run can
+            actually reach it. */}
+        <StudioPanel store={store} visual={visual} />
+        <PrestigePanel store={store} visual={visual} />
         <UpgradePanel store={store} visual={visual} />
         <MarketPanel store={store} visual={visual} />
         <RecyclerPanel store={store} visual={visual} />

@@ -2,6 +2,8 @@ import type { Content, Metric, Requirement } from '../content/schema.js';
 import { MS_PER_MINUTE } from '../engine/constants.js';
 import type { GameState } from '../state/game-state.js';
 import { countAutomations } from './automation.js';
+import { countDesignLevels, countDesigns, hasCapstoneDesign } from './designs.js';
+import { countMoneyPrinters } from './prestige.js';
 import { countUpgrades } from './upgrades.js';
 
 /**
@@ -43,6 +45,8 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.resources.money;
     case 'plates':
       return state.resources.plates;
+    case 'products':
+      return state.resources.products;
     case 'printers':
       return countPrinters(state);
     case 'slots':
@@ -71,6 +75,22 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return phaseDesignMinutes(state);
     case 'totalDesignMinutes':
       return totalDesignMinutes(state);
+    case 'designs':
+      return countDesigns(state);
+    case 'designLevels':
+      return countDesignLevels(state);
+    case 'capstoneDesigned':
+      return hasCapstoneDesign(state, content) ? ALL : NONE;
+    case 'productsProduced':
+      return state.stats.productsProduced;
+    case 'productsSold':
+      return state.stats.productsSold;
+    case 'prestigeCount':
+      return state.stats.prestigeCount;
+    case 'moneyPrinted':
+      return state.stats.moneyPrinted;
+    case 'moneyPrintersInstalled':
+      return countMoneyPrinters(state);
   }
 }
 

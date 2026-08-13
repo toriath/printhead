@@ -5,6 +5,7 @@ import {
   type ChooseForkAction,
   type Content,
   type CurveRegistry,
+  type DesignDef,
   type ForkDef,
   type GameState,
   type MaterialDef,
@@ -17,11 +18,15 @@ import {
   automationAvailability,
   buyAutomation,
   buyFilament,
+  buyMoneyPrinter,
   buyPrinter,
   buySlot,
   buyUpgrade,
   chooseFork,
+  computeModifiers,
   createCurveRegistry,
+  createDesign,
+  designAvailability,
   effectiveSlotCapacity,
   forkAvailability,
   forkCost,
@@ -31,19 +36,28 @@ import {
   isPhaseReached,
   isPieceReady,
   maxBuyableGrams,
+  moneyPrinterAvailability,
   nextAutomationCost,
+  nextDesignCost,
+  nextMoneyPrinterCost,
   nextPiece,
   nextPrinterCost,
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  platesFor,
+  prestige,
+  prestigeAvailability,
   printersPerSlot,
+  productValueOf,
   quoteFor,
   recycleScrap,
   resolveSlotConfig,
   sellParts,
+  sellProducts,
   setAutomation,
   setSlotConfig,
+  setSlotDesign,
   setSlotQueue,
   slotUnlockAvailability,
   slotWithRoom,
@@ -156,6 +170,46 @@ function cheapestMaterial(state: GameState, content: Content): MaterialDef | und
   );
 }
 
+const SECONDS_PER_MINUTE = 60;
+
+/**
+ * Grams per design-minute the whole fleet would eat if it ran flat out on this
+ * recipe. Machine speed is left out on purpose: it scales every candidate
+ * equally, so it cannot change which one wins.
+ */
+function appetiteGramsPerMinute(
+  state: GameState,
+  material: MaterialDef,
+  object: ObjectDef,
+): number {
+  let printers = 0;
+  for (const slot of state.slots) {
+    printers += slot.printerCount;
+  }
+  return (
+    (printers * object.filamentGrams * material.printSpeedMultiplier * SECONDS_PER_MINUTE) /
+    object.printDesignSeconds
+  );
+}
+
+/**
+ * How much of that appetite the shelf can actually feed.
+ *
+ * A market material restocks at a fixed rate (spec §7.2), and a rack big enough
+ * to outpace it spends most of its time idle however good the margin looks. The
+ * balanced bot learned this the hard way: it chased PETG's margin with
+ * twenty-four machines into a shelf that refills at a fifth of what they eat,
+ * and sat in the studio for three hundred design-minutes producing almost
+ * nothing. An infinite material (spec §3: PLA) has no shelf and no limit.
+ */
+function supplyFraction(content: Content, material: MaterialDef, appetite: number): number {
+  const listing = content.market.listings.find((entry) => entry.materialId === material.id);
+  if (listing === undefined || appetite <= 0) {
+    return 1;
+  }
+  return Math.min(1, listing.restockGramsPerDesignMinute / appetite);
+}
+
 /** Money value of one gram of filament once it has been through the printer. */
 function marginOf(
   state: GameState,
@@ -167,9 +221,11 @@ function marginOf(
   if (quote === null || quote.buyPerGram <= 0) {
     return 0;
   }
-  return (
+  const perGram =
     (object.partsYield * object.basePartValue * material.valueMultiplier) /
-    (object.filamentGrams * quote.buyPerGram)
+    (object.filamentGrams * quote.buyPerGram);
+  return (
+    perGram * supplyFraction(content, material, appetiteGramsPerMinute(state, material, object))
   );
 }
 
@@ -290,7 +346,7 @@ function restockMoves(state: GameState, content: Content, slot: SlotState): read
   if (quote === null || quote.buyPerGram <= 0) {
     return [];
   }
-  const perPrint = config.object.filamentGrams;
+  const perPrint = config.filamentGrams;
   const printers = Math.max(slot.printerCount, 1);
   const stock = state.filamentGrams[material.id] ?? 0;
   if (affordableBatch(config, printers, stock) >= printers) {
@@ -411,6 +467,94 @@ function retuneAutoSell(
   return moves;
 }
 
+/**
+ * Keep the auto-buyer's target stock in step with the rack.
+ *
+ * The default is written for one printer; a bay of eight eats more filament in
+ * a single batch than the shipped threshold tops it up to, so a workshop that
+ * never re-tunes it starves the moment it grows. That is a real setting a real
+ * player drags upwards, and leaving the bot on the default made the studio look
+ * like a content problem when it was a fleet-scaling one.
+ */
+function retuneAutoBuy(state: GameState, content: Content): readonly Action[] {
+  if (!phaseAllows(state, content, 'SET_AUTOMATION')) {
+    return [];
+  }
+  const target = batchCostOf(state, content).grams * RESTOCK_BATCHES;
+  if (target <= 0) {
+    return [];
+  }
+  const moves: Action[] = [];
+  for (const def of content.automation) {
+    if (def.behavior !== 'buy-filament') {
+      continue;
+    }
+    const owned = state.automation[def.id];
+    if (owned === undefined || owned.level <= 0) {
+      continue;
+    }
+    if (Math.abs(owned.threshold - target) > target * THRESHOLD_DRIFT) {
+      moves.push(setAutomation(def.id, { threshold: target }));
+    }
+  }
+  return moves;
+}
+
+/**
+ * Turn Parts into Money when Money is what the next purchase wants.
+ *
+ * Parts are hoarded for capacity, which is right until the Design Studio opens
+ * and the only thing worth buying is priced in Money (spec §2's flow). Without
+ * this the bot sits on a full rack and a full parts bin, one commission short
+ * of the rest of the game.
+ *
+ * It sells **exactly** what the commission costs and not a Part more. The
+ * obvious alternative — sell whatever is surplus to the capacity fund — starves
+ * on the greedy policy, whose next printer costs tens of thousands of Parts, so
+ * every Part is always "spoken for" and the studio never opens. A commission is
+ * a bounded, one-off price; paying it can set the capacity fund back by that
+ * much and no further.
+ */
+function fundMoneyGoal(state: GameState, content: Content, goal: number): readonly Action[] {
+  if (goal <= state.resources.money || !phaseAllows(state, content, 'SELL_PARTS')) {
+    return [];
+  }
+  const unitValue = unitPartValue(state);
+  if (unitValue <= 0 || state.resources.parts <= 0) {
+    return [];
+  }
+  const needed = Math.min(
+    Math.ceil((goal - state.resources.money) / unitValue),
+    state.resources.parts,
+  );
+  return needed > 0 ? [sellParts(needed)] : [];
+}
+
+/** The cheapest Money-priced commission the studio would accept right now. */
+function studioMoneyGoal(state: GameState, content: Content, curves: CurveRegistry): number {
+  if (!phaseAllows(state, content, 'CREATE_DESIGN') || state.studio !== null) {
+    return 0;
+  }
+  const modifiers = computeModifiers(state, content);
+  let cheapest = 0;
+  for (const def of content.designs) {
+    const blocked = designAvailability(state, content, modifiers, def.id);
+    // `slot-full` means every design slot is taken; a desk would fix that, and
+    // a desk is priced in Money too, so the goal is still worth funding.
+    if (blocked !== null && blocked !== 'slot-full') {
+      continue;
+    }
+    const cost = nextDesignCost(state, content, curves, def.id);
+    if (cost === null || cost.resource !== 'money') {
+      continue;
+    }
+    if (cheapest === 0 || cost.amount < cheapest) {
+      cheapest = cost.amount;
+    }
+  }
+  return cheapest;
+}
+
 /** Feed the recycler whatever the failed prints left behind (spec §2). */
 function recycleMoves(state: GameState, content: Content): readonly Action[] {
   if (!phaseAllows(state, content, 'RECYCLE_SCRAP') || state.resources.scrap <= 0) {
@@ -476,7 +620,7 @@ function batchCostOf(
     if (config === null) {
       continue;
     }
-    const slotGrams = config.object.filamentGrams * Math.max(slot.printerCount, 1);
+    const slotGrams = config.filamentGrams * Math.max(slot.printerCount, 1);
     const quote = quoteFor(state, content, config.material.id);
     grams += slotGrams;
     money += slotGrams * (quote?.buyPerGram ?? 0);
@@ -505,7 +649,9 @@ function staysSolvent(
     return true;
   }
   const partsLeft = Math.max(state.resources.parts - partsSpent, 0);
-  const partValue = config.object.basePartValue * config.material.valueMultiplier;
+  const partValue =
+    (config.object?.basePartValue ?? config.design?.baseProductValue ?? 0) *
+    config.material.valueMultiplier;
   const capital = state.resources.money + partsLeft * partValue;
   return capital >= batch.money * (reserveBatches + 1);
 }
@@ -667,6 +813,170 @@ function queueMoves(
 /** Batches a rota entry prints before the bay rotates on. */
 const QUEUE_BATCHES_PER_ENTRY = 12;
 
+// --- the meta layer (spec §5D, §5E) ------------------------------------------
+
+/**
+ * A melt-down is only worth the rebuild if it pays for something. Below this
+ * many Plates the bot keeps trading; the presses cost Plates, so a one-Plate
+ * run would reset the workshop and buy nothing with the proceeds.
+ */
+const PRESTIGE_MIN_AWARD = 2;
+
+/**
+ * How much a melt-down must add to the Plate pile, as a fraction of what is
+ * already on it.
+ *
+ * This is the whole prestige decision, and getting it wrong is the classic
+ * idle-game failure in both directions. The first draft melted down the moment
+ * the award cleared the content minimum, and the bot reset ten times in one
+ * phase for one Plate a piece — the rebuild costs more than the reward, so the
+ * run went backwards. A player waits until the next melt-down is *worth*
+ * something relative to what they already have; with a square-root plate curve
+ * that means each run has to be roughly the square of the last, which is
+ * exactly the widening prestige spiral spec §6's phases 4–5 describe.
+ */
+const PRESTIGE_GROWTH = 1;
+
+/** Bays the player keeps on Products once the studio opens (spec §5D). */
+const DESIGN_BAYS = 1;
+
+/**
+ * The owned Design worth the most per Product at its current level, skipping
+ * any whose material the machine tree has closed again — which a melt-down
+ * does, since it takes the SLA unit with everything else.
+ */
+function bestOwnedDesign(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): DesignDef | undefined {
+  const modifiers = computeModifiers(state, content);
+  return content.designs
+    .filter(
+      (def) =>
+        state.designs[def.id] !== undefined &&
+        isMaterialAvailable(state, content, def.requiredMaterialId),
+    )
+    .reduce<DesignDef | undefined>((best, def) => {
+      if (best === undefined) {
+        return def;
+      }
+      const level = state.designs[def.id]?.level ?? 1;
+      const bestLevel = state.designs[best.id]?.level ?? 1;
+      return productValueOf(def, curves, level, modifiers) >
+        productValueOf(best, curves, bestLevel, modifiers)
+        ? def
+        : best;
+    }, undefined);
+}
+
+/**
+ * Put a commission on the bench (spec §5D). The capstone comes first: it is the
+ * best Product *and* the thing prestige waits on, so a player who wants to see
+ * the rest of the game drafts it before anything decorative.
+ */
+function draftMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
+  if (!phaseAllows(state, content, 'CREATE_DESIGN') || state.studio !== null) {
+    return null;
+  }
+  const modifiers = computeModifiers(state, content);
+  const candidates = content.designs.filter(
+    (def) =>
+      designAvailability(state, content, modifiers, def.id) === null &&
+      (nextDesignCost(state, content, curves, def.id)?.amount ?? Number.POSITIVE_INFINITY) <=
+        state.resources.money,
+  );
+  const capstone = candidates.find((def) => def.id === content.prestige.requiredDesignId);
+  const chosen =
+    capstone ??
+    candidates.reduce<DesignDef | undefined>(
+      (best, def) =>
+        best === undefined ||
+        productValueOf(def, curves, 1, modifiers) > productValueOf(best, curves, 1, modifiers)
+          ? def
+          : best,
+      undefined,
+    );
+  return chosen === undefined ? null : createDesign(chosen.id);
+}
+
+/** Point a bay at the best Design owned, once there is one worth printing. */
+function designBayMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
+  if (!phaseAllows(state, content, 'SET_SLOT_DESIGN')) {
+    return null;
+  }
+  const design = bestOwnedDesign(state, content, curves);
+  if (design === undefined) {
+    return null;
+  }
+  const bays = activeSlots(state, content);
+  const onDesign = bays.filter((slot) => slot.designId !== null);
+  if (onDesign.length >= Math.min(DESIGN_BAYS, Math.max(bays.length - 1, 1))) {
+    // Already committed as many bays as the policy allows — but keep the one it
+    // has pointed at the best design it now owns.
+    const stale = onDesign.find((slot) => slot.designId !== design.id);
+    return stale === undefined || stale.run !== null || stale.changeoverMs > 0
+      ? null
+      : setSlotDesign(stale.id, design.id);
+  }
+  // The last bay is the studio's: taking the first would stop the Parts economy
+  // that pays for everything else.
+  const target = [...bays]
+    .reverse()
+    .find((slot) => slot.printerCount > 0 && slot.designId === null);
+  if (target === undefined || target.changeoverMs > 0) {
+    return null;
+  }
+  return setSlotDesign(target.id, design.id);
+}
+
+/** Install the next press (spec §5E) — the only thing Plates are spent on. */
+function moneyPrinterMove(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): Action | null {
+  if (!phaseAllows(state, content, 'BUY_MONEY_PRINTER')) {
+    return null;
+  }
+  for (const def of content.prestige.moneyPrinters) {
+    if (moneyPrinterAvailability(state, content, def.id) !== null) {
+      continue;
+    }
+    const cost = nextMoneyPrinterCost(state, content, curves, def.id);
+    if (
+      cost !== null &&
+      cost.resource !== 'filament' &&
+      state.resources[cost.resource] >= cost.amount
+    ) {
+      return buyMoneyPrinter(def.id);
+    }
+  }
+  return null;
+}
+
+/**
+ * Melt the workshop down (spec §5D) once the run is worth enough Plates to buy
+ * something with. Everything before this — the designs, the capstone, the money
+ * — was in service of this one button, and the bot presses it the moment the
+ * arithmetic says yes.
+ */
+function prestigeMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
+  if (!phaseAllows(state, content, 'PRESTIGE')) {
+    return null;
+  }
+  if (prestigeAvailability(state, content, curves) !== null) {
+    return null;
+  }
+  const award = platesFor(state, content, curves);
+  const worthwhile = Math.max(
+    PRESTIGE_MIN_AWARD,
+    content.prestige.minimumPlates,
+    state.resources.plates * PRESTIGE_GROWTH,
+  );
+  return award >= worthwhile ? prestige() : null;
+}
+
 /**
  * One policy, three parameterisations. Writing the strategies as knobs on a
  * shared decision order is deliberate: it keeps them comparable (any gap in the
@@ -722,9 +1032,13 @@ export function createPolicyBot(options: PolicyOptions): Bot {
        * only re-loaded when the material is genuinely different, and a bay with
        * a rota is left to the rota.
        */
+      // A bay the studio has claimed is *not* misconfigured: it is printing
+      // Products on purpose, and re-loading it with a stock object would throw
+      // away the whole reason the Design Studio exists (spec §5D).
       const misconfigured = bays.find(
         (slot) =>
           slot.queue.length === 0 &&
+          slot.designId === null &&
           (slot.materialId !== material.id || slot.objectId !== object.id),
       );
       if (misconfigured !== undefined) {
@@ -736,6 +1050,39 @@ export function createPolicyBot(options: PolicyOptions): Bot {
 
       moves.push(...recycleMoves(state, content));
       moves.push(...retuneAutoSell(state, content, curves));
+      moves.push(...retuneAutoBuy(state, content));
+      moves.push(...fundMoneyGoal(state, content, studioMoneyGoal(state, content, curves)));
+
+      /*
+       * The meta layer, in the order a player would reach for it (spec §5D):
+       * Products are only ever worth Money, so they are cashed in on sight; a
+       * free bench gets a commission; a Design that exists gets a bay; a press
+       * is installed the moment the Plates are there; and the melt-down is
+       * taken as soon as it would pay for one.
+       */
+      if (state.resources.products > 0 && phaseAllows(state, content, 'SELL_PRODUCTS')) {
+        moves.push(sellProducts(null));
+      }
+      const press = moneyPrinterMove(state, content, curves);
+      if (press !== null) {
+        moves.push(press);
+      }
+      const melt = prestigeMove(state, content, curves);
+      if (melt !== null) {
+        // Nothing after a melt-down means anything: the workshop it was about
+        // to act on no longer exists.
+        moves.push(melt);
+        return moves;
+      }
+      const draft = draftMove(state, content, curves);
+      if (draft !== null) {
+        moves.push(draft);
+      }
+      const studioBay = designBayMove(state, content, curves);
+      if (studioBay !== null) {
+        moves.push(studioBay);
+        return moves;
+      }
       if (options.useQueues) {
         // Before the shopping, not after: a rota is set once per bay and costs
         // nothing, and a bot that only gets to it when there is nothing left to

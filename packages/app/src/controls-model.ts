@@ -11,6 +11,7 @@ import {
   maxBuyableGrams,
   nextPrinterCost,
   quoteFor,
+  resolveSlotConfig,
 } from '@printhead/core';
 
 /**
@@ -111,23 +112,26 @@ export function buildControlModel(
           cooldownMs: assembly.cooldownMs,
         };
 
-  const currentMaterial = content.materials.find((m) => m.id === slot?.materialId);
-  const currentObject = content.objects.find((o) => o.id === slot?.objectId);
+  /*
+   * What the bay is loaded with, asked of the simulation rather than looked up
+   * in `objects`. Since M5 a bay may be printing one of the player's Designs
+   * instead of a stock object (spec §5D), and a model that recognised only
+   * objects computed "0 g per print" for a studio bay — which disabled Print
+   * forever and made the whole Product economy unreachable through the UI.
+   */
+  const loaded = state.slots.find((bay) => bay.id === slotId);
+  const config = loaded === undefined ? null : resolveSlotConfig(content, loaded);
+  const currentMaterial = config?.material;
   const stock = currentMaterial === undefined ? NONE : filamentOf(state, currentMaterial.id);
-  const perPrint = currentObject?.filamentGrams ?? NONE;
+  const perPrint = config?.filamentGrams ?? NONE;
 
   const buyMaterial = currentMaterial ?? content.materials.find((m) => m.id === materials[0]?.id);
-  const buyObject = currentObject ?? content.objects.find((o) => o.id === objects[0]?.id);
+  const fallbackGrams = content.objects.find((o) => o.id === objects[0]?.id)?.filamentGrams;
+  const buyGrams = perPrint > NONE ? perPrint : fallbackGrams;
   const buyFilament: BuyFilamentControl | null =
-    buyMaterial === undefined || buyObject === undefined || !allows('BUY_FILAMENT')
+    buyMaterial === undefined || buyGrams === undefined || !allows('BUY_FILAMENT')
       ? null
-      : buildBuyFilament(
-          state,
-          content,
-          buyMaterial,
-          buyObject.filamentGrams,
-          slot?.printerCount ?? NONE,
-        );
+      : buildBuyFilament(state, content, buyMaterial, buyGrams, slot?.printerCount ?? NONE);
 
   const printer = content.printers.find((candidate) =>
     isPhaseReached(content.pacing.phases, visual.phaseId, candidate.unlockPhaseId),

@@ -80,6 +80,7 @@ describe('meaningfulOptions', () => {
           id: 'slot-1',
           materialId: 'pla',
           objectId: 'bracket',
+          designId: null,
           printerCount: 1,
           autoRestart: false,
           run: null,
@@ -112,6 +113,7 @@ describe('meaningfulOptions', () => {
           id: 'slot-1',
           materialId: 'pla',
           objectId: 'bracket',
+          designId: null,
           printerCount: 1,
           autoRestart: false,
           run: null,
@@ -241,5 +243,87 @@ describe('longestWallByPhase', () => {
       ['bench', 5],
       ['farm', 1],
     ]);
+  });
+});
+
+/**
+ * The meta layer's options (spec §5D/§5E). Each of these is a real decision a
+ * player could take, and the detector's whole value is that it counts only
+ * decisions the reducer would actually accept — a button that refuses is a dead
+ * zone with extra steps.
+ */
+describe('meaningfulOptions and the meta layer', () => {
+  const capstoneId = content.prestige.requiredDesignId;
+  const capstone = content.designs.find((def) => def.id === capstoneId);
+  const pressId = content.prestige.moneyPrinters[0]?.id ?? 'bill-printer';
+
+  const studio = (over: Partial<GameState> = {}): GameState => ({
+    ...base,
+    phaseId: 'studio',
+    printers: { 'bench-mk1': 1 },
+    upgrades: { 'heated-bed': 1, enclosure: 1, 'sla-unit': 1 },
+    resources: { ...base.resources, money: 1_000_000 },
+    slots: [
+      {
+        id: 'slot-1',
+        materialId: 'pla',
+        objectId: 'bracket',
+        designId: null,
+        printerCount: 1,
+        autoRestart: false,
+        run: null,
+        failureCharge: 0,
+        changeoverMs: 0,
+        queue: [],
+        queueIndex: 0,
+        queueBatches: 0,
+      },
+    ],
+    ...over,
+  });
+
+  it('offers a commission the studio would take, and none it would not', () => {
+    expect(meaningfulOptions(studio(), content, curves)).toContain('draft-design');
+    expect(meaningfulOptions(studio({ upgrades: {} }), content, curves)).not.toContain(
+      'draft-design',
+    );
+    expect(
+      meaningfulOptions(studio({ resources: { ...base.resources, money: 0 } }), content, curves),
+    ).not.toContain('draft-design');
+  });
+
+  it('offers a bay for a Design only while its material is open (spec §3)', () => {
+    const owned = { [capstoneId]: { level: 1, printsOnLevel: 0 } };
+    expect(meaningfulOptions(studio({ designs: owned }), content, curves)).toContain('load-design');
+    // The melt-down takes the SLA unit with everything else, so the Design is
+    // still owned and still unprintable — which is not a decision.
+    expect(
+      meaningfulOptions(studio({ designs: owned, upgrades: {} }), content, curves),
+    ).not.toContain('load-design');
+    expect(capstone?.requiredMaterialId).toBe('resin');
+  });
+
+  it('offers the melt-down and the presses only where they are live', () => {
+    const meltable = studio({
+      phaseId: content.prestige.unlockPhaseId,
+      designs: { [capstoneId]: { level: 1, printsOnLevel: 0 } },
+      resources: { ...base.resources, money: 4_000_000, plates: 500 },
+    });
+    const options = meaningfulOptions(meltable, content, curves);
+    expect(options).toContain('prestige');
+    expect(options).toContain('buy-money-printer');
+
+    // In the studio phase neither action is allowed at all.
+    expect(meaningfulOptions(studio(), content, curves)).not.toContain('prestige');
+    expect(meaningfulOptions(studio(), content, curves)).not.toContain('buy-money-printer');
+    // ...and with no Plates the press is not on offer either.
+    expect(
+      meaningfulOptions(
+        { ...meltable, resources: { ...meltable.resources, plates: 0 } },
+        content,
+        curves,
+      ),
+    ).not.toContain('buy-money-printer');
+    expect(pressId).toBe('bill-printer');
   });
 });

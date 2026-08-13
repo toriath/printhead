@@ -1,6 +1,17 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
-import { BAY_HEIGHT, GOLIATH_SCALE, bayX, workshopWidth } from './geometry.js';
+import {
+  BAY_HEIGHT,
+  BILL_GAP,
+  BILL_HEIGHT,
+  BILL_STAGGER_SECONDS,
+  BILL_WIDTH,
+  GOLIATH_SCALE,
+  PRESS_HEIGHT,
+  PRESS_PAD,
+  bayX,
+  workshopWidth,
+} from './geometry.js';
 import { Slot } from './slot.js';
 import { WORKSHOP_CSS } from './styles.js';
 
@@ -35,6 +46,8 @@ function lockedBay(index: number, capacity: number): SlotVisual {
     materialName: null,
     objectId: null,
     objectName: null,
+    output: 'parts',
+    designId: null,
     machineTier: 0,
     printerCount: 0,
     // A bay that does not exist yet holds nothing; the schema wants a positive
@@ -79,10 +92,64 @@ function Goliath({ visual }: WorkshopProps): ReactElement | null {
   );
 }
 
+/**
+ * One drawn bill per installed money-printer level, named by the press that
+ * bought it (spec §5E). A flat list rather than a count, so each bill has a
+ * stable identity — `bill-bill-printer-2` is *that* level of *that* tier, and
+ * installing tier 2 does not renumber tier 1's bills.
+ */
+export function installedPresses(visual: VisualState): readonly string[] {
+  return visual.moneyPrinters.flatMap((press) =>
+    Array.from({ length: press.level }, (_unused, level) => `${press.moneyPrinterId}-${level + 1}`),
+  );
+}
+
+/**
+ * The mint (spec §5E). Once the Plates are printing money there is a machine
+ * doing it, and it belongs in the workshop rather than in a number on a panel —
+ * one bill per installed level, and the strip simply is not there before the
+ * first press is bought.
+ */
+function Mint({ visual, width }: { visual: VisualState; width: number }): ReactElement | null {
+  const bills = installedPresses(visual);
+  if (bills.length === 0) {
+    return null;
+  }
+  const span = bills.length * BILL_WIDTH + (bills.length - 1) * BILL_GAP;
+  const left = Math.max((width - span) / 2, PRESS_PAD);
+  return (
+    <g
+      data-testid="mint"
+      data-press-levels={bills.length}
+      data-plates={visual.ledger.plates}
+      transform={`translate(0, ${BAY_HEIGHT})`}
+    >
+      <title>{`${bills.length} press level(s) · ${visual.prestige.platesHeld} plate(s)`}</title>
+      {bills.map((bill, index) => (
+        <rect
+          key={bill}
+          className="ph-bill"
+          x={left + index * (BILL_WIDTH + BILL_GAP)}
+          y={PRESS_PAD}
+          width={BILL_WIDTH}
+          height={BILL_HEIGHT}
+          rx={2}
+          // A negative delay desynchronises the strip without a clock, exactly
+          // as `phaseOffset` does for the printers.
+          style={{ animationDelay: `${-index * BILL_STAGGER_SECONDS}s` }}
+        >
+          <title>{bill}</title>
+        </rect>
+      ))}
+    </g>
+  );
+}
+
 export function Workshop({ visual }: WorkshopProps): ReactElement {
   const rack = bays(visual);
   const width = visual.goliath ? workshopWidth(1) * GOLIATH_SCALE : workshopWidth(rack.length);
-  const height = visual.goliath ? BAY_HEIGHT * GOLIATH_SCALE : BAY_HEIGHT;
+  const rackHeight = visual.goliath ? BAY_HEIGHT * GOLIATH_SCALE : BAY_HEIGHT;
+  const height = rackHeight + (installedPresses(visual).length > 0 ? PRESS_HEIGHT : 0);
   // During the intro the first bay holds the machine being built: the pieces
   // the player has clicked on, drawn on the printer that will keep them
   // company for the rest of the game (spec §6 phase 0).
@@ -97,6 +164,7 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
       data-phase={visual.phaseId}
       data-slot-capacity={visual.slotCapacity}
       data-layout={visual.goliath ? 'goliath' : 'rack'}
+      data-self-assembling={visual.assembly.selfAssembling}
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
     >
@@ -110,11 +178,13 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
           <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
             <Slot
               slot={slot}
+              selfAssembling={visual.assembly.selfAssembling}
               {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
             />
           </g>
         ))
       )}
+      <Mint visual={visual} width={width} />
     </svg>
   );
 }

@@ -4,11 +4,13 @@ import type { CurveRegistry } from '../curves/evaluate.js';
 import type { GameState } from '../state/game-state.js';
 import { type Cost, canAfford, nextCost } from './cost.js';
 import {
-  type ValuedPool,
   drawParts,
   drawPool,
+  drawProducts,
+  isValuedPool,
   removeParts,
   removePool,
+  removeProducts,
   withResource,
 } from './resources.js';
 
@@ -49,6 +51,33 @@ export function sellPartsFrom(state: GameState, requested: number | null): SaleR
   };
 }
 
+/**
+ * Sell Products at the value their Design's level banked with them (spec §5D:
+ * "sells high margin"). Deliberately a separate till from Parts: Parts are the
+ * currency of capacity and Products are the currency of the studio, and a
+ * player who taps "sell everything" should not be cashing in both.
+ */
+export function sellProductsFrom(state: GameState, requested: number | null): SaleResult | null {
+  const draw = drawProducts(state, requested ?? state.resources.products);
+  if (draw.count <= NONE) {
+    return null;
+  }
+  const afterProducts = removeProducts(state, draw);
+  return {
+    state: {
+      ...afterProducts,
+      resources: withResource(afterProducts.resources, 'money', draw.value),
+      stats: {
+        ...afterProducts.stats,
+        productsSold: afterProducts.stats.productsSold + draw.count,
+        moneyEarned: afterProducts.stats.moneyEarned + draw.value,
+      },
+    },
+    parts: draw.count,
+    money: draw.value,
+  };
+}
+
 export function ownedPrinters(state: GameState, printerId: string): number {
   return state.printers[printerId] ?? NONE;
 }
@@ -69,13 +98,6 @@ export function nextPrinterCost(
   }
   const cost = nextCost(curves, printer, ownedPrinters(state, printerId));
   return cost.resource === 'parts' ? { ...cost, amount: Math.ceil(cost.amount) } : cost;
-}
-
-/** The balances that carry a banked value and must be drawn, not decremented. */
-const VALUED_POOLS: readonly ValuedPool[] = ['parts', 'scrap'];
-
-function isValuedPool(resource: Cost['resource']): resource is ValuedPool {
-  return VALUED_POOLS.some((pool) => pool === resource);
 }
 
 /** Pay a content-priced cost out of the ledger; `null` when it is unaffordable. */

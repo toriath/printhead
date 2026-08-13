@@ -35,11 +35,30 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   // M4's new sinks. A config slot is the biggest single purchase before the
   // fork, so it owns a large slice of the farm phase's length (spec §4).
   { pointer: 'curves/slot-cost/base', min: 50, max: 4000 },
-  { pointer: 'curves/slot-cost/growth', min: 1.5, max: 12 },
+  // Spec §4 calls slot 3 "expensive": the growth floor is a *design* bound, not
+  // a numerical one, and it stops the optimiser from buying a green timeline by
+  // making the third bay a rounding error on the second.
+  { pointer: 'curves/slot-cost/growth', min: 2.5, max: 12 },
   { pointer: 'curves/fork-cost/value', min: 100, max: 20000 },
+  // M5's meta layer. The studio is gated on drafting the capstone, so what a
+  // commission costs owns most of that phase; prestige is gated on the presses,
+  // so the Plate reward, the press price and the print rate own that one.
+  { pointer: 'curves/design-cost/base', min: 100, max: 40000 },
+  { pointer: 'curves/design-cost/growth', min: 1.1, max: 8 },
+  { pointer: 'curves/design-slot-cost/base', min: 100, max: 40000 },
+  { pointer: 'curves/upgrade-cost-sla/base', min: 100, max: 8000 },
+  { pointer: 'curves/prestige-plates/base', min: 0.1, max: 8 },
+  { pointer: 'curves/money-printer-cost/base', min: 1, max: 60 },
+  { pointer: 'curves/money-printer-cost/growth', min: 1.1, max: 8 },
+  { pointer: 'curves/money-print-rate/step', min: 0.05, max: 40 },
 ];
 
-const DEFAULT_PHASES = ['intro', 'bench', 'farm'] as const;
+/**
+ * Phases with real gates. `absurd` and `end` still advance on elapsed time
+ * alone (M6 fills them), so they sit on budget by construction and scoring
+ * them would only teach the optimiser to chase noise.
+ */
+const DEFAULT_PHASES = ['intro', 'bench', 'farm', 'studio', 'prestige'] as const;
 
 function parseList(argv: readonly string[], flag: string): readonly string[] | undefined {
   const index = argv.indexOf(`--${flag}`);

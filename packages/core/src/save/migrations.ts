@@ -105,6 +105,36 @@ function migrateV3ToV4(payload: unknown): unknown {
 }
 
 /**
+ * v4 (M4) predates the Design Studio, Products, prestige and the money
+ * printers. A v4 save is therefore a workshop that has never drafted anything
+ * and never melted itself down: the design ledger is empty, the bench is free,
+ * no bay is printing a Design, and the intro would still have to be clicked
+ * out by hand — which is exactly what that save described.
+ */
+function migrateV4ToV5(payload: unknown): unknown {
+  const v4 = payload as Record<string, unknown>;
+  const slots = Array.isArray(v4.slots) ? v4.slots : [];
+  const stats = (v4.stats ?? {}) as Record<string, unknown>;
+  return {
+    ...v4,
+    saveVersion: 5,
+    productsValue: 0,
+    designs: {},
+    studio: null,
+    moneyPrinters: {},
+    selfAssembling: false,
+    slots: slots.map((slot) => ({ ...(slot as Record<string, unknown>), designId: null })),
+    stats: {
+      ...stats,
+      productsProduced: 0,
+      productsSold: 0,
+      moneyPrinted: 0,
+      prestigeCount: 0,
+    },
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
@@ -112,6 +142,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
   3: migrateV3ToV4,
+  4: migrateV4ToV5,
 };
 
 export class SaveMigrationError extends Error {

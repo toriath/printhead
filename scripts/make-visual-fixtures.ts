@@ -187,6 +187,26 @@ if (goliath !== undefined) {
   capture('goliath');
 }
 
+/**
+ * 8. The Design Studio (spec §5D). Handing the wheel to the reference bot as
+ * far as the melt-down phase is the only honest way to reach it: the capstone
+ * sits behind resin, forty sold Products and a second commission, which is
+ * eighty design-minutes of economy rather than a few clicks.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'prestige', seed: 7 }).finalState;
+tickSeconds(5);
+capture('studio');
+
+/**
+ * 9. After the melt-down (spec §6 phase 4): Plates on the books, a press
+ * installed, the Designs still owned at the level they reached, and an intro
+ * that rebuilds itself. Run on to the phase after prestige so the projection
+ * carries a workshop that has actually been melted down and started again.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'absurd', seed: 7 }).finalState;
+tickSeconds(5);
+capture('prestige');
+
 console.log(`wrote ${written.length} fixtures to ${dir}:`);
 for (const line of written) {
   console.log(`  - ${line}`);

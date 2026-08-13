@@ -14,6 +14,7 @@ import {
   checkPhaseBudgets,
   gatedPhaseIds,
   isPlaceholderPhase,
+  placeholderPhaseIds,
 } from './budget.js';
 import { runHeadless } from './harness.js';
 import { checkWaitWalls } from './waitwall.js';
@@ -173,24 +174,28 @@ describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
   /**
    * The other half of that gate, stated rather than hidden.
    *
-   * Once the reference player has bought everything M4 sells, the placeholder
-   * phases have nothing left to offer and the detector correctly reports dead
-   * zones there. Raising those budgets would make the report green and the
-   * game no better, so the overrun is asserted instead: when M5 gives the
-   * studio real mechanics this test fails, which is exactly the reminder the
-   * next milestone wants.
+   * At M4 this test asserted the *opposite*: once the reference player had
+   * bought everything the game sold, the placeholder phases had nothing left to
+   * offer and the detector correctly reported dead zones in them. The meta
+   * layer closed those — a melt-down to take, a press to install, a commission
+   * to put on the bench are meaningful actions wherever the player is — so the
+   * whole timeline is now live and the assertion is inverted rather than
+   * deleted.
+   *
+   * What is *still* a placeholder is the gate: `absurd` and `end` advance on
+   * elapsed design minutes alone, so they sit on budget by construction and M6
+   * is what makes their green light mean anything.
    */
-  it('still reports the placeholder phases as dead zones until M5–M6 fill them', () => {
-    const dead = new Set(
-      checkWaitWalls(content, log.waitWalls).map((violation) => violation.phaseId),
-    );
-    expect([...dead].every((phaseId) => !GATED_PHASES.includes(phaseId))).toBe(true);
-    expect(dead.has('studio')).toBe(true);
-    // And the gated phases really are the ones with mechanics behind them.
-    expect([...GATED_PHASES]).toEqual(['intro', 'bench', 'farm']);
+  it('leaves no dead zone anywhere, though two gates are still placeholders', () => {
+    expect(checkWaitWalls(content, log.waitWalls)).toEqual([]);
+    // The gated phases really are the ones with mechanics behind them. M5 moved
+    // `studio` and `prestige` across this line, which is what the milestone was
+    // for; `absurd` and `end` are M6's.
+    expect([...GATED_PHASES]).toEqual(['intro', 'bench', 'farm', 'studio', 'prestige']);
+    expect(placeholderPhaseIds(content)).toEqual(['absurd', 'end']);
   });
 
-  it('keeps phases 0–2 — the ones the game actually gates — on budget', () => {
+  it('keeps phases 0–4 — the ones the game actually gates — on budget', () => {
     for (const phaseId of GATED_PHASES) {
       const phase = table.phases.find((candidate) => candidate.phaseId === phaseId);
       const actual = log.phaseDurations.get(phaseId);
@@ -273,6 +278,14 @@ describe('the strategies are genuinely different players', () => {
   const balanced = runHeadless({ content, bot: balancedBot });
   const greedy = runHeadless({ content, bot: greedySpenderBot });
   const idleHeavy = runHeadless({ content, bot: idleHeavyBot });
+  // Anything a melt-down resets — the fork, the rack, the production counters —
+  // has to be read before one happens (spec §5D).
+  const balancedRunOne = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'prestige' });
+  const greedyRunOne = runHeadless({
+    content,
+    bot: greedySpenderBot,
+    stopAtPhaseId: 'prestige',
+  });
 
   it('the attentive players finish; the ten-minute check-in does not', () => {
     expect(balanced.finalPhaseId).toBe('end');
@@ -280,12 +293,24 @@ describe('the strategies are genuinely different players', () => {
     expect(idleHeavy.finalPhaseId).not.toBe('end');
   });
 
-  it('greedy out-produces balanced and rushes the farm it was meant to dwell in', () => {
-    expect(greedy.finalState.stats.printsCompleted).toBeGreaterThan(
-      balanced.finalState.stats.printsCompleted,
+  /**
+   * What separates them changed again at M5, and the assertion follows rather
+   * than being propped up. Greedy takes Goliath — slower prints, far bigger
+   * batches — so it finishes *fewer* prints than the Farm-branch reference
+   * while fielding more machines and banking several times the money. It is
+   * still the impatient player; it is no longer the busier one.
+   */
+  it('greedy fields more machines and banks more money, and rushes the bench', () => {
+    const machinesOf = (state: { printers: Readonly<Record<string, number>> }): number =>
+      Object.values(state.printers).reduce((total, count) => total + count, 0);
+    expect(machinesOf(greedyRunOne.finalState)).toBeGreaterThan(
+      machinesOf(balancedRunOne.finalState),
     );
-    expect(greedy.phaseDurations.get('farm') ?? 0).toBeLessThan(
-      balanced.phaseDurations.get('farm') ?? 0,
+    expect(greedyRunOne.finalState.stats.moneyEarned).toBeGreaterThan(
+      balancedRunOne.finalState.stats.moneyEarned,
+    );
+    expect(greedy.phaseDurations.get('bench') ?? 0).toBeLessThan(
+      balanced.phaseDurations.get('bench') ?? 0,
     );
   });
 
@@ -315,12 +340,12 @@ describe('the strategies are genuinely different players', () => {
    * rack, so neither branch is dead content that only a unit test ever visits.
    */
   it('takes opposite sides of the Farm/Goliath fork', () => {
-    const greedyFork = content.forks.find((def) => def.id === greedy.finalState.forkId);
-    const balancedFork = content.forks.find((def) => def.id === balanced.finalState.forkId);
+    const greedyFork = content.forks.find((def) => def.id === greedyRunOne.finalState.forkId);
+    const balancedFork = content.forks.find((def) => def.id === balancedRunOne.finalState.forkId);
     expect(greedyFork?.visual).toBe('goliath');
     expect(balancedFork?.visual).toBe('rack');
-    expect(greedy.finalState.slots).toHaveLength(2);
-    expect(balanced.finalState.slots.length).toBeGreaterThan(1);
+    expect(greedyRunOne.finalState.slots).toHaveLength(2);
+    expect(balancedRunOne.finalState.slots.length).toBeGreaterThan(1);
   });
 });
 
@@ -330,7 +355,13 @@ describe('the strategies are genuinely different players', () => {
  * reducer the app dispatches into.
  */
 describe('the balanced bot plays the M4 loop end to end', () => {
-  const log = runHeadless({ content, bot: REFERENCE_BOT });
+  /*
+   * Measured at the end of the studio phase, not at the end of the run: since
+   * M5 the melt-down scraps the rack, the fleet and the fork on purpose
+   * (spec §5D), so the *final* state of a completed arc is a bare bench and
+   * says nothing about whether the M4 loop was ever played.
+   */
+  const log = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'prestige' });
   const state = log.finalState;
 
   it('outgrows its first bay and buys another (spec §4)', () => {
@@ -365,16 +396,17 @@ describe('placeholder phases (spec §18)', () => {
   it('are recognised from their gate, not from a list of names', () => {
     const byId = new Map(content.pacing.phases.map((phase) => [phase.id, phase]));
     const intro = byId.get('intro');
-    const studio = byId.get('studio');
-    if (intro === undefined || studio === undefined) {
+    const absurd = byId.get('absurd');
+    if (intro === undefined || absurd === undefined) {
       throw new Error('expected the spec §6 phases');
     }
     expect(isPlaceholderPhase(intro)).toBe(false);
-    expect(isPlaceholderPhase(studio)).toBe(true);
-    // Give the studio one real requirement and it stops being a placeholder,
-    // with no tool told anything — which is the point of deriving it.
+    expect(isPlaceholderPhase(absurd)).toBe(true);
+    // Give the phase one real requirement and it stops being a placeholder,
+    // with no tool told anything — which is the point of deriving it. M5 did
+    // exactly this to `studio` and `prestige`, and no tool needed editing.
     expect(
-      isPlaceholderPhase({ ...studio, advanceWhen: [{ metric: 'designs', atLeast: 1 } as never] }),
+      isPlaceholderPhase({ ...absurd, advanceWhen: [{ metric: 'designs', atLeast: 1 } as never] }),
     ).toBe(false);
   });
 });
