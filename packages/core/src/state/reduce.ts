@@ -1,6 +1,6 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, isPieceReady, nextPiece, tickAssembly } from '../systems/assembly.js';
 import {
@@ -174,7 +174,7 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const drafted = tickDesignStudio(rebuilt, simDtMs, ctx);
   const printed = tickSlots(drafted, ctx.content, simDtMs, ctx.emit);
   const traded = tickMarket(printed, ctx.content, simDtMs);
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const minted = tickMoneyPrinting(traded, ctx.content, simDtMs, curves);
   const modifiers = computeModifiers(minted, ctx.content);
   const manufactured = tickFactory(minted, ctx.content, simDtMs, modifiers, ctx.emit);
@@ -585,7 +585,7 @@ function applyBuyPrinter(
   if (slotRoom(state, ctx.content, slot) <= 0) {
     return reject(ctx, state, 'BUY_PRINTER', 'slot-full');
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchasePrinter(state, ctx.content, curves, printerId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_PRINTER', 'insufficient-resources');
@@ -616,7 +616,7 @@ function applyBuyUpgrade(state: GameState, upgradeId: string, ctx: ReduceContext
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_UPGRADE', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseUpgrade(state, ctx.content, curves, upgradeId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_UPGRADE', 'insufficient-resources');
@@ -636,7 +636,7 @@ function applyBuyAutomation(state: GameState, automationId: string, ctx: ReduceC
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_AUTOMATION', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseAutomation(state, ctx.content, curves, automationId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_AUTOMATION', 'insufficient-resources');
@@ -681,7 +681,7 @@ function applyBuySlot(state: GameState, unlockId: string, ctx: ReduceContext): G
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_SLOT', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseSlot(state, ctx.content, curves, unlockId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_SLOT', 'insufficient-resources');
@@ -779,7 +779,7 @@ function applyChooseFork(state: GameState, forkId: string, ctx: ReduceContext): 
   if (blocked !== null) {
     return reject(ctx, state, 'CHOOSE_FORK', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const choice = commitFork(state, ctx.content, curves, forkId);
   if (choice === null) {
     return reject(ctx, state, 'CHOOSE_FORK', 'insufficient-resources');
@@ -823,7 +823,7 @@ function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContex
   if (blocked !== null) {
     return reject(ctx, state, 'CREATE_DESIGN', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const draft = startDesignDraft(state, ctx.content, curves, designId);
   if (draft === null) {
     return reject(ctx, state, 'CREATE_DESIGN', 'insufficient-resources');
@@ -844,7 +844,7 @@ function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContex
  * itself because the workshop has now done it once.
  */
 function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const blocked = prestigeAvailability(state, ctx.content, curves);
   if (blocked !== null) {
     return reject(ctx, state, 'PRESTIGE', blocked);
@@ -866,7 +866,7 @@ function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
  * staying in the running for a print only Goliath may attempt.
  */
 function applyPrintSection(state: GameState, ctx: ReduceContext): GameState {
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const blocked = sectionAvailability(state, ctx.content, curves);
   if (blocked !== null) {
     return reject(ctx, state, 'PRINT_SECTION', blocked);
@@ -928,7 +928,7 @@ function applyBuyMoneyPrinter(
   if (blocked !== null) {
     return reject(ctx, state, 'BUY_MONEY_PRINTER', blocked);
   }
-  const curves = createCurveRegistry(ctx.content.curves);
+  const curves = curveRegistryFor(ctx.content.curves);
   const purchase = purchaseMoneyPrinter(state, ctx.content, curves, moneyPrinterId);
   if (purchase === null) {
     return reject(ctx, state, 'BUY_MONEY_PRINTER', 'insufficient-resources');

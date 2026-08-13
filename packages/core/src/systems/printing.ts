@@ -1,7 +1,7 @@
 import { indexById } from '../content/load.js';
 import type { Content, DesignDef, MaterialDef, ObjectDef } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
@@ -574,7 +574,7 @@ export function tickSlots(
   dtMs: number,
   emit: EventSink | undefined,
   modifiers: ModifierMap = computeModifiers(state, content),
-  curves: CurveRegistry = createCurveRegistry(content.curves),
+  curves: CurveRegistry = curveRegistryFor(content.curves),
 ): GameState {
   let next = state;
   for (let index = NONE; index < next.slots.length; index += FULL) {

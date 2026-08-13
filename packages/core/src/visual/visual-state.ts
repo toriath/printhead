@@ -1,7 +1,7 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import { MS_PER_MINUTE, MS_PER_SECOND } from '../engine/constants.js';
 import { clamp } from '../math/scalar.js';
 import type { GameState, SlotState } from '../state/game-state.js';
@@ -183,7 +183,7 @@ function toSlotUnlockVisual(state: GameState, content: Content): SlotUnlockVisua
   if (def === null) {
     return null;
   }
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   const cost = nextSlotCost(content, curves, def.id);
   const blocked = slotUnlockAvailability(state, content, def.id);
   return {
@@ -199,7 +199,7 @@ function toSlotUnlockVisual(state: GameState, content: Content): SlotUnlockVisua
 
 /** Both branches of the per-run fork (spec §5B) — one of them may be taken. */
 function toForkVisuals(state: GameState, content: Content): readonly ForkVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.forks.map((def) => {
     const cost = forkCost(content, curves, def.id);
     return {
@@ -377,7 +377,7 @@ function affordable(state: GameState, resource: string, amount: number): boolean
 }
 
 function toUpgradeVisuals(state: GameState, content: Content): readonly UpgradeVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.upgrades.map((def) => {
     const cost = nextUpgradeCost(state, content, curves, def.id);
     return {
@@ -395,7 +395,7 @@ function toUpgradeVisuals(state: GameState, content: Content): readonly UpgradeV
 }
 
 function toAutomationVisuals(state: GameState, content: Content): readonly AutomationVisual[] {
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   return content.automation.map((def) => {
     const owned = state.automation[def.id];
     const cost = nextAutomationCost(state, content, curves, def.id);
@@ -567,7 +567,7 @@ function toEndingVisual(state: GameState, content: Content, machineTier: number)
 
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
-  const curves = createCurveRegistry(content.curves);
+  const curves = curveRegistryFor(content.curves);
   const machineTier = bestPrinterTier(state, content, modifiers);
   const fork = chosenFork(state, content);
   /*
