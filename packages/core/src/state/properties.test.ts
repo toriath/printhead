@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { loadContent } from '../content/load.js';
 import { RAW_CONTENT } from '../content/raw.js';
 import type { RawContent } from '../content/schema.js';
+import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
 import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
 import { assignedPrinters, printersPerSlot } from '../systems/fleet.js';
 import { marketStateOf, priceMultiplier, quoteFor } from '../systems/market.js';
+import { moneyPrintRate } from '../systems/prestige.js';
 import { countPrinters } from '../systems/requirements.js';
 import { effectiveSlotCapacity, hardSlotMaximum } from '../systems/slots.js';
 import { validateVisualState } from '../visual/schema.js';
@@ -25,15 +27,20 @@ import {
   assignPrinter,
   buyAutomation,
   buyFilament,
+  buyMoneyPrinter,
   buyPrinter,
   buySlot,
   buyUpgrade,
   chooseFork,
+  createDesign,
+  prestige,
   recycleScrap,
   sellFilament,
   sellParts,
+  sellProducts,
   setAutomation,
   setSlotConfig,
+  setSlotDesign,
   setSlotQueue,
   startPrint,
   tick,
@@ -137,6 +144,16 @@ const anyAction = (): fc.Arbitrary<Action> =>
         ),
       )
       .map(([slotId, entries]) => setSlotQueue(slotId, entries)),
+    // --- M5: the studio, the melt-down and the presses (spec §5D, §5E) ---
+    fc
+      .constantFrom(...content.designs.map((d) => d.id))
+      .map(createDesign),
+    fc
+      .tuple(slotIds(), fc.constantFrom(...content.designs.map((d) => d.id)))
+      .map(([slotId, designId]) => setSlotDesign(slotId, designId)),
+    fc.oneof(fc.constant(sellProducts(null)), quantity().map(sellProducts)),
+    fc.constant(prestige()),
+    fc.constantFrom(...content.prestige.moneyPrinters.map((def) => def.id)).map(buyMoneyPrinter),
   );
 
 /**
@@ -285,6 +302,41 @@ function forking(seed: number): GameState {
 }
 
 /**
+ * A studio-phase workshop with resin open and Money in the bank: the state in
+ * which drafting a Design is a legal move at all (spec §5D). Without it every
+ * M5 action below would be rejected on the material gate and the properties
+ * would pass by never happening.
+ */
+function studioReady(seed: number): GameState {
+  const base = forking(seed);
+  return {
+    ...base,
+    // The machine tree, not a flag: `isMaterialAvailable` reads these nodes.
+    upgrades: { ...base.upgrades, 'heated-bed': 1, enclosure: 1, 'sla-unit': 1, 'design-desk': 2 },
+    resources: { ...base.resources, money: 5_000_000 },
+    filamentGrams: { ...base.filamentGrams, resin: 5000 },
+  };
+}
+
+/** The same workshop with the capstone drafted, so the melt-down is on offer. */
+function melting(seed: number): GameState {
+  const base = studioReady(seed);
+  const capstone = content.prestige.requiredDesignId;
+  const other = content.designs.find((def) => def.id !== capstone)?.id ?? capstone;
+  return {
+    ...base,
+    phaseId: content.prestige.unlockPhaseId,
+    designs: {
+      [capstone]: { level: 3, printsOnLevel: 1 },
+      [other]: { level: 1, printsOnLevel: 0 },
+    },
+    resources: { ...base.resources, designs: 2, products: 12, plates: 4 },
+    productsValue: 900,
+    moneyPrinters: { [content.prestige.moneyPrinters[0]?.id ?? 'bill-printer']: 1 },
+  };
+}
+
+/**
  * Start states that actually unlock the actions under test. Fuzzing from a
  * fresh save alone is close to vacuous: the phase FSM gates every economy
  * action behind an intro that random input will never complete.
@@ -298,6 +350,8 @@ const startStates = (): fc.Arbitrary<GameState> =>
     scaled(4),
     racked(4),
     forking(4),
+    studioReady(4),
+    melting(4),
   );
 
 describe('property: resources are never negative', () => {
@@ -875,9 +929,14 @@ describe('property: the slot cap is never exceeded (spec §4)', () => {
  * Spec §5B: the Farm/Goliath fork is **mutually exclusive per run**. Once a
  * branch is committed, no sequence of actions may replace it — the run's shape
  * is decided, and the endgame depends on which one it was.
+ *
+ * "Per run" became load-bearing at M5: a melt-down *is* the end of the run
+ * (spec §5D), and the next one is entitled to choose the other branch. So the
+ * invariant is stated as a transition rule — null → branch when it is chosen,
+ * branch → null when the workshop is melted down, and never branch → branch.
  */
 describe('property: the Farm/Goliath fork is exclusive (spec §5B)', () => {
-  it('never changes a commitment once it has been made', () => {
+  it('never swaps one branch for another; only a melt-down clears it', () => {
     fc.assert(
       fc.property(
         startStates(),
@@ -887,8 +946,18 @@ describe('property: the Farm/Goliath fork is exclusive (spec §5B)', () => {
           const forkId = content.forks[from.simTimeMs % content.forks.length]?.id ?? null;
           let state: GameState = { ...from, forkId };
           for (const action of actions) {
+            const before = state.forkId;
             state = apply(state, action);
-            expect(state.forkId, 'a committed fork was overwritten').toBe(forkId);
+            if (state.forkId === before) {
+              continue;
+            }
+            if (state.forkId === null) {
+              expect(action.type, 'a fork was cleared by something other than a melt-down').toBe(
+                'PRESTIGE',
+              );
+              continue;
+            }
+            expect(before, 'a committed fork was overwritten').toBeNull();
           }
         },
       ),
@@ -896,21 +965,26 @@ describe('property: the Farm/Goliath fork is exclusive (spec §5B)', () => {
     );
   });
 
-  it('reaches at most one branch from an uncommitted run', () => {
+  it('reaches at most one branch per run', () => {
     fc.assert(
       fc.property(
         startStates(),
         fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
         (from, actions) => {
           let state = from;
-          const chosen = new Set<string>();
+          let chosen = new Set<string>();
           for (const action of actions) {
+            const before = state;
             state = apply(state, action);
+            if (action.type === 'PRESTIGE' && state !== before) {
+              // A new run: the previous commitment is history, not a conflict.
+              chosen = new Set<string>();
+            }
             if (state.forkId !== null) {
               chosen.add(state.forkId);
             }
+            expect(chosen.size).toBeLessThanOrEqual(1);
           }
-          expect(chosen.size).toBeLessThanOrEqual(1);
         },
       ),
       { numRuns: 60 },
@@ -962,6 +1036,251 @@ describe('the M4 properties are not vacuous', () => {
       ASSIGN_PRINTER: true,
       SET_SLOT_QUEUE: true,
       CHOOSE_FORK: true,
+    });
+  });
+});
+
+/**
+ * Spec §2, §5D, §13: **prestige preserves Designs exactly.**
+ *
+ * Not "roughly", not "at level 1", not "the ids": the same ledger, level and
+ * per-level progress. Designs are the game's only permanent progression, so a
+ * melt-down that rounded a level down would quietly erase hours of play, and
+ * the mistake would be invisible until somebody compared two saves.
+ */
+describe('property: the melt-down preserves Designs exactly (spec §13)', () => {
+  it('carries the whole ledger across, whatever the run looked like', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            const before = state.designs;
+            state = apply(state, action);
+            if (action.type !== 'PRESTIGE' || state.stats.prestigeCount === 0) {
+              continue;
+            }
+            // A melt-down really happened: the ledger must be untouched.
+            expect(state.designs, 'a melt-down altered the Designs').toEqual(before);
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('never loses a Design once drafted, however the run is played', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
+        (from, actions) => {
+          let state = from;
+          const seen = new Map<string, number>();
+          for (const action of actions) {
+            state = apply(state, action);
+            for (const [designId, design] of Object.entries(state.designs)) {
+              const best = seen.get(designId) ?? 0;
+              // Levels only ever go up, and an owned Design is owned forever.
+              expect(design.level, `${designId} regressed`).toBeGreaterThanOrEqual(best);
+              seen.set(designId, design.level);
+            }
+            for (const designId of seen.keys()) {
+              expect(state.designs[designId], `${designId} vanished`).toBeDefined();
+            }
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});
+
+/**
+ * Spec §13: **money printing is monotone in Plates.** More Plates can never
+ * print less money. The rate is `rateCurve(plates) × level` summed over the
+ * installed presses, so this really tests that nothing in the fold divides by
+ * the Plate count or subtracts a "diminishing returns" term — the shape of the
+ * reward has to live in the curve, where content can see it.
+ */
+describe('property: money printing is monotone in Plates (spec §13)', () => {
+  const curves = createCurveRegistry(content.curves);
+
+  it('never pays less for more Plates, at any install level', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 5000 }),
+        fc.integer({ min: 0, max: 5000 }),
+        fc.integer({ min: 0, max: 5 }),
+        (a, b, level) => {
+          const base = melting(1);
+          const press = content.prestige.moneyPrinters[0];
+          if (press === undefined) {
+            return;
+          }
+          const at = (plates: number): number =>
+            moneyPrintRate(
+              {
+                ...base,
+                resources: { ...base.resources, plates },
+                moneyPrinters: { [press.id]: level },
+              },
+              content,
+              curves,
+            );
+          const [low, high] = a <= b ? [a, b] : [b, a];
+          expect(at(high)).toBeGreaterThanOrEqual(at(low));
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
+  it('prints nothing without Plates, however many presses are installed', () => {
+    const base = melting(1);
+    const press = content.prestige.moneyPrinters[0];
+    expect(press).toBeDefined();
+    expect(
+      moneyPrintRate(
+        {
+          ...base,
+          resources: { ...base.resources, plates: 0 },
+          moneyPrinters: { [press?.id ?? '']: 5 },
+        },
+        content,
+        curves,
+      ),
+    ).toBe(0);
+  });
+
+  it('the money the presses actually print rises with the Plates held', () => {
+    const base = melting(1);
+    const press = content.prestige.moneyPrinters[0];
+    const minted = (plates: number): number => {
+      let state: GameState = {
+        ...base,
+        resources: { ...base.resources, plates, money: 0 },
+        moneyPrinters: { [press?.id ?? '']: 1 },
+        stats: { ...base.stats, moneyPrinted: 0 },
+      };
+      for (let i = 0; i < 100; i += 1) {
+        state = apply(state, tick(TICK_MS));
+      }
+      return state.stats.moneyPrinted;
+    };
+    expect(minted(10)).toBeGreaterThan(minted(1));
+    expect(minted(1)).toBeGreaterThan(minted(0));
+  });
+});
+
+/**
+ * Spec §5D: the melt-down **scraps the run**. Everything the content does not
+ * name as retained has to come back at (or below) what a brand-new workshop
+ * starts with — otherwise "prestige" is a free top-up and the whole decision
+ * evaporates.
+ */
+describe('property: the melt-down never increases a non-persistent resource', () => {
+  const fresh = createInitialState(content, { seed: 1 });
+  const retained = new Set<string>(content.prestige.retainedResources);
+
+  it('resets every balance the content does not retain', () => {
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 1, maxLength: 150 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            const before = state;
+            state = apply(state, action);
+            if (action.type !== 'PRESTIGE' || state === before) {
+              continue;
+            }
+            for (const [kind, amount] of Object.entries(state.resources)) {
+              if (retained.has(kind)) {
+                continue;
+              }
+              expect(amount, `${kind} survived the melt-down`).toBeLessThanOrEqual(
+                fresh.resources[kind as keyof typeof fresh.resources],
+              );
+            }
+            // The workshop itself is gone too, not just the balances.
+            expect(state.printers).toEqual({});
+            expect(state.upgrades).toEqual({});
+            expect(state.automation).toEqual({});
+            expect(state.forkId).toBeNull();
+            expect(state.productsValue).toBe(0);
+            expect(state.partsValue).toBe(0);
+            expect(state.slots).toHaveLength(content.start.slotCount);
+          }
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('keeps the Plate-bought presses, because content says to (spec §5E)', () => {
+    const before = melting(1);
+    const after = apply(before, prestige());
+    expect(after.stats.prestigeCount).toBe(before.stats.prestigeCount + 1);
+    expect(after.moneyPrinters).toEqual(before.moneyPrinters);
+    expect(after.selfAssembling).toBe(true);
+    // Re-point the content at nothing but the Designs and the presses go with
+    // the rest of the run — the rule is data, not a special case in the code.
+    const designsOnly = {
+      ...content,
+      prestige: { ...content.prestige, retainedLedgers: ['designs' as const] },
+    };
+    const stripped = reduce(before, prestige(), {
+      content: designsOnly,
+      nowMs: before.simTimeMs,
+      rng: restoreRng(before.rng),
+    });
+    expect(stripped.moneyPrinters).toEqual({});
+    expect(stripped.designs).toEqual(before.designs);
+  });
+});
+
+/**
+ * The same vacuity guard the M4 properties carry: an invariant that never sees
+ * its mechanic is decoration. Every M5 action has to be genuinely reached by
+ * the generated play, or the three properties above prove nothing.
+ */
+describe('the M5 properties are not vacuous', () => {
+  it('the generated play drafts, loads, sells, melts down and buys a press', () => {
+    const reached: Record<string, boolean> = {
+      CREATE_DESIGN: false,
+      SET_SLOT_DESIGN: false,
+      SELL_PRODUCTS: false,
+      PRESTIGE: false,
+      BUY_MONEY_PRINTER: false,
+    };
+    fc.assert(
+      fc.property(
+        startStates(),
+        fc.array(anyAction(), { minLength: 40, maxLength: 200 }),
+        (from, actions) => {
+          let state = from;
+          for (const action of actions) {
+            const before = state;
+            state = apply(state, action);
+            if (state !== before && action.type in reached) {
+              reached[action.type] = true;
+            }
+          }
+        },
+      ),
+      // Fixed seed, for the same reason the M4 check fixes one.
+      { numRuns: 80, seed: 20260813 },
+    );
+    expect(reached).toEqual({
+      CREATE_DESIGN: true,
+      SET_SLOT_DESIGN: true,
+      SELL_PRODUCTS: true,
+      PRESTIGE: true,
+      BUY_MONEY_PRINTER: true,
     });
   });
 });

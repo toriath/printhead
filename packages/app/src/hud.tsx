@@ -60,6 +60,14 @@ export function Hud({ visual, content }: HudProps): ReactElement {
         {visual.ledger.scrap > 0 ? (
           <Stat label="Scrap" value={formatGrams(visual.ledger.scrap)} testId="scrap" />
         ) : null}
+        {/* Products and Plates follow the same rule as Scrap: a permanent zero
+            would advertise the Design Studio and prestige before they exist. */}
+        {visual.ledger.products > 0 ? (
+          <Stat label="Products" value={formatAmount(visual.ledger.products)} testId="products" />
+        ) : null}
+        {visual.ledger.plates > 0 ? (
+          <Stat label="Plates" value={formatAmount(visual.ledger.plates)} testId="plates" />
+        ) : null}
         {stocked.length === 0 ? (
           <Stat label="Filament" value={formatGrams(0)} testId="filament" />
         ) : (
