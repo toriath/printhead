@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="246" viewBox="0 0 760 246" role="img">
+  <style>
+    .surface { fill: #fcfcfb; }
+    .ink { fill: #0b0b0b; }
+    .ink-2 { fill: #52514e; }
+    .grid { stroke: #dcdcd8; stroke-width: 1; }
+    .axis { stroke: #b4b3ae; stroke-width: 1; }
+    .line { fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linejoin: round; }
+    .band { fill: #2a78d6; opacity: 0.12; }
+    .ok { fill: #008300; }
+    .over { fill: #e34948; }
+    text { font-family: ui-sans-serif, system-ui, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .surface { fill: #1a1a19; }
+      .ink { fill: #ffffff; }
+      .ink-2 { fill: #c3c2b7; }
+      .grid { stroke: #33332f; }
+      .axis { stroke: #55554f; }
+      .line { stroke: #3987e5; }
+      .band { fill: #3987e5; opacity: 0.18; }
+      .over { fill: #e66767; }
+    }
+  </style><rect class="surface" width="760" height="246" rx="6"/><text class="ink" x="16" y="22" font-size="13" font-weight="600">Longest wait wall per phase</text><line class="axis" x1="132" y1="28" x2="132" y2="216"/><text class="ink-2" x="122" y="44" font-size="11" text-anchor="end">Intro</text><rect class="band" x="132" y="32" width="59.75" height="16" rx="3"/><rect class="ok" x="132" y="34" width="39.83" height="12" rx="4"/><line class="axis" x1="191.75" y1="30" x2="191.75" y2="50"/><text class="ink" x="622" y="44" font-size="11">0.7 / 1 · OK</text><text class="ink-2" x="122" y="70" font-size="11" text-anchor="end">Bench</text><rect class="band" x="132" y="58" width="179.25" height="16" rx="3"/><rect class="ok" x="132" y="60" width="174.27" height="12" rx="4"/><line class="axis" x1="311.25" y1="56" x2="311.25" y2="76"/><text class="ink" x="622" y="70" font-size="11">2.9 / 3 · OK</text><text class="ink-2" x="122" y="96" font-size="11" text-anchor="end">Farm</text><rect class="band" x="132" y="84" width="298.75" height="16" rx="3"/><rect class="ok" x="132" y="86" width="174.27" height="12" rx="4"/><line class="axis" x1="430.75" y1="82" x2="430.75" y2="102"/><text class="ink" x="622" y="96" font-size="11">2.9 / 5 · OK</text><text class="ink-2" x="122" y="122" font-size="11" text-anchor="end">Studio</text><rect class="band" x="132" y="110" width="298.75" height="16" rx="3"/><rect class="ok" x="132" y="112" width="44.81" height="12" rx="4"/><line class="axis" x1="430.75" y1="108" x2="430.75" y2="128"/><text class="ink" x="622" y="122" font-size="11">0.8 / 5 · OK</text><text class="ink-2" x="122" y="148" font-size="11" text-anchor="end">Prestige runs 1-2</text><rect class="band" x="132" y="136" width="358.5" height="16" rx="3"/><rect class="ok" x="132" y="138" width="2" height="12" rx="4"/><line class="axis" x1="490.5" y1="134" x2="490.5" y2="154"/><text class="ink" x="622" y="148" font-size="11">0.0 / 6 · OK</text><text class="ink-2" x="122" y="174" font-size="11" text-anchor="end">The Absurd</text><rect class="band" x="132" y="162" width="358.5" height="16" rx="3"/><rect class="ok" x="132" y="164" width="2" height="12" rx="4"/><line class="axis" x1="490.5" y1="160" x2="490.5" y2="180"/><text class="ink" x="622" y="174" font-size="11">0.0 / 6 · OK</text><text class="ink-2" x="122" y="200" font-size="11" text-anchor="end">The End</text><rect class="band" x="132" y="188" width="478" height="16" rx="3"/><rect class="ok" x="132" y="190" width="2" height="12" rx="4"/><line class="axis" x1="610" y1="186" x2="610" y2="206"/><text class="ink" x="622" y="200" font-size="11">0.0 / 8 · OK</text><text class="ink-2" x="132" y="236" font-size="10">design minutes — bar: actual · tick: budget · band: tolerance window</text></svg>

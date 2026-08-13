@@ -3,15 +3,18 @@
 A finite idle game about a 3D printer that eventually prints everything.
 The binding specification is [`docs/printhead-spec-v0.4.md`](docs/printhead-spec-v0.4.md).
 
-> **Status:** M4 — slots and scale. The game is playable in a browser through
-> phases 0–2: assemble printer #1 piece by piece, load the slot, print, watch the
+> **Status:** M5 — meta and editor v2. The game is playable in a browser through
+> phases 0–4: assemble printer #1 piece by piece, load the slot, print, watch the
 > pity timer fill and a print fail, recycle the scrap, climb the machine tree,
 > unlock PETG behind the heated bed, trade filament on a moving market, buy your
-> way out of the friction with automation — and then outgrow your first bay,
-> buy a second, spread the fleet across the rack, put a bay on a print rota and
-> commit the run to Farm or Goliath. It installs as a PWA, autosaves to
-> IndexedDB and shows a "welcome back" summary. `VisualState` is frozen at v5;
-> saves are at v4. Designs and prestige land in M5.
+> way out of the friction with automation, outgrow your first bay, buy a second,
+> spread the fleet across the rack, put a bay on a print rota and commit the run
+> to Farm or Goliath — and then open the Design Studio, draft the capstone Money
+> Plate, print Products from it, melt the whole workshop down for Plates and
+> watch the intro rebuild itself while the presses print money. It installs as a
+> PWA, autosaves to IndexedDB and shows a "welcome back" summary. `VisualState`
+> is frozen at v6; saves are at v5. The endgame tree and the Fabricator's final
+> print land in M6.
 
 ## Quick start (inside the devcontainer)
 
@@ -75,7 +78,7 @@ v5 by a strict zod schema plus the fixture corpus in
 
 - **Materials are strategies chosen by data.** PLA is cheap, infinite and
   crash-prone; PETG is the balanced workhorse behind the heated bed; resin is
-  slow, reliable and behind the SLA unit; metal is a stub for M5. What makes
+  slow, reliable and behind the SLA unit; metal is a stub for M6. What makes
   them different is entirely numbers in `materials.json` — plus
   `requiresUpgradeId`, which is how the machine tree gates them.
 - **Failure is a deterministic pity timer, never a dice roll** (§7.1). Each
@@ -105,8 +108,9 @@ v5 by a strict zod schema plus the fixture corpus in
 - **Slots go 1 → 2 → 3 → 4 and stop.** The list lives in `slots.json`, one entry
   per bay with its price, its phase and its gates; the hard maximum is derived
   from that list plus `start.slotCount`, so the cap and the unlocks that reach
-  it can never disagree. Slot 3 wants an enclosure and slot 4 wants a Plate —
-  which nothing before M5 can mint, so it is prestige-gated in the literal sense.
+  it can never disagree. Slot 3 wants an enclosure and slot 4 wants a Plate, so
+  it is prestige-gated in the literal sense — until M5 there was nothing in the
+  game that could mint one.
 - **`ASSIGN_PRINTER` conserves the fleet.** Machines walk between bays; the sum
   across bays always equals the machines owned, asserted as a property. Pulling
   machines out of a running bay *shrinks its batch* rather than refunding it —
@@ -124,6 +128,36 @@ v5 by a strict zod schema plus the fixture corpus in
   The reducer only ever writes `forkId` while it is `null`, so exclusivity is a
   property of the shape rather than a rule someone has to remember.
 
+### The meta layer (spec §2, §5D, §5E)
+
+- **A Design is drafted once and owned forever.** It costs Money, occupies the
+  studio bench for its `designDesignMinutes`, and needs the material its def
+  names — which is how spec §3's "resin is required for Designs" is expressed:
+  the machine tree opens the material, and the studio simply cannot take a
+  commission for one it has not opened. `start.designSlots` (plus whatever the
+  `design-desk` node adds) is what stops the player owning the whole catalogue.
+- **Printing a Design makes Products, not Parts**, and every successful print
+  levels it up. The level multiplies the Product's value through the def's own
+  curve, so the reason to keep printing one design rather than drafting another
+  is earned by making the thing. A Product carries its banked value the way a
+  Part does, because it is worth what its Design was worth on the day it printed.
+- **The capstone unlocks prestige.** Nothing in `systems/` knows what the Money
+  Plate is: the gate is whichever design `prestige.requiredDesignId` names.
+- **The melt-down scraps the run** (§5D) — printers, tree, automations, bays,
+  filament, fork, all of it — and engraves it into Plates by a curve read from
+  content. What survives is *entirely* data: `retainedResources` names the
+  balances, `retainedLedgers` names the Designs and the Plate-bought presses.
+  A press confiscated by the next melt-down would be a tax rather than a reward,
+  and re-pointing either list changes the game without changing any code.
+- **The rebuilt workshop assembles itself** (§6 phase 4). `selfAssembling` is
+  set by the first melt-down and never cleared; the tick then attaches the intro
+  pieces through the very same `ATTACH_PIECE` path a clicking player uses, so
+  printer #1 is granted and the same events fire.
+- **Money printing is monotone in Plates by construction** (§5E). Each installed
+  press contributes `rateCurve(plates) × level`, with the curve read *at the
+  Plate count* — so the shape of the reward lives in `curves.json` where content
+  can see it, and no fold in the code can make more Plates pay less.
+
 ### The dev editor panel (spec §14)
 
 `pnpm --filter @printhead/app dev`, then the **Editor** button, bottom right.
@@ -133,6 +167,22 @@ it with zero editor code. Edits hot-apply through the same validator the game
 uses and keep the last good set on rejection; **Write to disk** posts to a
 dev-only Vite middleware that re-validates before touching a file. Time controls
 pause, warp ×1/×10/×100 *on top of* pace, and jump the FSM into any phase.
+
+Editor v2 adds the **state tools** and the **balance view**: a recursive
+GameState tree (shape-agnostic, so a field added to `GameState` appears the day
+it is added), an action-log tail fed by `store.onAction` — ticks excluded, so it
+is exactly the player's clicks — seed set/rewind, grant-resource cheats that keep
+a valued pool's banked money in step with the granted count, save export/import,
+a live sparkline per plotted balance, and the current phase timed against the
+budget the *running* content declares, so editing `pacing.json` above moves the
+bar immediately.
+
+`coverage.test.ts` is the guarantee behind "new content types appear
+automatically": it walks the shipped JSON, collects every scalar leaf and demands
+the inspector offer a widget for each. It found a real gap at M5 — union
+discriminators (`curves[].type`, `automation[].behavior`) were invisible, so the
+form could not say whether a curve was exponential or a power law. They are shown
+now, read-only, because changing one means a different variant's whole shape.
 
 The panel is behind `import.meta.env.DEV` **and** a dynamic import, so it is its
 own chunk and a production build drops it — `smoke.prod.spec.ts` fetches every
@@ -180,39 +230,44 @@ pnpm balance:report [--date YYYY-MM-DD] [--sweep sweep.csv]
   result to `packages/core/content/` as a reviewable diff.
 - **Report** (§12.5): markdown plus SVG charts into
   `docs/balance-reports/<date>/`. The current one is
-  [`2026-08-12`](docs/balance-reports/2026-08-12/report.md).
+  [`2026-08-13`](docs/balance-reports/2026-08-13/report.md).
 
 ```
 phase           actual   budget   window
 intro             5.0      5.0   4.0..6.0
 bench            25.9     30.0   24.0..36.0
-farm             80.1     80.0   64.0..96.0
+farm             80.3     80.0   64.0..96.0
+studio           74.6     75.0   60.0..90.0
+prestige         89.9     90.0   72.0..108.0
 ```
 
-> **Read the green light correctly.** `intro`, `bench` and `farm` are gated on
-> real mechanics — assemble, print, sell; four printers, two machine nodes and a
-> recycler run; fourteen printers, six nodes and three automations. Phases
-> `studio`…`end` still advance on `phaseDesignMinutes` alone, so they sit on
-> budget by construction and will stay green no matter what the economy does.
-> They become meaningful gates as M5–M6 add the mechanics behind them, and the
-> last phase absorbs any drift from the earlier ones because the run stops at
+> **Read the green light correctly.** `intro` … `prestige` are gated on real
+> mechanics — assemble, print, sell; four printers, two machine nodes and a
+> recycler run; fourteen printers, six nodes and three automations; the capstone
+> Design, a second Design and forty Products sold; two melt-downs, two presses
+> and fifty thousand printed. `absurd` and `end` still advance on
+> `phaseDesignMinutes` alone, so they sit on budget by construction and will stay
+> green no matter what the economy does. They become meaningful gates in M6, and
+> the last phase absorbs any drift from the earlier ones because the run stops at
 > the total budget rather than at a gate of its own.
 >
 > The tools know which is which without being told: a phase whose only
 > requirement is `phaseDesignMinutes` **is** a placeholder (`isPlaceholderPhase`),
-> and the wait-wall gate is scoped to the rest. Once the reference player has
-> bought everything M4 sells, the detector correctly reports dead zones in those
-> empty phases; raising their budgets would make the report green and the game
-> no better, so the overrun is asserted instead and the assertion breaks — on
-> purpose — the moment M5 gives the studio something to do.
+> and the wait-wall gate is scoped to the rest. At M4 the detector correctly
+> reported dead zones in `studio`…`end`, and the harness asserted the overrun
+> rather than raising the budgets to hide it. M5 closed them: a melt-down to take,
+> a press to install and a commission to put on the bench are meaningful actions
+> wherever the player is, so the whole timeline is now live and that assertion is
+> inverted rather than deleted.
 >
 > The bots disagree with each other, and that is the point. `greedy-spender`
-> buys capacity the instant it can afford it; in M3 that stalled it, because
-> printers stayed cheap and it never saved for the SLA unit. Bays now cap the
-> fleet, so its reflex runs into a ceiling, it is *forced* to buy a config slot,
-> and it finishes the arc — in 57 farm-minutes against the reference player's
-> 80, with an order of magnitude more prints. It also takes the other side of
-> the fork, so between the two of them both branches get played.
+> buys capacity the instant it can afford it. At M3 that stalled it; at M4 the bay
+> ceiling forced it to buy a config slot and it finished the arc. At M5 it takes
+> Goliath — slower prints, far bigger batches — so it finishes *fewer* prints than
+> the reference player while fielding more machines and banking several times the
+> money. It is still the impatient player; it is no longer the busier one.
+> `idle-heavy` still stalls in the farm, which is what a ten-minute check-in buys
+> you. Between them both sides of the fork get played.
 
 ## Layout
 
