@@ -44,6 +44,9 @@ export const ScalarResourceKindSchema = z.enum(SCALAR_RESOURCE_KINDS);
  */
 export const GatedActionTypeSchema = z.enum([
   'ATTACH_PIECE',
+  'PRINT_SECTION',
+  'START_FABRICATOR',
+  'NEW_GAME_PLUS',
   'SET_SLOT_CONFIG',
   'START_PRINT',
   'SELL_PARTS',
@@ -103,6 +106,14 @@ export const MetricSchema = z.enum([
   /** Money the Plates have printed directly (spec §5E). */
   'moneyPrinted',
   'moneyPrintersInstalled',
+  /** Levels installed in the Endgame Tree (spec §5E) — the Plate sink. */
+  'endgameNodes',
+  /** Fabricator sections pre-printed (spec §7.3). */
+  'fabricatorSections',
+  /** 1 once the Universal Fabricator has finished printing (spec §6 phase 6). */
+  'fabricatorComplete',
+  /** 1 once the ending sequence has run its course — the FSM's last gate. */
+  'endingComplete',
 ]);
 
 export const RequirementSchema = z
@@ -230,6 +241,14 @@ export const MaterialDefSchema = z
     identity: MaterialIdentitySchema,
     qualityTier: z.number().int().positive(),
     supply: MaterialSupplySchema,
+    /**
+     * What a gram is paid for in. Everything the workshop buys with Money says
+     * so here, and the endgame's exotic feedstock says `plates` — which is the
+     * whole of spec §3's "Composite/exotic … Cost: Plates". The market prices a
+     * gram; this says which till the money comes out of, so a material bought
+     * with prestige currency needs no second buying path.
+     */
+    priceResource: ScalarResourceKindSchema,
     costPerGram: NonNegative,
     printSpeedMultiplier: Multiplier,
     /** Pity charge each print in this material adds (spec §7.1). */
@@ -315,6 +334,11 @@ export const UpgradeEffectTypeSchema = z.enum([
   'designSlots',
   /** Money value of a printed Product (spec §5D) — the studio's own tree. */
   'productValueMultiplier',
+  /**
+   * Printers the printed factory turns out per design-minute (spec §5E:
+   * "print a factory (outputs printers)"). `add`, so factory levels stack.
+   */
+  'printerFactoryRate',
 ]);
 
 export const UpgradeEffectSchema = z
@@ -668,8 +692,16 @@ export const PrestigeFileSchema = z
      * named survivor (§2), and the money printers join them because they are
      * bought with Plates: an endgame node paid for in prestige currency that
      * the next melt-down confiscates would be a tax, not a reward (§5E).
+     *
+     * The same argument carries the whole **Endgame Tree** across, for the same
+     * reason — every node in it is priced in Plates — and the Fabricator's
+     * pre-printed sections, which is precisely how a Farm build hands its work
+     * to the Goliath run that finishes the job (§7.3). As always the list is
+     * the *only* place any of this is decided.
      */
-    retainedLedgers: z.array(z.enum(['designs', 'moneyPrinters'])).min(1),
+    retainedLedgers: z
+      .array(z.enum(['designs', 'moneyPrinters', 'endgameTree', 'fabricator']))
+      .min(1),
     plateInputResource: ResourceKindSchema,
     plateInputScale: Positive,
     /** Plates a melt-down must be worth before the button does anything. */
@@ -690,6 +722,154 @@ export const PrestigeFileSchema = z
     },
   );
 
+// --- endgame.json -----------------------------------------------------------
+
+/**
+ * On-screen inflation (spec §6 phase 5: "the economy eats itself").
+ *
+ * The index is a curve read at a *reading of the simulation* — by default the
+ * Money the Plates have printed — so the devaluation is caused by the player's
+ * own money printers rather than by a timer. It never falls below 1 and never
+ * passes `maxMultiplier`, so a runaway curve cannot produce an unrenderable
+ * price. `startPhaseId` is when it switches on: before that the index is
+ * exactly 1 and nothing in the economy is touched.
+ */
+/**
+ * Which reading of the run drives the inflation index.
+ *
+ * Deliberately a *narrow* selector rather than the whole `Metric` union: the
+ * index is read on every market quote and every batch that comes off a bed, so
+ * it has to be computable from `stats` alone. Going through the general metric
+ * interpreter would drag the automation, the market and the studio in behind
+ * it — and those all ask the market for a price, which asks for the index.
+ */
+export const InflationMetricSchema = z.enum(['moneyPrinted', 'moneyEarned', 'platesEarned']);
+
+export const InflationSchema = z
+  .object({
+    startPhaseId: IdSchema,
+    metric: InflationMetricSchema,
+    /** The reading is scaled before the curve sees it, so curves stay readable. */
+    inputScale: Positive,
+    curveId: IdSchema,
+    maxMultiplier: Multiplier,
+  })
+  .strict();
+
+/**
+ * A backdrop the workshop is drawn against (spec §5E: "print a building
+ * (backdrop change)"). The first entry with `requiresUpgradeId: null` is the
+ * default; the last one whose node is installed wins, so the list reads as a
+ * progression and the renderer only ever receives an id.
+ */
+export const BackdropDefSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    requiresUpgradeId: IdSchema.nullable(),
+  })
+  .strict();
+
+/** The printed factory (spec §5E): a node that turns out machines by itself. */
+export const FactoryDefSchema = z
+  .object({
+    /** Which printer the factory produces — an ordinary `printers.json` def. */
+    printerId: IdSchema,
+  })
+  .strict();
+
+/**
+ * The Universal Fabricator (spec §6 phase 6, §7.3) — the final print.
+ *
+ * It needs the blueprint, every active bay committed to it, and the fork that
+ * declares `requiredForFinalPrint` (spec §7.3: Goliath). A Farm build stays
+ * viable by **pre-printing sections**: each finished section takes
+ * `sectionDesignMinutes` off the final build, and sections survive a melt-down
+ * when `prestige.retainedLedgers` says so — which is exactly how a Farm run
+ * hands its work to the Goliath run that follows.
+ */
+export const FabricatorDefSchema = z
+  .object({
+    requiresUpgradeId: IdSchema,
+    /** Feedstock for the build — the endgame material, bought with Plates. */
+    materialId: IdSchema,
+    filamentGrams: Positive,
+    /** The full build, before any pre-printed section shortens it. */
+    designMinutes: Positive,
+    /** Never shorter than this, however many sections were pre-printed. */
+    minDesignMinutes: Positive,
+    /** Layers the synced render draws (spec §6: "layer by layer"). */
+    layers: z.number().int().positive(),
+    /**
+     * Machines that must be standing in the committed bays before the print
+     * will start (spec §4: "a deliberate return to total commitment"). Without
+     * a number here "all slots committed" would mean one manned bay under a
+     * Goliath run, which is no commitment at all.
+     */
+    requiredPrinters: z.number().int().positive(),
+    maxSections: z.number().int().positive(),
+    sectionDesignMinutes: Positive,
+    sectionFilamentGrams: Positive,
+    sectionCostCurveId: IdSchema,
+    sectionCostResource: ResourceKindSchema,
+  })
+  .strict()
+  .refine((def) => def.minDesignMinutes <= def.designMinutes, {
+    message: 'minDesignMinutes must not exceed designMinutes',
+    path: ['minDesignMinutes'],
+  });
+
+/**
+ * The ending (spec §6 phase 6): "numbers fade to ∞ → museum shot of printer #1
+ * → credits print out". The three stages are durations in design-seconds and
+ * the credits are content, so the whole sequence is data.
+ */
+export const EndingDefSchema = z
+  .object({
+    numbersDesignSeconds: Positive,
+    museumDesignSeconds: Positive,
+    creditsDesignSeconds: Positive,
+    /** The machine the museum shot puts under glass — printer #1. */
+    museumPrinterId: IdSchema,
+    /** A blank line is a spacer in a credit roll, so empty strings are allowed. */
+    credits: z.array(z.string()).min(1),
+  })
+  .strict();
+
+/**
+ * New Game Plus (spec §18 M6): "a new run keeping designs + optional
+ * modifiers". What survives is named here exactly as prestige names it, and the
+ * modifiers are ordinary `UpgradeEffect` bundles the player opts into, folded
+ * by the same interpreter the trees use — so a new modifier is a JSON edit.
+ */
+export const NewGamePlusModifierSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    description: z.string().min(1),
+    effects: z.array(UpgradeEffectSchema).min(1),
+  })
+  .strict();
+
+export const NewGamePlusSchema = z
+  .object({
+    retainedResources: z.array(ResourceKindSchema),
+    retainedLedgers: z.array(z.enum(['designs', 'moneyPrinters'])),
+    modifiers: z.array(NewGamePlusModifierSchema),
+  })
+  .strict();
+
+export const EndgameFileSchema = z
+  .object({
+    inflation: InflationSchema,
+    backdrops: z.array(BackdropDefSchema).min(1),
+    factory: FactoryDefSchema,
+    fabricator: FabricatorDefSchema,
+    ending: EndingDefSchema,
+    newGamePlus: NewGamePlusSchema,
+  })
+  .strict();
+
 // --- the whole content set --------------------------------------------------
 
 export const ContentSchema = z
@@ -708,6 +888,7 @@ export const ContentSchema = z
     automation: AutomationFileSchema,
     failure: FailureFileSchema,
     prestige: PrestigeFileSchema,
+    endgame: EndgameFileSchema,
   })
   .strict();
 
@@ -727,6 +908,7 @@ export const CONTENT_FILE_SCHEMAS = {
   automation: AutomationFileSchema,
   failure: FailureFileSchema,
   prestige: PrestigeFileSchema,
+  endgame: EndgameFileSchema,
 } as const;
 
 export type ContentFileName = keyof typeof CONTENT_FILE_SCHEMAS;
@@ -767,5 +949,15 @@ export type ChangeoverAutomationDef = z.infer<typeof ChangeoverAutomationSchema>
 export type FailureContent = z.infer<typeof FailureFileSchema>;
 export type MoneyPrinterDef = z.infer<typeof MoneyPrinterDefSchema>;
 export type PrestigeContent = z.infer<typeof PrestigeFileSchema>;
+export type RetainedLedger = PrestigeContent['retainedLedgers'][number];
+export type InflationMetric = z.infer<typeof InflationMetricSchema>;
+export type InflationDef = z.infer<typeof InflationSchema>;
+export type BackdropDef = z.infer<typeof BackdropDefSchema>;
+export type FactoryDef = z.infer<typeof FactoryDefSchema>;
+export type FabricatorDef = z.infer<typeof FabricatorDefSchema>;
+export type EndingDef = z.infer<typeof EndingDefSchema>;
+export type NewGamePlusModifier = z.infer<typeof NewGamePlusModifierSchema>;
+export type NewGamePlusContent = z.infer<typeof NewGamePlusSchema>;
+export type EndgameContent = z.infer<typeof EndgameFileSchema>;
 export type Content = z.infer<typeof ContentSchema>;
 export type RawContent = Record<ContentFileName, unknown>;

@@ -36,8 +36,14 @@ import { z } from 'zod';
  *   money printers are a list like every other purchase; and the intro carries
  *   a `selfAssembling` flag so the renderer can show the workshop building
  *   itself instead of waiting for clicks (spec §6 phase 4).
+ * - v7 (M6) — **frozen**: the endgame. The workshop carries the backdrop it is
+ *   drawn against (spec §5E: "print a building"), the inflation index the
+ *   presses have caused (spec §6 phase 5), the Universal Fabricator as a
+ *   synced, layer-by-layer build (spec §6 phase 6) with the sections
+ *   pre-printed for it (spec §7.3), and the ending sequence — stage, progress
+ *   and the credits themselves — followed by the New Game Plus offer.
  */
-export const VISUAL_STATE_VERSION = 6;
+export const VISUAL_STATE_VERSION = 7;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -321,6 +327,103 @@ export const MoneyPrinterVisualSchema = z
   })
   .strict();
 
+/**
+ * On-screen inflation (spec §6 phase 5). The multiplier is what every price the
+ * player sees has been through, and the reading is what caused it — so the HUD
+ * can say *why* a bracket now costs what a printer used to.
+ */
+export const InflationVisualSchema = z
+  .object({
+    active: z.boolean(),
+    /** ≥ 1. Multiplies every money price and every freshly banked value. */
+    multiplier: z.number().finite().min(1),
+    /** Money the presses have printed — the reading the index is read at. */
+    moneyPrinted: NonNegative,
+  })
+  .strict();
+
+/**
+ * The Universal Fabricator (spec §6 phase 6) — the one synced render.
+ *
+ * `layer`/`layers` are what makes it synced: the renderer draws the build layer
+ * by layer straight off the projection, so it needs no clock and two viewers of
+ * the same save are on the same layer.
+ */
+export const FabricatorVisualSchema = z
+  .object({
+    /** The blueprint is owned, so the whole thing is worth showing at all. */
+    unlocked: z.boolean(),
+    available: z.boolean(),
+    /** Why it cannot be started — `null` when it can. */
+    blockedReason: NonEmpty.nullable(),
+    running: z.boolean(),
+    complete: z.boolean(),
+    progress: Unit,
+    layer: NonNegativeInt,
+    layers: z.number().int().positive(),
+    remainingMs: NonNegative,
+    /** Design-milliseconds the build takes at today's section count. */
+    totalMs: NonNegative,
+    materialId: NonEmpty,
+    filamentGrams: NonNegative,
+    heldGrams: NonNegative,
+    /** Sections pre-printed, and the most that can be (spec §7.3). */
+    sections: NonNegativeInt,
+    maxSections: z.number().int().positive(),
+    sectionRunning: z.boolean(),
+    sectionProgress: Unit,
+    sectionAvailable: z.boolean(),
+    sectionBlockedReason: NonEmpty.nullable(),
+    sectionCost: NonNegative,
+    sectionCostResource: NonEmpty,
+    /** Does the run's fork allow the final print at all (spec §7.3)? */
+    forkAllows: z.boolean(),
+    /** Are all the active bays staffed and ready to commit (spec §4)? */
+    slotsCommitted: z.boolean(),
+    /** Machines standing in them, and how many the print asks for. */
+    committedPrinters: NonNegativeInt,
+    requiredPrinters: z.number().int().positive(),
+  })
+  .strict();
+
+/** One optional New Game Plus modifier (spec §18 M6). */
+export const NewGamePlusModifierVisualSchema = z
+  .object({
+    modifierId: NonEmpty,
+    name: NonEmpty,
+    description: NonEmpty,
+    /** Taken on the current run. */
+    active: z.boolean(),
+  })
+  .strict();
+
+/**
+ * The ending (spec §6 phase 6): numbers → museum → credits → the post-game.
+ * The credits are content, carried here so the renderer holds no copy of them,
+ * and `stage` is derived from the clock alone.
+ */
+export const EndingVisualSchema = z
+  .object({
+    stage: z.enum(['none', 'numbers', 'museum', 'credits', 'complete']),
+    active: z.boolean(),
+    /** 0..1 through the whole sequence. */
+    progress: Unit,
+    /** 0..1 through the current stage — what a fade or a scroll runs on. */
+    stageProgress: Unit,
+    /** The machine the museum shot puts under glass: printer #1. */
+    museumPrinterId: NonEmpty,
+    museumTier: NonNegativeInt,
+    credits: z.array(z.string()),
+    /** How many credit lines have printed out so far. */
+    creditLines: NonNegativeInt,
+    /** The numbers have gone to ∞ (spec §6): stop rendering the ledger. */
+    infinite: z.boolean(),
+    newGamePlusAvailable: z.boolean(),
+    newGamePlusRun: NonNegativeInt,
+    modifiers: z.array(NewGamePlusModifierVisualSchema),
+  })
+  .strict();
+
 export const VisualStateSchema = z
   .object({
     version: z.literal(VISUAL_STATE_VERSION),
@@ -348,6 +451,11 @@ export const VisualStateSchema = z
     studio: StudioVisualSchema,
     prestige: PrestigeVisualSchema,
     moneyPrinters: z.array(MoneyPrinterVisualSchema),
+    /** What the workshop is drawn against (spec §5E), as an id, not a picture. */
+    backdrop: NonEmpty,
+    inflation: InflationVisualSchema,
+    fabricator: FabricatorVisualSchema,
+    ending: EndingVisualSchema,
   })
   .strict();
 
@@ -374,6 +482,12 @@ export type DesignVisual = DeepReadonly<z.infer<typeof DesignVisualSchema>>;
 export type StudioVisual = DeepReadonly<z.infer<typeof StudioVisualSchema>>;
 export type PrestigeVisual = DeepReadonly<z.infer<typeof PrestigeVisualSchema>>;
 export type MoneyPrinterVisual = DeepReadonly<z.infer<typeof MoneyPrinterVisualSchema>>;
+export type InflationVisual = DeepReadonly<z.infer<typeof InflationVisualSchema>>;
+export type FabricatorVisual = DeepReadonly<z.infer<typeof FabricatorVisualSchema>>;
+export type NewGamePlusModifierVisual = DeepReadonly<
+  z.infer<typeof NewGamePlusModifierVisualSchema>
+>;
+export type EndingVisual = DeepReadonly<z.infer<typeof EndingVisualSchema>>;
 export type AssemblyVisual = DeepReadonly<z.infer<typeof AssemblyVisualSchema>>;
 export type LedgerVisual = DeepReadonly<z.infer<typeof LedgerVisualSchema>>;
 export type VisualState = DeepReadonly<z.infer<typeof VisualStateSchema>>;

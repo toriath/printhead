@@ -1,0 +1,122 @@
+{
+  "version": 5,
+  "savedAtMs": 1723420800000,
+  "state": {
+    "saveVersion": 5,
+    "simTimeMs": 12813000,
+    "tickCount": 128130,
+    "phaseId": "prestige",
+    "phaseEnteredAtMs": 11755100,
+    "rng": {
+      "seed": 7,
+      "count": 0
+    },
+    "resources": {
+      "parts": 3302,
+      "scrap": 0,
+      "money": 261012.8247839086,
+      "designs": 2,
+      "products": 1,
+      "plates": 5
+    },
+    "partsValue": 0,
+    "scrapValue": 0,
+    "productsValue": 12730.63683606969,
+    "filamentGrams": {
+      "pla": 40,
+      "petg": 0,
+      "resin": 1920,
+      "metal": 0
+    },
+    "printers": {
+      "bench-mk1": 1
+    },
+    "upgrades": {
+      "heated-bed": 1,
+      "enclosure": 1,
+      "sla-unit": 1,
+      "design-desk": 2
+    },
+    "automation": {},
+    "market": {
+      "petg": {
+        "stockGrams": 6000,
+        "pressure": 0
+      },
+      "resin": {
+        "stockGrams": 5499.999999998636,
+        "pressure": -0.21067114586355257
+      },
+      "metal": {
+        "stockGrams": 800,
+        "pressure": 0
+      }
+    },
+    "slots": [
+      {
+        "id": "slot-1",
+        "materialId": "resin",
+        "objectId": null,
+        "designId": "money-plate",
+        "printerCount": 1,
+        "autoRestart": true,
+        "run": {
+          "remainingMs": 122727.2727272727,
+          "totalMs": 436363.63636363635,
+          "batch": 1
+        },
+        "failureCharge": 0.0168,
+        "changeoverMs": 0,
+        "queue": [],
+        "queueIndex": 0,
+        "queueBatches": 0
+      }
+    ],
+    "forkId": null,
+    "designs": {
+      "money-plate": {
+        "level": 11,
+        "printsOnLevel": 2
+      },
+      "lamp-shade": {
+        "level": 1,
+        "printsOnLevel": 0
+      }
+    },
+    "studio": {
+      "designId": "phone-stand",
+      "remainingMs": 330000
+    },
+    "moneyPrinters": {
+      "bill-printer": 1
+    },
+    "selfAssembling": true,
+    "assembly": {
+      "attachedPieceIds": [
+        "frame",
+        "gantry",
+        "bed",
+        "extruder",
+        "hotend",
+        "spool-holder",
+        "controller"
+      ],
+      "cooldownMs": 0
+    },
+    "stats": {
+      "printsCompleted": 1,
+      "printsFailed": 0,
+      "partsProduced": 0,
+      "partsSold": 0,
+      "moneyEarned": 15000,
+      "filamentPurchasedGrams": 2000,
+      "filamentSoldGrams": 0,
+      "scrapProducedGrams": 0,
+      "scrapRecycledGrams": 0,
+      "productsProduced": 1,
+      "productsSold": 0,
+      "moneyPrinted": 15000,
+      "prestigeCount": 1
+    }
+  }
+}

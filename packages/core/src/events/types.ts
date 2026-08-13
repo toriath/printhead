@@ -165,6 +165,40 @@ export interface MoneyPrinterInstalledEvent extends EventBase {
   readonly paid: number;
 }
 
+/** One section of the Universal Fabricator came off the bed (spec §7.3). */
+export interface FabricatorSectionPrintedEvent extends EventBase {
+  readonly type: 'FABRICATOR_SECTION_PRINTED';
+  readonly sections: number;
+  readonly maxSections: number;
+}
+
+/** The whole workshop was committed to the final print (spec §6 phase 6). */
+export interface FabricatorStartedEvent extends EventBase {
+  readonly type: 'FABRICATOR_STARTED';
+  readonly durationMs: number;
+  readonly sections: number;
+  readonly slotsCommitted: number;
+}
+
+export interface FabricatorCompletedEvent extends EventBase {
+  readonly type: 'FABRICATOR_COMPLETED';
+  readonly designMinutes: number;
+}
+
+/** The credits finished printing: the arc is over (spec §6 phase 6). */
+export interface GameEndedEvent extends EventBase {
+  readonly type: 'GAME_ENDED';
+  readonly totalDesignMinutes: number;
+}
+
+/** A new run on the far side of the ending (spec §18 M6). */
+export interface NewGamePlusStartedEvent extends EventBase {
+  readonly type: 'NEW_GAME_PLUS_STARTED';
+  readonly run: number;
+  readonly modifierIds: readonly string[];
+  readonly designsKept: number;
+}
+
 export interface FilamentPurchasedEvent extends EventBase {
   readonly type: 'FILAMENT_PURCHASED';
   readonly materialId: string;
@@ -238,6 +272,12 @@ export type ActionRejectedReason =
   | 'already-owned'
   | 'missing-prerequisite'
   | 'no-recycler'
+  /** The final print needs every active bay staffed and committed (spec §4). */
+  | 'slots-not-committed'
+  /** Only the fork that declares `requiredForFinalPrint` may attempt it (§7.3). */
+  | 'wrong-fork'
+  /** Nothing left to print: the Fabricator has already been built. */
+  | 'already-built'
   | 'not-tradeable'
   | 'nothing-to-do';
 
@@ -263,6 +303,11 @@ export type DomainEvent =
   | DesignLevelledEvent
   | PrestigedEvent
   | MoneyPrinterInstalledEvent
+  | FabricatorSectionPrintedEvent
+  | FabricatorStartedEvent
+  | FabricatorCompletedEvent
+  | GameEndedEvent
+  | NewGamePlusStartedEvent
   | FilamentPurchasedEvent
   | FilamentSoldEvent
   | PrinterBuiltEvent
@@ -295,6 +340,11 @@ export const DOMAIN_EVENT_TYPES = [
   'DESIGN_LEVELLED',
   'PRESTIGED',
   'MONEY_PRINTER_INSTALLED',
+  'FABRICATOR_SECTION_PRINTED',
+  'FABRICATOR_STARTED',
+  'FABRICATOR_COMPLETED',
+  'GAME_ENDED',
+  'NEW_GAME_PLUS_STARTED',
   'FILAMENT_PURCHASED',
   'FILAMENT_SOLD',
   'PRINTER_BUILT',

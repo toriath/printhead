@@ -2,7 +2,7 @@ import type { Content, MoneyPrinterDef } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
 import { evaluateCurveById } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
-import type { GameState, MoneyPrinterLedger } from '../state/game-state.js';
+import type { GameState, MoneyPrinterLedger, UpgradeLedger } from '../state/game-state.js';
 import { createInitialState } from '../state/game-state.js';
 import { type Cost, nextCost } from './cost.js';
 import { hasCapstoneDesign } from './designs.js';
@@ -92,13 +92,40 @@ export interface PrestigeResult {
  * remade, not rescaled, not reset — which is exactly what "preserves Designs
  * **exactly**" (spec §13) asks for.
  */
-function retainedLedgers(state: GameState, content: Content): Partial<GameState> {
+function retainedLedgers(state: GameState, content: Content, fresh: GameState): Partial<GameState> {
   let kept: Partial<GameState> = {};
   for (const ledger of content.prestige.retainedLedgers) {
-    kept =
-      ledger === 'designs'
-        ? { ...kept, designs: state.designs }
-        : { ...kept, moneyPrinters: state.moneyPrinters };
+    switch (ledger) {
+      case 'designs':
+        kept = { ...kept, designs: state.designs };
+        break;
+      case 'moneyPrinters':
+        kept = { ...kept, moneyPrinters: state.moneyPrinters };
+        break;
+      case 'endgameTree':
+        kept = { ...kept, upgrades: endgameLevels(state, content) };
+        break;
+      case 'fabricator':
+        // The *sections* survive, not the build: a print in flight belongs to
+        // the workshop that was melted down (spec §7.3).
+        kept = {
+          ...kept,
+          fabricator: { ...fresh.fabricator, sections: state.fabricator.sections },
+        };
+        break;
+    }
+  }
+  return kept;
+}
+
+/** Just the Endgame Tree's levels — everything else in the ledger is scrapped. */
+function endgameLevels(state: GameState, content: Content): UpgradeLedger {
+  const kept: Record<string, number> = {};
+  for (const def of content.upgrades) {
+    const level = state.upgrades[def.id];
+    if (def.tree === 'endgame' && level !== undefined) {
+      kept[def.id] = level;
+    }
   }
   return kept;
 }
@@ -143,14 +170,24 @@ export function meltDown(
       phaseEnteredAtMs: state.phaseEnteredAtMs,
       rng: state.rng,
       resources,
-      ...retainedLedgers(state, content),
+      ...retainedLedgers(state, content, fresh),
       selfAssembling: true,
       assembly: {
         ...fresh.assembly,
         cooldownMs:
           fresh.assembly.cooldownMs + content.prestige.meltdownDesignSeconds * MS_PER_SECOND,
       },
-      stats: { ...fresh.stats, prestigeCount: state.stats.prestigeCount + ONE },
+      stats: {
+        ...fresh.stats,
+        // Two counters measure the *player*, not the run, and survive the
+        // melt-down: how many times they have done this, and how much money
+        // the presses have put into the world. The second one is what drives
+        // inflation (spec §6 phase 5), and money already printed does not
+        // un-print itself when a workshop is scrapped.
+        prestigeCount: state.stats.prestigeCount + ONE,
+        moneyPrinted: state.stats.moneyPrinted,
+        platesEarned: state.stats.platesEarned + platesAwarded,
+      },
     },
   };
 }
@@ -176,9 +213,14 @@ export function countMoneyPrinters(state: GameState): number {
  * **monotone in Plates** by construction: the curve is read at the Plate count
  * and nothing else scales it down. With no Plates there is nothing to print
  * with, however many machines are installed — the Plates *are* the plates.
+ *
+ * The count it reads is `stats.platesEarned`, every Plate the game has ever
+ * engraved, rather than the balance in hand. Reading the balance made spending
+ * Plates switch the presses off, which turned the Endgame Tree — the only thing
+ * Plates are for — into a punishment (see `StatsState.platesEarned`).
  */
 export function moneyPrintRate(state: GameState, content: Content, curves: CurveRegistry): number {
-  const plates = state.resources.plates;
+  const plates = state.stats.platesEarned;
   if (plates <= NONE) {
     return NONE;
   }

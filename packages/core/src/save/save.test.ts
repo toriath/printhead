@@ -7,6 +7,7 @@ import fixtureV2 from './__fixtures__/save-v2.json' with { type: 'json' };
 import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
 import fixtureV4 from './__fixtures__/save-v4.json' with { type: 'json' };
 import fixtureV5 from './__fixtures__/save-v5.json' with { type: 'json' };
+import fixtureV6 from './__fixtures__/save-v6.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -52,12 +53,13 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
     expect(fixtureV4.version).toBe(4);
     expect(fixtureV5.version).toBe(5);
+    expect(fixtureV6.version).toBe(6);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -126,9 +128,9 @@ describe('save fixture corpus', () => {
     expect(loaded.stats.moneyPrinted).toBe(0);
   });
 
-  it('loads the released v5 fixture untouched', () => {
+  it('loads the released v5 fixture by migrating it forward', () => {
     const loaded = fromSaveFile(fixtureV5);
-    expect(loaded).toEqual(fixtureV5.state);
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
     // The M5 shape the fixture exists to pin: Designs owned and levelled, a bay
     // making Products, a commission on the bench, Plates banked, a press
     // installed, and an intro that now rebuilds itself (spec §5D, §5E).
@@ -140,6 +142,29 @@ describe('save fixture corpus', () => {
     expect(Object.keys(loaded.moneyPrinters).length).toBeGreaterThan(0);
     expect(loaded.selfAssembling).toBe(true);
     expect(loaded.stats.prestigeCount).toBeGreaterThan(0);
+    // ...and everything M6 added starts empty: that workshop had no factory,
+    // had printed no section of the Fabricator and had never seen the credits.
+    expect(loaded.factoryProgress).toBe(0);
+    expect(loaded.fabricator).toEqual({
+      sections: 0,
+      sectionRun: null,
+      run: null,
+      completedAtMs: null,
+    });
+    expect(loaded.ngPlus).toEqual({ run: 0, modifierIds: [] });
+  });
+
+  it('loads the released v6 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV6);
+    expect(loaded).toEqual(fixtureV6.state);
+    // The M6 shape the fixture exists to pin: an Endgame Tree bought with
+    // Plates, a printed factory turning over, sections pre-printed for the
+    // Fabricator and the final print itself in flight (spec §5E, §7.3).
+    expect(loaded.upgrades['exotic-feedstock']).toBeGreaterThan(0);
+    expect(loaded.upgrades['universal-fabricator']).toBeGreaterThan(0);
+    expect(loaded.fabricator.sections).toBeGreaterThan(0);
+    expect(loaded.fabricator.run).not.toBeNull();
+    expect(loaded.phaseId).toBe('end');
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

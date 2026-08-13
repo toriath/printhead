@@ -86,6 +86,18 @@ export function computeModifiers(state: GameState, content: Content): ModifierMa
       modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, IDENTITY));
     }
   }
+  // New Game Plus modifiers (spec §18 M6) are the same records again, taken
+  // once at the start of the run and in force for the whole of it. Folding
+  // them here is what keeps "optional modifiers" a content decision rather
+  // than a special case anywhere in the systems that read a modifier.
+  for (const modifier of content.endgame.newGamePlus.modifiers) {
+    if (!state.ngPlus.modifierIds.includes(modifier.id)) {
+      continue;
+    }
+    for (const effect of modifier.effects) {
+      modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, IDENTITY));
+    }
+  }
   return modifiers;
 }
 
@@ -100,6 +112,29 @@ export function modifierOf(
   fallback: number,
 ): number {
   return modifiers.get(type) ?? fallback;
+}
+
+/**
+ * Levels installed in one tree (spec §5). The Endgame Tree's total is a phase
+ * gate, and it lives here rather than with the endgame systems so the metric
+ * interpreter can read it without importing the machinery behind the Fabricator.
+ */
+export function countUpgradesInTree(
+  state: GameState,
+  content: Content,
+  tree: UpgradeDef['tree'],
+): number {
+  let total = NONE;
+  for (const def of content.upgrades) {
+    if (def.tree === tree) {
+      total += installedLevel(state, def.id);
+    }
+  }
+  return total;
+}
+
+export function countEndgameNodes(state: GameState, content: Content): number {
+  return countUpgradesInTree(state, content, 'endgame');
 }
 
 export type UpgradeRejection = 'unknown-target' | 'locked' | 'max-level' | 'missing-prerequisite';

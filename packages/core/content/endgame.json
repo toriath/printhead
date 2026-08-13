@@ -1,0 +1,98 @@
+{
+  "inflation": {
+    "startPhaseId": "absurd",
+    "metric": "moneyPrinted",
+    "inputScale": 0.00001,
+    "curveId": "inflation-index",
+    "maxMultiplier": 500
+  },
+  "backdrops": [
+    {
+      "id": "workshop",
+      "name": "The workshop",
+      "requiresUpgradeId": null
+    },
+    {
+      "id": "skyline",
+      "name": "A printed city",
+      "requiresUpgradeId": "print-a-building"
+    }
+  ],
+  "factory": {
+    "printerId": "bench-mk1"
+  },
+  "fabricator": {
+    "requiresUpgradeId": "universal-fabricator",
+    "materialId": "composite",
+    "filamentGrams": 600,
+    "designMinutes": 34,
+    "minDesignMinutes": 20,
+    "layers": 140,
+    "requiredPrinters": 16,
+    "maxSections": 4,
+    "sectionDesignMinutes": 3.5,
+    "sectionFilamentGrams": 60,
+    "sectionCostCurveId": "fabricator-section-cost",
+    "sectionCostResource": "parts"
+  },
+  "ending": {
+    "numbersDesignSeconds": 40,
+    "museumDesignSeconds": 40,
+    "creditsDesignSeconds": 100,
+    "museumPrinterId": "bench-mk1",
+    "credits": [
+      "PRINTHEAD",
+      "a finite idle game about a 3D printer",
+      "",
+      "Printer #1 — assembled by hand, seven pieces",
+      "The Bench — where a Part was first worth something",
+      "The Farm — fourteen machines and a market",
+      "The Studio — resin, designs, products",
+      "The Melt-down — everything you built, engraved",
+      "The Absurd — the economy ate itself",
+      "The Fabricator — it printed the last thing left to print",
+      "",
+      "Every number you saw came out of content/*.json",
+      "Every phase you passed was a row in pacing.json",
+      "Nothing here was hard-coded. That was the point.",
+      "",
+      "Thank you for playing.",
+      "Now print your printer."
+    ]
+  },
+  "newGamePlus": {
+    "retainedResources": ["designs"],
+    "retainedLedgers": ["designs"],
+    "modifiers": [
+      {
+        "id": "veteran-workshop",
+        "name": "Veteran workshop",
+        "description": "You have built this bench before. Every machine runs half again as fast.",
+        "effects": [
+          {
+            "type": "printSpeedMultiplier",
+            "combine": "multiply",
+            "value": 1.5
+          }
+        ]
+      },
+      {
+        "id": "brittle-filament",
+        "name": "Brittle filament",
+        "description": "The spools are worse and the parts are worth more. Prints fail twice as often.",
+        "effects": [
+          {
+            "type": "failureChargeMultiplier",
+            "combine": "multiply",
+            "value": 2
+          },
+          {
+            "type": "partsYieldMultiplier",
+            "combine": "multiply",
+            "value": 2
+          }
+        ]
+      }
+    ]
+  }
+}

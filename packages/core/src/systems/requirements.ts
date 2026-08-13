@@ -3,8 +3,9 @@ import { MS_PER_MINUTE } from '../engine/constants.js';
 import type { GameState } from '../state/game-state.js';
 import { countAutomations } from './automation.js';
 import { countDesignLevels, countDesigns, hasCapstoneDesign } from './designs.js';
+import { isEndingComplete } from './ending.js';
 import { countMoneyPrinters } from './prestige.js';
-import { countUpgrades } from './upgrades.js';
+import { countEndgameNodes, countUpgrades } from './upgrades.js';
 
 /**
  * Data-driven progression gates (spec §11/§15). Content names a metric and a
@@ -91,6 +92,14 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.stats.moneyPrinted;
     case 'moneyPrintersInstalled':
       return countMoneyPrinters(state);
+    case 'endgameNodes':
+      return countEndgameNodes(state, content);
+    case 'fabricatorSections':
+      return state.fabricator.sections;
+    case 'fabricatorComplete':
+      return state.fabricator.completedAtMs === null ? NONE : ALL;
+    case 'endingComplete':
+      return isEndingComplete(state, content) ? ALL : NONE;
   }
 }
 

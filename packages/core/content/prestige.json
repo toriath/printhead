@@ -4,7 +4,7 @@
   "moneyPrintCurveId": "money-print-rate",
   "meltdownDesignSeconds": 30,
   "retainedResources": ["designs", "plates"],
-  "retainedLedgers": ["designs", "moneyPrinters"],
+  "retainedLedgers": ["designs", "moneyPrinters", "endgameTree", "fabricator"],
   "plateInputResource": "money",
   "plateInputScale": 0.001,
   "minimumPlates": 1,
@@ -19,6 +19,36 @@
       "maxLevel": 5,
       "rateCurveId": "money-print-rate",
       "unlockPhaseId": "prestige"
+    },
+    {
+      "id": "bundle-printer",
+      "name": "Bundle press",
+      "tier": 2,
+      "costCurveId": "money-printer-cost-bundles",
+      "costResource": "plates",
+      "maxLevel": 5,
+      "rateCurveId": "money-print-rate-bundles",
+      "unlockPhaseId": "absurd"
+    },
+    {
+      "id": "pallet-printer",
+      "name": "Pallet press",
+      "tier": 3,
+      "costCurveId": "money-printer-cost-pallets",
+      "costResource": "plates",
+      "maxLevel": 5,
+      "rateCurveId": "money-print-rate-pallets",
+      "unlockPhaseId": "absurd"
+    },
+    {
+      "id": "central-bank",
+      "name": "The central bank",
+      "tier": 4,
+      "costCurveId": "money-printer-cost-central-bank",
+      "costResource": "plates",
+      "maxLevel": 3,
+      "rateCurveId": "money-print-rate-central-bank",
+      "unlockPhaseId": "end"
     }
   ]
 }

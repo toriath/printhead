@@ -23,15 +23,35 @@ export interface PhaseBudget {
 
 export interface BudgetTable {
   readonly tolerance: number;
+  /** Spec §6's arc budget — the sandbox at the end is not part of it. */
   readonly totalDesignMinutes: number;
+  readonly terminalPhaseId: string | undefined;
   readonly phases: readonly PhaseBudget[];
+}
+
+/**
+ * The phase the FSM comes to rest in (spec §15: "Intro → … → Ended").
+ *
+ * It is the post-game sandbox, and it is deliberately *not* budgeted: nothing
+ * advances out of it, so its "duration" is however long the player chooses to
+ * stay, and a run that stops at an arbitrary limit would report that choice as
+ * a balance regression. It is still checked for being **reached** — finishing
+ * the game is exactly what the gate is for.
+ */
+export function terminalPhaseId(pacing: PacingContent): string | undefined {
+  return pacing.phases.at(-1)?.id;
 }
 
 export function buildBudgetTable(pacing: PacingContent): BudgetTable {
   const tolerance = pacing.phaseBudgetTolerance;
+  const terminal = terminalPhaseId(pacing);
   return {
     tolerance,
-    totalDesignMinutes: totalBudgetDesignMinutes(pacing.phases),
+    terminalPhaseId: terminal,
+    /** The arc's budget: everything up to, but not including, the sandbox. */
+    totalDesignMinutes: totalBudgetDesignMinutes(
+      pacing.phases.filter((phase) => phase.id !== terminal),
+    ),
     phases: pacing.phases.map((phase: PhaseDef) => ({
       phaseId: phase.id,
       name: phase.name,
@@ -65,6 +85,10 @@ export function checkPhaseBudgets(
         budgetDesignMinutes: phase.budgetDesignMinutes,
         reason: 'never-reached',
       });
+      continue;
+    }
+    if (phase.phaseId === table.terminalPhaseId) {
+      // Reached is all that is asked of the sandbox — see `terminalPhaseId`.
       continue;
     }
     if (actual < phase.minDesignMinutes) {

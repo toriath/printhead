@@ -135,6 +135,33 @@ function migrateV4ToV5(payload: unknown): unknown {
 }
 
 /**
+ * v5 (M5) predates the Endgame entirely: no factory, no Fabricator, no New Game
+ * Plus. A v5 save is therefore a workshop that has printed no sections and
+ * finished nothing — which is exactly what it described. The ending is timed
+ * from `fabricator.completedAtMs`, and `null` is the honest reading of "this
+ * save has not seen the credits".
+ */
+function migrateV5ToV6(payload: unknown): unknown {
+  const v5 = payload as Record<string, unknown>;
+  const stats = (v5.stats ?? {}) as Record<string, unknown>;
+  const resources = (v5.resources ?? {}) as Record<string, unknown>;
+  return {
+    ...v5,
+    saveVersion: 6,
+    factoryProgress: 0,
+    fabricator: { sections: 0, sectionRun: null, run: null, completedAtMs: null },
+    ngPlus: { run: 0, modifierIds: [] },
+    stats: {
+      ...stats,
+      // v5 never recorded how many Plates had been engraved, only how many were
+      // left. The Plates in hand are the honest lower bound, and reading them
+      // keeps a v5 save's presses running at the rate it was used to.
+      platesEarned: typeof resources.plates === 'number' ? resources.plates : 0,
+    },
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
@@ -143,6 +170,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   2: migrateV2ToV3,
   3: migrateV3ToV4,
   4: migrateV4ToV5,
+  5: migrateV5ToV6,
 };
 
 export class SaveMigrationError extends Error {

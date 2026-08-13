@@ -17,9 +17,8 @@ import {
   createRng,
   reduce,
   restoreRng,
-  totalBudgetDesignMinutes,
 } from '@printhead/core';
-import { designMinutesOf, wallHoursOf } from './budget.js';
+import { buildBudgetTable, designMinutesOf, wallHoursOf } from './budget.js';
 import { type WaitWall, WaitWallTracker, meaningfulOptions } from './waitwall.js';
 
 /**
@@ -50,7 +49,12 @@ export interface RunOptions {
   readonly seed?: number;
   /**
    * Hard stop, in design minutes, so a stuck bot cannot spin forever.
-   * Defaults to the total §6 budget from `pacing.json`.
+   *
+   * Defaults to the spec §6 arc budget **plus its own tolerance**, plus the
+   * terminal sandbox's nominal length. A limit set to the budget exactly cannot
+   * observe a phase that legitimately runs to +20 %: the run is cut off mid-arc
+   * and the last phase is reported as never reached, which is a fact about the
+   * limit rather than about the game.
    */
   readonly limitDesignMinutes?: number;
   /** Stop as soon as this phase is entered — used to time the early phases. */
@@ -68,6 +72,8 @@ export interface ResourceSample {
   readonly filamentGrams: number;
   readonly printers: number;
   readonly printsCompleted: number;
+  /** Money the presses have printed — the reading inflation is read at (§6). */
+  readonly moneyPrinted: number;
 }
 
 export interface RunLog {
@@ -86,6 +92,12 @@ export interface RunLog {
   readonly decisionsByPhase: ReadonlyMap<string, number>;
   readonly actionsByType: Readonly<Partial<Record<ActionType, number>>>;
   readonly eventCounts: Readonly<Partial<Record<DomainEventType, number>>>;
+  /**
+   * Every domain event, in order, with the simulation clock it fired at. The
+   * counts answer "did it happen?"; the log answers "when?", which is the first
+   * question asked of a phase that overran its budget.
+   */
+  readonly events: readonly DomainEvent[];
   readonly samples: readonly ResourceSample[];
   /** Stretches with nothing meaningful to do (spec §12.2). */
   readonly waitWalls: readonly WaitWall[];
@@ -120,13 +132,19 @@ function sampleOf(state: GameState): ResourceSample {
     filamentGrams: totalFilament(state),
     printers: totalPrinters(state),
     printsCompleted: state.stats.printsCompleted,
+    moneyPrinted: state.stats.moneyPrinted,
   };
 }
 
 export function runHeadless(options: RunOptions): RunLog {
   const { content, bot } = options;
   const pace: PaceMapping = createPaceMapping(content.pacing);
-  const limit = options.limitDesignMinutes ?? totalBudgetDesignMinutes(content.pacing.phases);
+  const table = buildBudgetTable(content.pacing);
+  const sandbox =
+    content.pacing.phases.find((phase) => phase.id === table.terminalPhaseId)
+      ?.budgetDesignMinutes ?? 0;
+  const limit =
+    options.limitDesignMinutes ?? table.totalDesignMinutes * (1 + table.tolerance) + sandbox;
   const stepWallMs = pace.toWallDtMs(bot.checkInDesignSeconds * MS_PER_SECOND);
   const sampleEvery = options.sampleEveryDesignMinutes ?? DEFAULT_SAMPLE_EVERY_DESIGN_MINUTES;
   const bus = createEventBus();
@@ -240,6 +258,7 @@ export function runHeadless(options: RunOptions): RunLog {
     decisionsByPhase,
     actionsByType,
     eventCounts: countEventsByType(events),
+    events,
     samples,
     waitWalls: waitWalls.finish(),
     finalState: state,

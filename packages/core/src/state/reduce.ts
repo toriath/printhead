@@ -17,6 +17,18 @@ import {
   sellPartsFrom,
   sellProductsFrom,
 } from '../systems/economy.js';
+import {
+  beginFabricatorPrint,
+  fabricatorAvailability,
+  fabricatorDurationMs,
+  newGamePlusAvailability,
+  sectionAvailability,
+  startNewGamePlus,
+  startSection,
+  tickFabricator,
+  tickFactory,
+} from '../systems/endgame.js';
+import { isEndingComplete } from '../systems/ending.js';
 import { recycleScrapInto } from '../systems/failure.js';
 import { assignPrinters, slotRoom } from '../systems/fleet.js';
 import { commitFork, forkAvailability } from '../systems/forks.js';
@@ -38,7 +50,7 @@ import {
   withSlot,
 } from '../systems/printing.js';
 import { changeoverAutomationDefs, queueEntriesResolve } from '../systems/queue.js';
-import { meetsRequirements } from '../systems/requirements.js';
+import { meetsRequirements, totalDesignMinutes } from '../systems/requirements.js';
 import { purchaseSlot, slotUnlockAvailability } from '../systems/slots.js';
 import {
   computeModifiers,
@@ -125,6 +137,12 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applyPrestige(state, ctx);
     case 'BUY_MONEY_PRINTER':
       return applyBuyMoneyPrinter(state, action.moneyPrinterId, ctx);
+    case 'PRINT_SECTION':
+      return applyPrintSection(state, ctx);
+    case 'START_FABRICATOR':
+      return applyStartFabricator(state, ctx);
+    case 'NEW_GAME_PLUS':
+      return applyNewGamePlus(state, action.modifierIds, ctx);
   }
 }
 
@@ -134,12 +152,13 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
  * One fixed timestep. The order is fixed and load-bearing, because it is what
  * makes a replay reproducible:
  *
- *   assembly → studio → printers → market drift → money press → automation → FSM
+ *   assembly → studio → printers → market drift → money press → factory →
+ *   fabricator → automation → FSM
  *
  * Automation runs *after* the market has drifted and the printers have paid
  * out, so a bot inside the machine sees exactly the world a player checking in
  * at that instant would see. The FSM runs last, so a phase can only advance on
- * a fully settled state.
+ * a fully settled state — including on the tick where the credits finish.
  */
 function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameState {
   if (!Number.isFinite(simDtMs) || simDtMs < 0) {
@@ -157,7 +176,10 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const traded = tickMarket(printed, ctx.content, simDtMs);
   const curves = createCurveRegistry(ctx.content.curves);
   const minted = tickMoneyPrinting(traded, ctx.content, simDtMs, curves);
-  const automated = tickAutomation(minted, ctx.content, simDtMs, ctx.emit);
+  const modifiers = computeModifiers(minted, ctx.content);
+  const manufactured = tickFactory(minted, ctx.content, simDtMs, modifiers, ctx.emit);
+  const built = tickTheFinalPrint(state, manufactured, simDtMs, ctx);
+  const automated = tickAutomation(built, ctx.content, simDtMs, ctx.emit);
   return advanceWhileReady(automated, ctx);
 }
 
@@ -182,6 +204,37 @@ function selfAssemble(state: GameState, ctx: ReduceContext): GameState {
   }
   const piece = nextPiece(state.assembly, ctx.content);
   return piece === null ? state : applyAttachPiece(state, piece.id, ctx);
+}
+
+/**
+ * Advance the Universal Fabricator and announce the moment the credits stop
+ * rolling (spec §6 phase 6). `GAME_ENDED` is emitted exactly once — on the tick
+ * the sequence crosses its last stage — because the ending is derived from the
+ * clock and would otherwise be "true" forever after.
+ */
+function tickTheFinalPrint(
+  before: GameState,
+  state: GameState,
+  simDtMs: number,
+  ctx: ReduceContext,
+): GameState {
+  /*
+   * `before` is the state as it was *at the start of the tick*, and it has to
+   * be: the ending is derived from the clock, and by the time the systems run
+   * the clock has already moved. Asking the post-tick state whether the credits
+   * had finished answers "yes" on the very tick they finish, and the
+   * announcement would never be made.
+   */
+  const wasComplete = isEndingComplete(before, ctx.content);
+  const built = tickFabricator(state, ctx.content, simDtMs, ctx.emit);
+  if (!wasComplete && isEndingComplete(built, ctx.content)) {
+    ctx.emit?.({
+      type: 'GAME_ENDED',
+      simTimeMs: built.simTimeMs,
+      totalDesignMinutes: totalDesignMinutes(built),
+    });
+  }
+  return built;
 }
 
 /** Advance the studio bench; a finished draft becomes an owned Design. */
@@ -806,6 +859,64 @@ function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
     designsKept: Object.keys(result.state.designs).length,
   });
   return result.state;
+}
+
+/**
+ * Pre-print one section of the Fabricator (spec §7.3) — the Farm build's way of
+ * staying in the running for a print only Goliath may attempt.
+ */
+function applyPrintSection(state: GameState, ctx: ReduceContext): GameState {
+  const curves = createCurveRegistry(ctx.content.curves);
+  const blocked = sectionAvailability(state, ctx.content, curves);
+  if (blocked !== null) {
+    return reject(ctx, state, 'PRINT_SECTION', blocked);
+  }
+  const started = startSection(state, ctx.content, curves);
+  if (started === null) {
+    return reject(ctx, state, 'PRINT_SECTION', 'insufficient-resources');
+  }
+  return started.state;
+}
+
+/** Commit every bay to the last print there is (spec §4, §6 phase 6). */
+function applyStartFabricator(state: GameState, ctx: ReduceContext): GameState {
+  const blocked = fabricatorAvailability(state, ctx.content);
+  if (blocked !== null) {
+    return reject(ctx, state, 'START_FABRICATOR', blocked);
+  }
+  const committed = beginFabricatorPrint(state, ctx.content);
+  if (committed === null) {
+    return reject(ctx, state, 'START_FABRICATOR', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'FABRICATOR_STARTED',
+    simTimeMs: state.simTimeMs,
+    durationMs: fabricatorDurationMs(state, ctx.content),
+    sections: state.fabricator.sections,
+    slotsCommitted: committed.slots.filter((slot) => slot.printerCount > 0).length,
+  });
+  return committed;
+}
+
+/** Start again on the far side of the credits (spec §18 M6). */
+function applyNewGamePlus(
+  state: GameState,
+  modifierIds: readonly string[],
+  ctx: ReduceContext,
+): GameState {
+  const blocked = newGamePlusAvailability(state, ctx.content);
+  if (blocked !== null) {
+    return reject(ctx, state, 'NEW_GAME_PLUS', blocked);
+  }
+  const restarted = startNewGamePlus(state, ctx.content, modifierIds);
+  ctx.emit?.({
+    type: 'NEW_GAME_PLUS_STARTED',
+    simTimeMs: state.simTimeMs,
+    run: restarted.run,
+    modifierIds: restarted.modifierIds,
+    designsKept: Object.keys(restarted.state.designs).length,
+  });
+  return restarted.state;
 }
 
 function applyBuyMoneyPrinter(

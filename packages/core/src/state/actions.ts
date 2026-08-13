@@ -134,6 +134,32 @@ export interface BuyMoneyPrinterAction {
   readonly moneyPrinterId: string;
 }
 
+/**
+ * Pre-print one section of the Universal Fabricator (spec §7.3). A Farm build
+ * cannot attempt the final print, but it can print its pieces in advance and
+ * carry them through the melt-down that follows.
+ */
+export interface PrintSectionAction {
+  readonly type: 'PRINT_SECTION';
+}
+
+/**
+ * Commit the whole workshop to the final print (spec §4: "a deliberate return
+ * to total commitment"). Every active bay is cleared and dedicated to it.
+ */
+export interface StartFabricatorAction {
+  readonly type: 'START_FABRICATOR';
+}
+
+/**
+ * Start again, keeping what `endgame.newGamePlus` says to keep and whatever
+ * optional modifiers the player took (spec §18 M6).
+ */
+export interface NewGamePlusAction {
+  readonly type: 'NEW_GAME_PLUS';
+  readonly modifierIds: readonly string[];
+}
+
 /** Commit to Farm or Goliath for this run (spec §5B). One choice, forever. */
 export interface ChooseForkAction {
   readonly type: 'CHOOSE_FORK';
@@ -162,7 +188,10 @@ export type Action =
   | SetSlotDesignAction
   | SellProductsAction
   | PrestigeAction
-  | BuyMoneyPrinterAction;
+  | BuyMoneyPrinterAction
+  | PrintSectionAction
+  | StartFabricatorAction
+  | NewGamePlusAction;
 
 export type ActionType = Action['type'];
 
@@ -247,4 +276,10 @@ export const prestige = (): PrestigeAction => ({ type: 'PRESTIGE' });
 export const buyMoneyPrinter = (moneyPrinterId: string): BuyMoneyPrinterAction => ({
   type: 'BUY_MONEY_PRINTER',
   moneyPrinterId,
+});
+export const printSection = (): PrintSectionAction => ({ type: 'PRINT_SECTION' });
+export const startFabricator = (): StartFabricatorAction => ({ type: 'START_FABRICATOR' });
+export const newGamePlus = (modifierIds: readonly string[] = []): NewGamePlusAction => ({
+  type: 'NEW_GAME_PLUS',
+  modifierIds,
 });

@@ -40,6 +40,9 @@ describe('bundled content', () => {
         'forks',
         'start',
         'upgrades',
+        // Likewise the endgame (spec §5E, §6 phases 5–6): the tree, the
+        // inflation index, the Fabricator, the credits and New Game Plus.
+        'endgame',
       ].sort(),
     );
   });
@@ -55,8 +58,17 @@ describe('bundled content', () => {
     const { pacing } = loadContent(RAW_CONTENT);
     expect(pacing.baselineHours).toBe(8);
     expect(pacing.targetHours).toBe(8);
-    const total = pacing.phases.reduce((sum, phase) => sum + phase.budgetDesignMinutes, 0);
+    /*
+     * Spec §6's table totals 420 design-minutes across the seven *playable*
+     * phases. `ended` is the eighth — the post-game sandbox the FSM comes to
+     * rest in (spec §15: "Intro → … → Ended") — and it is not part of the arc's
+     * budget: nothing ends it, so its "duration" is however long the player
+     * stays. Its nominal budget is what the harness uses as a run-out.
+     */
+    const playable = pacing.phases.slice(0, -1);
+    const total = playable.reduce((sum, phase) => sum + phase.budgetDesignMinutes, 0);
     expect(total).toBe(420);
+    expect(pacing.phases.at(-1)?.id).toBe('ended');
   });
 });
 

@@ -1,9 +1,17 @@
 import { indexById } from '../content/load.js';
-import type { Content, MarketListing, MarketModel, MaterialDef } from '../content/schema.js';
+import type {
+  Content,
+  MarketListing,
+  MarketModel,
+  MaterialDef,
+  ScalarResourceKind,
+} from '../content/schema.js';
+import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_MINUTE, TRADE_SEARCH_ITERATIONS } from '../engine/constants.js';
 import { TAU, clamp, signedUnit } from '../math/scalar.js';
 import { hashUnit } from '../rng/mulberry32.js';
 import type { GameState, MarketLedger, MarketMaterialState } from '../state/game-state.js';
+import { inflationMultiplier } from './inflation.js';
 import { withFilament, withResource } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 
@@ -31,6 +39,8 @@ const IDENTITY = 1;
 
 export interface MarketQuote {
   readonly materialId: string;
+  /** Which till a gram is paid out of (spec §3: the exotics cost Plates). */
+  readonly priceResource: ScalarResourceKind;
   /** Tradeable materials have a `market.json` listing; PLA does not. */
   readonly tradeable: boolean;
   /** Price multiplier applied to the listing's base price. */
@@ -90,6 +100,15 @@ export function effectiveSpread(content: Content, modifiers: ModifierMap): numbe
   return clamp(content.market.model.spread * fee, NONE, IDENTITY);
 }
 
+/**
+ * Inflation devalues *money*, so a material bought with Plates is untouched by
+ * it (spec §6 phase 5). That is the whole reason the endgame's feedstock is
+ * priced in prestige currency: it is the one shelf the presses cannot spoil.
+ */
+function inflationFor(material: MaterialDef, inflation: number): number {
+  return material.priceResource === 'money' ? inflation : IDENTITY;
+}
+
 function quoteFrom(
   content: Content,
   material: MaterialDef,
@@ -98,14 +117,17 @@ function quoteFrom(
   designMinutes: number,
   seed: number,
   spread: number,
+  inflation: number,
 ): MarketQuote {
+  const priced = inflationFor(material, inflation);
   if (listing === undefined) {
     // No listing: a flat shelf price, and nothing the player can sell back.
     return {
       materialId: material.id,
+      priceResource: material.priceResource,
       tradeable: false,
       multiplier: IDENTITY,
-      buyPerGram: material.costPerGram,
+      buyPerGram: material.costPerGram * priced,
       sellPerGram: NONE,
       stockGrams: Number.POSITIVE_INFINITY,
       pressure: NONE,
@@ -118,9 +140,10 @@ function quoteFrom(
     marketState.pressure,
     seed,
   );
-  const buyPerGram = listing.basePricePerGram * multiplier;
+  const buyPerGram = listing.basePricePerGram * multiplier * priced;
   return {
     materialId: material.id,
+    priceResource: material.priceResource,
     tradeable: true,
     multiplier,
     buyPerGram,
@@ -128,6 +151,20 @@ function quoteFrom(
     stockGrams: marketState.stockGrams,
     pressure: marketState.pressure,
   };
+}
+
+/**
+ * Today's inflation index (spec §6 phase 5). Built here rather than threaded in
+ * from the reducer because every price in this file has to carry it, and a
+ * caller that forgot would quietly sell at last week's prices.
+ */
+function priceIndex(state: GameState, content: Content): number {
+  return inflationMultiplier(state, content, createCurveRegistry(content.curves));
+}
+
+/** The balance a gram of this material is paid out of (spec §3). */
+export function priceBalanceOf(state: GameState, material: MaterialDef): number {
+  return state.resources[material.priceResource];
 }
 
 /** What the market is asking for `materialId` right now. */
@@ -149,6 +186,7 @@ export function quoteFor(
     designMinutesOf(state),
     state.rng.seed,
     spread,
+    priceIndex(state, content),
   );
 }
 
@@ -156,6 +194,7 @@ export function quoteFor(
 export function quoteAll(state: GameState, content: Content): readonly MarketQuote[] {
   const spread = effectiveSpread(content, computeModifiers(state, content));
   const designMinutes = designMinutesOf(state);
+  const inflation = priceIndex(state, content);
   return content.materials.map((material) =>
     quoteFrom(
       content,
@@ -165,17 +204,19 @@ export function quoteAll(state: GameState, content: Content): readonly MarketQuo
       designMinutes,
       state.rng.seed,
       spread,
+      inflation,
     ),
   );
 }
 
 /**
- * How many grams `money` buys at the *displayed* ask. This ignores the buy's
+ * How many grams `balance` buys at the *displayed* ask. This ignores the buy's
  * own slippage, so it is an upper bound — use {@link maxBuyableGrams} to size
  * an order you actually intend to place.
  */
-export function affordableGrams(quote: MarketQuote, money: number): number {
-  const affordable = quote.buyPerGram > NONE ? money / quote.buyPerGram : Number.POSITIVE_INFINITY;
+export function affordableGrams(quote: MarketQuote, balance: number): number {
+  const affordable =
+    quote.buyPerGram > NONE ? balance / quote.buyPerGram : Number.POSITIVE_INFINITY;
   return Math.min(affordable, quote.stockGrams);
 }
 
@@ -232,6 +273,7 @@ function projectBuy(
       designMinutesOf(state),
       state.rng.seed,
       spread,
+      priceIndex(state, content),
     );
     return { pricePerGram: quote.buyPerGram, market: state.market };
   }
@@ -251,6 +293,7 @@ function projectBuy(
     designMinutesOf(state),
     state.rng.seed,
     spread,
+    priceIndex(state, content),
   );
   return { pricePerGram: quote.buyPerGram, market: withMarket(state.market, materialId, after) };
 }
@@ -266,9 +309,10 @@ export function buyFillPricePerGram(
 }
 
 /**
- * The largest order `money` can actually pay for.
+ * The largest order `balance` can actually pay for, in whatever resource the
+ * material is priced in.
  *
- * Not `money / price`: a buy moves the price it is filled at (see the header),
+ * Not `balance / price`: a buy moves the price it is filled at (see the header),
  * so an order sized off the displayed ask is rejected for being a few coins
  * short. Total cost rises monotonically with size — more grams at a price that
  * is itself non-decreasing — so a bisection finds the true ceiling.
@@ -277,7 +321,7 @@ export function maxBuyableGrams(
   state: GameState,
   content: Content,
   materialId: string,
-  money: number,
+  balance: number,
 ): number {
   const costOf = (grams: number): number | null => {
     const price = buyFillPricePerGram(state, content, materialId, grams);
@@ -291,12 +335,12 @@ export function maxBuyableGrams(
   // `affordableGrams` already caps at the shelf's stock, which is unbounded for
   // an unlisted material — and an unlisted material has no slippage to solve
   // for, so the displayed ask *is* the fill price.
-  const ceiling = affordableGrams(quote, money);
+  const ceiling = affordableGrams(quote, balance);
   if (!quote.tradeable || !Number.isFinite(ceiling) || ceiling <= NONE) {
     return Math.max(ceiling, NONE);
   }
   const full = costOf(ceiling);
-  if (full !== null && full <= money) {
+  if (full !== null && full <= balance) {
     return ceiling;
   }
   let lo = NONE;
@@ -304,13 +348,26 @@ export function maxBuyableGrams(
   for (let step = NONE; step < TRADE_SEARCH_ITERATIONS; step += IDENTITY) {
     const mid = (lo + hi) / (IDENTITY + IDENTITY);
     const cost = costOf(mid);
-    if (cost !== null && cost <= money) {
+    if (cost !== null && cost <= balance) {
       lo = mid;
     } else {
       hi = mid;
     }
   }
   return lo;
+}
+
+/** The largest order the workshop could pay for out of the right till. */
+export function affordableFilamentGrams(
+  state: GameState,
+  content: Content,
+  materialId: string,
+): number {
+  const material = indexById(content.materials).get(materialId);
+  if (material === undefined) {
+    return NONE;
+  }
+  return maxBuyableGrams(state, content, materialId, priceBalanceOf(state, material));
 }
 
 /**
@@ -324,22 +381,29 @@ export function purchaseFilament(
   materialId: string,
   grams: number,
 ): TradeResult | null {
+  const material = indexById(content.materials).get(materialId);
   const projected = projectBuy(state, content, materialId, grams);
-  if (projected === null) {
+  if (material === undefined || projected === null) {
     return null;
   }
-  return settleBuy(state, materialId, grams, projected.pricePerGram, projected.market);
+  return settleBuy(state, material, grams, projected.pricePerGram, projected.market);
 }
 
+/**
+ * Pay for the fill. The till is the material's own `priceResource`, so the
+ * endgame's exotic feedstock comes out of the Plate pile without a second
+ * buying path (spec §3: "Composite/exotic … Cost: Plates").
+ */
 function settleBuy(
   state: GameState,
-  materialId: string,
+  material: MaterialDef,
   grams: number,
   pricePerGram: number,
   market: MarketLedger,
 ): TradeResult | null {
+  const materialId = material.id;
   const money = pricePerGram * grams;
-  if (state.resources.money < money) {
+  if (state.resources[material.priceResource] < money) {
     return null;
   }
   return {
@@ -349,7 +413,7 @@ function settleBuy(
     state: {
       ...state,
       market,
-      resources: withResource(state.resources, 'money', -money),
+      resources: withResource(state.resources, material.priceResource, -money),
       filamentGrams: withFilament(state.filamentGrams, materialId, grams),
       stats: {
         ...state.stats,
@@ -396,6 +460,7 @@ export function sellFilamentToMarket(
     designMinutesOf(state),
     state.rng.seed,
     spread,
+    priceIndex(state, content),
   );
   const money = quote.sellPerGram * grams;
   return {
