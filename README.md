@@ -276,7 +276,8 @@ packages/core       pure TS simulation — content/, engine/, state/, systems/,
                     curves/, visual/, save/, rng/ (no DOM, no Math.random, no Date.now)
 packages/renderer   React SVG, a pure function of VisualState
 packages/app        shell, HUD, store bridge, engine loop, autosave, PWA
-packages/editor     dev-only editor panel: schema-generated inspector, time controls
+packages/editor     dev-only editor panel: schema-generated inspector, time
+                    controls, state tools, balance view
 packages/platform   storage (IndexedDB) + clock + lifecycle facade (web / Tauri)
 tools/balance       headless harness, bots, wait walls, sweep, tuner, report
 tools/stl           printable PRINTHEAD generator (M7)
