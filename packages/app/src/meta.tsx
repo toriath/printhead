@@ -150,7 +150,7 @@ export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement |
   return (
     <section className="panel" aria-label="prestige" data-testid="prestige">
       <h2>Melt-down</h2>
-      <p className="panel__note" data-testid="plates">
+      <p className="panel__note" data-testid="prestige-plates">
         {`${formatAmount(melt.platesHeld)} plates · ${formatMoney(
           melt.moneyPerDesignSecond,
         )}/s printed · run ${melt.runsCompleted + 1}`}

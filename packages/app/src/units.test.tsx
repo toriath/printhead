@@ -131,6 +131,37 @@ describe('the control model', () => {
     expect(buildControlModel(freshState, content, running as VisualState).canPrint).toBe(false);
   });
 
+  /**
+   * Regression: the model used to read the batch's filament out of
+   * `content.objects` by the bay's `objectId`. A bay printing a Design has no
+   * `objectId` (spec §5D), so it computed zero grams per print, disabled the
+   * Print button forever and made the whole Product economy unreachable from
+   * the UI. It now asks the simulation what the bay is loaded with.
+   */
+  it('offers a print for a bay loaded with a Design, not just a stock object', () => {
+    const capstoneId = content.prestige.requiredDesignId;
+    const capstone = content.designs.find((def) => def.id === capstoneId);
+    const studio = {
+      ...freshState,
+      phaseId: 'studio',
+      printers: { 'bench-mk1': 1 },
+      upgrades: { 'heated-bed': 1, enclosure: 1, 'sla-unit': 1 },
+      designs: { [capstoneId]: { level: 1, printsOnLevel: 0 } },
+      filamentGrams: { ...freshState.filamentGrams, resin: 5000 },
+      slots: freshState.slots.map((slot) => ({
+        ...slot,
+        materialId: capstone?.requiredMaterialId ?? 'resin',
+        objectId: null,
+        designId: capstoneId,
+        printerCount: 1,
+      })),
+    };
+    const model = buildControlModel(studio, content, toVisualState(studio, content));
+    expect(model.canPrint).toBe(true);
+    // ...and the restock button quotes the Design's own appetite.
+    expect(model.buyFilament?.materialId).toBe(capstone?.requiredMaterialId);
+  });
+
   it('prices the next printer from the cost curve, and gates it on the ledger', () => {
     const bench = { ...freshState, phaseId: 'bench', printers: { 'bench-mk1': 1 } };
     const model = buildControlModel(bench, content, toVisualState(bench, content));

@@ -160,7 +160,7 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
   it('shows the Plates held, the print rate and which run this is', () => {
     const { store } = stubStore();
     render(<PrestigePanel store={store} visual={prestige} />);
-    const line = screen.getByTestId('plates').textContent ?? '';
+    const line = screen.getByTestId('prestige-plates').textContent ?? '';
     expect(line).toContain('plates');
     expect(line).toContain(`run ${prestige.prestige.runsCompleted + 1}`);
   });

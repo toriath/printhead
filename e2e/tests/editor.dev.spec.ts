@@ -25,7 +25,9 @@ test('the content inspector is generated from the schemas', async ({ page }) => 
 
   // ...and a file's fields come from its zod schema, not from a hand-written form.
   await page.getByTestId('editor-file').selectOption('materials');
-  await page.getByText('pla', { exact: true }).click();
+  // Scoped to the inspector: the state tree below it also mentions "pla",
+  // because a workshop's filament ledger is keyed by material.
+  await page.getByTestId('editor-groups').getByText('pla', { exact: true }).click();
   await expect(page.getByTestId('field-0.costPerGram')).toBeVisible();
   await expect(page.getByTestId('field-0.supply')).toBeVisible();
 });
