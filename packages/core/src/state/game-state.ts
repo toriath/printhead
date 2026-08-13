@@ -52,6 +52,12 @@ export interface SlotState {
   readonly materialId: string | null;
   readonly objectId: string | null;
   /**
+   * The Design this bay is printing (spec §5D), or `null` when it is printing
+   * a stock object. Exactly one of `objectId`/`designId` is ever set: a bay
+   * makes Parts or it makes Products, never both at once.
+   */
+  readonly designId: string | null;
+  /**
    * Printers assigned to this bay (spec §4). The fleet is a pool of identical
    * machines the player allocates across slots, so this is a count, and the sum
    * across every slot is exactly the number of printers owned — the invariant
@@ -110,6 +116,34 @@ export interface StatsState {
   readonly filamentSoldGrams: number;
   readonly scrapProducedGrams: number;
   readonly scrapRecycledGrams: number;
+  readonly productsProduced: number;
+  readonly productsSold: number;
+  /** Money the Plates have printed directly (spec §5E) — the inflation meter. */
+  readonly moneyPrinted: number;
+  /** Melt-downs completed. Survives prestige: it *counts* prestige (spec §5D). */
+  readonly prestigeCount: number;
+}
+
+/**
+ * One owned Design (spec §5D). `level` multiplies the Product's value through
+ * the def's `levelValueCurveId`; `printsOnLevel` is progress towards the next
+ * one. Designs are the game's only permanent progression — a melt-down copies
+ * this ledger across untouched, which is the property test of spec §13.
+ */
+export interface DesignState {
+  readonly level: number;
+  readonly printsOnLevel: number;
+}
+
+/**
+ * The studio bench while a Design is being drafted (spec §5D). One project at
+ * a time: the studio is a *place*, not a queue, so drafting the Money Plate is
+ * a decision with an opportunity cost rather than a shopping list entry.
+ */
+export interface StudioProjectState {
+  readonly designId: string;
+  /** Design-milliseconds of drafting left. Integer ms, like every clock here. */
+  readonly remainingMs: number;
 }
 
 export type ResourceLedger = Readonly<Record<ScalarResourceKind, number>>;
@@ -119,6 +153,10 @@ export type PrinterLedger = Readonly<Record<string, number>>;
 export type UpgradeLedger = Readonly<Record<string, number>>;
 export type AutomationLedger = Readonly<Record<string, AutomationSlotState>>;
 export type MarketLedger = Readonly<Record<string, MarketMaterialState>>;
+/** Design id → its level and progress. Absent means "never drafted". */
+export type DesignLedger = Readonly<Record<string, DesignState>>;
+/** Money-printer id → installed level (spec §5E). */
+export type MoneyPrinterLedger = Readonly<Record<string, number>>;
 
 export interface GameState {
   readonly saveVersion: number;
@@ -141,6 +179,12 @@ export interface GameState {
    * stops "recycle cheap scrap into dear filament" from minting money.
    */
   readonly scrapValue: number;
+  /**
+   * Money value of the Products in stock, banked exactly like `partsValue`.
+   * A Product's worth is set by the level its Design was at when it printed,
+   * so the pool has to carry the value rather than recompute it at the till.
+   */
+  readonly productsValue: number;
   /** Grams per material id (spec §2: filament is tracked per material). */
   readonly filamentGrams: FilamentLedger;
   /** How many of each printer def are owned. */
@@ -159,6 +203,21 @@ export interface GameState {
    * (M5).
    */
   readonly forkId: string | null;
+  /** Designs owned and their levels (spec §5D). Survives prestige, exactly. */
+  readonly designs: DesignLedger;
+  /** The design currently on the studio bench, or `null` when it is free. */
+  readonly studio: StudioProjectState | null;
+  /** Installed money-printer levels (spec §5E), the Plate sink. */
+  readonly moneyPrinters: MoneyPrinterLedger;
+  /**
+   * Does the intro rebuild itself? Set by the first melt-down and never
+   * cleared: once you have built a printer by hand, the workshop knows how
+   * (spec §6 phase 4, "intro replays **self-assembling**"). It is state rather
+   * than a reading of `stats.prestigeCount` because the projection, the
+   * renderer and the reducer all ask the same question and none of them should
+   * have to know the rule.
+   */
+  readonly selfAssembling: boolean;
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
 }
@@ -189,6 +248,10 @@ export const EMPTY_STATS: StatsState = {
   filamentSoldGrams: 0,
   scrapProducedGrams: 0,
   scrapRecycledGrams: 0,
+  productsProduced: 0,
+  productsSold: 0,
+  moneyPrinted: 0,
+  prestigeCount: 0,
 };
 
 export function zeroResources(): ResourceLedger {
@@ -209,6 +272,7 @@ export function emptySlot(id: string): SlotState {
     id,
     materialId: null,
     objectId: null,
+    designId: null,
     printerCount: 0,
     autoRestart: false,
     run: null,
@@ -262,6 +326,7 @@ export function createInitialState(content: Content, options: InitialStateOption
     resources: { ...zeroResources(), ...content.start.startingResources },
     partsValue: 0,
     scrapValue: 0,
+    productsValue: 0,
     filamentGrams: startingFilament(content),
     printers: {},
     upgrades: {},
@@ -269,6 +334,10 @@ export function createInitialState(content: Content, options: InitialStateOption
     market: createMarket(content),
     slots: createSlots(content),
     forkId: null,
+    designs: {},
+    studio: null,
+    moneyPrinters: {},
+    selfAssembling: false,
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,
   };

@@ -20,6 +20,8 @@ the documents the projection's freeze test does.
 | `economy.json` | generated | M3: a machine node installed, an automation running, scrap in the bin |
 | `rack.json` | generated | M4: two bays, the fleet split between them, a print rota on the second |
 | `goliath.json` | generated | M4: the other side of the fork — one giant printer, no rack |
+| `studio.json` | generated | M5: Designs owned and levelling, a bay making Products, the melt-down on offer |
+| `prestige.json` | generated | M5: after the melt-down — Plates banked, a press installed, the intro rebuilding itself |
 | `showcase.json` | hand-authored | four bays, three machine tiers, badges, a purge in progress, one empty outline |
 
 Regenerate the *generated* ones (only when adding a new version) with:
@@ -40,7 +42,10 @@ per-slot, this fixture can be generated like the rest.
 The M4 fixtures are produced by handing the wheel to the reference bot until
 the phase where the fork unlocks, then making the slot, rota and fork decisions
 through the real reducer — the farm gate is a grind rather than a few clicks,
-and a fixture that skipped it would be a hand-written guess again.
+and a fixture that skipped it would be a hand-written guess again. The M5 pair
+is produced the same way, one phase further on each time: `studio` is the
+workshop the moment the capstone gate opens, and `prestige` is the same run
+after two melt-downs.
 
 Validation is **lazy and memoised** (`visualStateFixtures()`), not run at import
 time. The corpus is still checked the moment anything reads it — which every

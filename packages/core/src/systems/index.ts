@@ -4,6 +4,8 @@ export * from './resources.js';
 export * from './requirements.js';
 export * from './assembly.js';
 export * from './upgrades.js';
+export * from './designs.js';
+export * from './prestige.js';
 export * from './failure.js';
 export * from './fleet.js';
 export * from './forks.js';

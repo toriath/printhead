@@ -1,8 +1,8 @@
 import { type VisualState, visualFixture, visualStateFixtures } from '@printhead/core';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { BAY_HEIGHT, workshopWidth } from './geometry.js';
-import { Workshop, bays } from './workshop.js';
+import { BAY_HEIGHT, PRESS_HEIGHT, workshopWidth } from './geometry.js';
+import { Workshop, bays, installedPresses } from './workshop.js';
 
 afterEach(cleanup);
 
@@ -10,6 +10,8 @@ const fresh = visualFixture('fresh');
 const assembling = visualFixture('assembling');
 const printing = visualFixture('printing');
 const showcase = visualFixture('showcase');
+const studio = visualFixture('studio');
+const prestige = visualFixture('prestige');
 
 describe('Workshop', () => {
   it('renders every VisualState fixture (spec §13)', () => {
@@ -38,10 +40,15 @@ describe('Workshop', () => {
     expect(bays(assembling)).toHaveLength(assembling.slotCapacity);
   });
 
-  it('sizes its viewBox from the rack it drew', () => {
+  it('sizes its viewBox from the rack it drew, plus the mint if there is one', () => {
     render(<Workshop visual={showcase} />);
     expect(screen.getByRole('img').getAttribute('viewBox')).toBe(
-      `0 0 ${workshopWidth(showcase.slotCapacity)} ${BAY_HEIGHT}`,
+      `0 0 ${workshopWidth(showcase.slotCapacity)} ${BAY_HEIGHT + PRESS_HEIGHT}`,
+    );
+    cleanup();
+    render(<Workshop visual={fresh} />);
+    expect(screen.getByRole('img').getAttribute('viewBox')).toBe(
+      `0 0 ${workshopWidth(fresh.slotCapacity)} ${BAY_HEIGHT}`,
     );
   });
 
@@ -188,6 +195,71 @@ describe('machine-tier visuals (spec §5A)', () => {
       const { container } = render(<Workshop visual={single} />);
       expect(container.innerHTML).toMatchSnapshot(`machine-tier-${slot.machineTier}`);
     }
+  });
+
+  it('draws a Product differently from a Part (spec §5D)', () => {
+    const bay = studio.slots.find((slot) => slot.output === 'products');
+    expect(bay, 'the studio fixture should have a bay making Products').toBeDefined();
+    render(<Workshop visual={studio} />);
+    const products = screen
+      .getAllByTestId('print-in-progress')
+      .filter((node) => node.getAttribute('data-output') === 'products');
+    expect(products.length).toBeGreaterThan(0);
+    for (const node of products) {
+      expect(node.getAttribute('class')).toContain('ph-print--product');
+    }
+  });
+
+  it('marks the bay making Products, and names its Design', () => {
+    render(<Workshop visual={studio} />);
+    const bays_ = screen.getAllByTestId(/^slot-/);
+    const onDesign = bays_.filter((node) => node.getAttribute('data-output') === 'products');
+    expect(onDesign).toHaveLength(studio.slots.filter((slot) => slot.output === 'products').length);
+    const design = studio.slots.find((slot) => slot.designId !== null);
+    expect(design).toBeDefined();
+    expect(screen.getByTestId(`label-${design?.slotId ?? ''}`).textContent).toContain(
+      design?.objectName ?? '',
+    );
+  });
+
+  it('says the workshop is rebuilding itself after a melt-down (spec §6 phase 4)', () => {
+    render(<Workshop visual={prestige} />);
+    expect(screen.getByRole('img').getAttribute('data-self-assembling')).toBe('true');
+    cleanup();
+    render(<Workshop visual={fresh} />);
+    expect(screen.getByRole('img').getAttribute('data-self-assembling')).toBe('false');
+  });
+
+  it('captions a self-assembling intro differently from a clicked one', () => {
+    const rebuilding: VisualState = {
+      ...prestige,
+      assembly: { ...prestige.assembly, complete: false, attachedPieceIds: ['frame'] },
+    };
+    render(<Workshop visual={rebuilding} />);
+    expect(screen.getByTestId(`label-${rebuilding.slots[0]?.slotId ?? ''}`).textContent).toBe(
+      'self-assembling…',
+    );
+    cleanup();
+    render(<Workshop visual={assembling} />);
+    expect(screen.getByTestId(`label-${assembling.slots[0]?.slotId ?? ''}`).textContent).toBe(
+      'assembling…',
+    );
+  });
+
+  describe('the mint (spec §5E)', () => {
+    it('appears only once a press is installed, one bill per level', () => {
+      render(<Workshop visual={prestige} />);
+      const bills = installedPresses(prestige);
+      expect(bills.length).toBeGreaterThan(0);
+      const mint = screen.getByTestId('mint');
+      expect(mint.getAttribute('data-press-levels')).toBe(String(bills.length));
+      expect(mint.querySelectorAll('.ph-bill')).toHaveLength(bills.length);
+    });
+
+    it('is absent before the first press, so the Plates are not implied', () => {
+      render(<Workshop visual={printing} />);
+      expect(screen.queryByTestId('mint')).toBeNull();
+    });
   });
 
   it('only the top tier gets an enclosure', () => {

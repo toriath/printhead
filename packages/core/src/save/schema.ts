@@ -164,21 +164,67 @@ export const SlotQueueEntrySchema = z
   })
   .strict();
 
-export const SlotStateSchema = SlotStateV3Schema.extend({
+/** v4 (M4) — kept for the frozen fixture; migrated to v5 by `migrations.ts`. */
+export const SlotStateV4Schema = SlotStateV3Schema.extend({
   queue: z.array(SlotQueueEntrySchema),
   queueIndex: z.number().int().nonnegative(),
   queueBatches: z.number().int().nonnegative(),
 }).strict();
 
+export const StatsStateV4Schema = StatsStateSchema;
+
 export const GameStateV4Schema = GameStateV3Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
-  slots: z.array(SlotStateSchema),
+  saveVersion: z.literal(4),
+  slots: z.array(SlotStateV4Schema),
   /** The run's Farm/Goliath commitment (spec §5B); `null` until it is made. */
   forkId: z.string().min(1).nullable(),
 }).strict();
 
+// --- v5 (M5) ----------------------------------------------------------------
+
+/** A bay prints an object *or* a Design (spec §5D) — never both. */
+export const SlotStateSchema = SlotStateV4Schema.extend({
+  designId: z.string().min(1).nullable(),
+}).strict();
+
+export const DesignStateSchema = z
+  .object({
+    level: z.number().int().positive(),
+    printsOnLevel: NonNegative,
+  })
+  .strict();
+
+export const DesignLedgerSchema = z.record(z.string().min(1), DesignStateSchema);
+
+export const StudioProjectStateSchema = z
+  .object({
+    designId: z.string().min(1),
+    remainingMs: NonNegative,
+  })
+  .strict();
+
+export const MoneyPrinterLedgerSchema = z.record(z.string().min(1), z.number().int().nonnegative());
+
+export const StatsStateV5Schema = StatsStateSchema.extend({
+  productsProduced: NonNegative,
+  productsSold: NonNegative,
+  moneyPrinted: NonNegative,
+  prestigeCount: z.number().int().nonnegative(),
+}).strict();
+
+export const GameStateV5Schema = GameStateV4Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  productsValue: NonNegative,
+  slots: z.array(SlotStateSchema),
+  designs: DesignLedgerSchema,
+  studio: StudioProjectStateSchema.nullable(),
+  moneyPrinters: MoneyPrinterLedgerSchema,
+  selfAssembling: z.boolean(),
+  stats: StatsStateV5Schema,
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV4Schema;
+export const GameStateSchema = GameStateV5Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -193,3 +239,4 @@ export type GameStateV1 = z.infer<typeof GameStateV1Schema>;
 export type GameStateV2 = z.infer<typeof GameStateV2Schema>;
 export type GameStateV3 = z.infer<typeof GameStateV3Schema>;
 export type GameStateV4 = z.infer<typeof GameStateV4Schema>;
+export type GameStateV5 = z.infer<typeof GameStateV5Schema>;

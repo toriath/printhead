@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MaterialDef, ObjectDef } from '../content/schema.js';
+import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
 import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
@@ -24,14 +25,51 @@ const content = TEST_CONTENT;
 const base = createInitialState(content, { seed: 1 });
 /** Nothing installed: the fleet's own numbers, unmodified. */
 const bare = new Map<never, never>();
+const curves = createCurveRegistry(content.curves);
 
 const material = (over: Partial<MaterialDef> = {}): MaterialDef =>
   ({ ...content.materials[0], ...over }) as MaterialDef;
 const object = (over: Partial<ObjectDef> = {}): ObjectDef =>
   ({ ...content.objects[0], ...over }) as ObjectDef;
 
-const config = (over: { material?: Partial<MaterialDef>; object?: Partial<ObjectDef> } = {}) =>
-  ({ material: material(over.material), object: object(over.object) }) satisfies SlotConfig;
+/**
+ * A loaded bay's flattened recipe, built the way the sim builds it — printing
+ * reads `printDesignSeconds`/`filamentGrams` off the config, not off the def,
+ * so a test that hand-rolled the object would stop measuring the real path.
+ */
+const config = (
+  over: { material?: Partial<MaterialDef>; object?: Partial<ObjectDef> } = {},
+): SlotConfig => {
+  const obj = object(over.object);
+  return {
+    material: material(over.material),
+    object: obj,
+    design: null,
+    recipeId: obj.id,
+    recipeName: obj.name,
+    printDesignSeconds: obj.printDesignSeconds,
+    filamentGrams: obj.filamentGrams,
+    pool: 'parts',
+  };
+};
+
+/** A bay loaded with a Design instead: it makes Products (spec §5D). */
+const designConfig = (): SlotConfig => {
+  const def = content.designs[0];
+  if (def === undefined) {
+    throw new Error('expected a design in content');
+  }
+  return {
+    material: material({ id: def.requiredMaterialId }),
+    object: null,
+    design: { ...def, baseProductValue: 100, levelValueCurveId: 'design-level-value' },
+    recipeId: def.id,
+    recipeName: def.name,
+    printDesignSeconds: def.printDesignSeconds,
+    filamentGrams: def.filamentGrams,
+    pool: 'products',
+  };
+};
 
 describe('resolveSlotConfig', () => {
   it('resolves a configured slot to its defs', () => {
@@ -40,7 +78,9 @@ describe('resolveSlotConfig', () => {
       testSlot({ printerCount: 1, materialId: 'pla', objectId: 'bracket' }),
     );
     expect(resolved?.material.id).toBe('pla');
-    expect(resolved?.object.id).toBe('bracket');
+    expect(resolved?.object?.id).toBe('bracket');
+    expect(resolved?.recipeId).toBe('bracket');
+    expect(resolved?.pool).toBe('parts');
   });
 
   it('is null for an unconfigured or dangling slot', () => {
@@ -104,7 +144,7 @@ describe('batching', () => {
     expect(affordableBatch(c, 10, 0)).toBe(0);
   });
 
-  it('refuses an object that consumes no filament', () => {
+  it('refuses a recipe that consumes no filament', () => {
     expect(() => affordableBatch(config({ object: { filamentGrams: 0 } }), 1, 10)).toThrow(
       RangeError,
     );
@@ -115,7 +155,21 @@ describe('batching', () => {
       object: { partsYield: 2, basePartValue: 3 },
       material: { valueMultiplier: 1.5 },
     });
-    expect(batchYield(c, 4, 1)).toEqual({ parts: 8, value: 8 * 3 * 1.5 });
+    expect(batchYield(c, 4, bare, curves, 0)).toEqual({
+      count: 8,
+      value: 8 * 3 * 1.5,
+      pool: 'parts',
+    });
+  });
+
+  it('yields Products from a Design, valued by its level (spec §5D)', () => {
+    const c = designConfig();
+    // One Product per print, and the level curve reads 1× at level 1.
+    expect(batchYield(c, 3, bare, curves, 1)).toEqual({ count: 3, value: 300, pool: 'products' });
+    // A higher level is worth strictly more per Product, from content alone.
+    const levelled = batchYield(c, 3, bare, curves, 4);
+    expect(levelled.value).toBeGreaterThan(300);
+    expect(levelled.pool).toBe('products');
   });
 });
 

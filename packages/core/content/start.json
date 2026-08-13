@@ -2,6 +2,7 @@
   "printerId": "bench-mk1",
   "slotCount": 1,
   "printersPerSlot": 8,
+  "designSlots": 1,
   "slotIdPrefix": "slot",
   "startingResources": {
     "parts": 0,
@@ -21,37 +22,37 @@
     {
       "id": "frame",
       "name": "Frame",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "gantry",
       "name": "Gantry",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "bed",
       "name": "Print bed",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "extruder",
       "name": "Extruder",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "hotend",
       "name": "Hotend",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "spool-holder",
       "name": "Spool holder",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     },
     {
       "id": "controller",
       "name": "Controller board",
-      "attachDesignSeconds": 36
+      "attachDesignSeconds": 39
     }
   ]
 }

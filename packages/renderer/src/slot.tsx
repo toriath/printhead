@@ -31,6 +31,11 @@ export interface SlotProps {
   readonly slot: SlotVisual;
   /** Parts to draw during the intro; omitted once the machine is finished. */
   readonly assemblyParts?: readonly string[];
+  /**
+   * The workshop is rebuilding itself after a melt-down (spec §6 phase 4), so
+   * the intro caption says so instead of inviting a click that never comes.
+   */
+  readonly selfAssembling?: boolean;
 }
 
 const SINGLE = 1;
@@ -138,7 +143,9 @@ function QueueStrip({ slot }: { slot: SlotVisual }): ReactElement | null {
 }
 
 export function slotLabel(slot: SlotVisual): string {
-  const config = `${slot.objectName ?? slot.objectId} · ${slot.materialName ?? slot.materialId}`;
+  const name = slot.objectName ?? slot.objectId;
+  // A Design is a thing the player made, so it is named as one (spec §5D).
+  const config = `${slot.designId === null ? name : `⌗ ${name}`} · ${slot.materialName ?? slot.materialId}`;
   if (slot.changingOver) {
     return `purging → ${slot.materialName ?? slot.materialId}`;
   }
@@ -151,7 +158,7 @@ export function slotLabel(slot: SlotVisual): string {
   return slot.printerCount > 0 ? 'no config loaded' : 'empty bay';
 }
 
-export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
+export function Slot({ slot, assemblyParts, selfAssembling = false }: SlotProps): ReactElement {
   const assembling = assemblyParts !== undefined;
   // A machine the player owns is always on screen, configured or not.
   const drawMachine = slot.printerCount > 0 || assembling;
@@ -160,6 +167,7 @@ export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
       data-testid={`slot-${slot.slotId}`}
       data-occupied={slot.occupied}
       data-slot-index={slot.index}
+      data-output={slot.output}
     >
       <rect
         data-testid={`bay-${slot.slotId}`}
@@ -177,6 +185,7 @@ export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
           running={slot.running}
           phaseOffset={slot.phaseOffset}
           progress={slot.progress}
+          output={slot.output}
         />
       ) : null}
       {slot.occupied ? (
@@ -196,7 +205,7 @@ export function Slot({ slot, assemblyParts }: SlotProps): ReactElement {
         y={LABEL_Y}
         textAnchor="middle"
       >
-        {assembling ? 'assembling…' : slotLabel(slot)}
+        {assembling ? (selfAssembling ? 'self-assembling…' : 'assembling…') : slotLabel(slot)}
       </text>
       <QueueStrip slot={slot} />
     </g>

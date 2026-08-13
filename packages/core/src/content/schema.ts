@@ -58,6 +58,11 @@ export const GatedActionTypeSchema = z.enum([
   'ASSIGN_PRINTER',
   'SET_SLOT_QUEUE',
   'CHOOSE_FORK',
+  'CREATE_DESIGN',
+  'SET_SLOT_DESIGN',
+  'SELL_PRODUCTS',
+  'PRESTIGE',
+  'BUY_MONEY_PRINTER',
 ]);
 
 /**
@@ -70,6 +75,7 @@ export const MetricSchema = z.enum([
   'scrap',
   'money',
   'plates',
+  'products',
   'printers',
   'slots',
   'partsProduced',
@@ -84,6 +90,19 @@ export const MetricSchema = z.enum([
   'filamentTradedGrams',
   'phaseDesignMinutes',
   'totalDesignMinutes',
+  /** Designs owned — they survive prestige, so this only ever grows (spec §5D). */
+  'designs',
+  /** Total levels across every design: how much the studio has been *used*. */
+  'designLevels',
+  /** 1 once `prestige.requiredDesignId` exists — the Money Plate capstone. */
+  'capstoneDesigned',
+  'productsProduced',
+  'productsSold',
+  /** Melt-downs completed (spec §5D). */
+  'prestigeCount',
+  /** Money the Plates have printed directly (spec §5E). */
+  'moneyPrinted',
+  'moneyPrintersInstalled',
 ]);
 
 export const RequirementSchema = z
@@ -166,6 +185,13 @@ export const StartFileSchema = z
      * — that is precisely what one giant printer means (spec §5B).
      */
     printersPerSlot: z.number().int().positive(),
+    /**
+     * Design slots the studio opens with (spec §5D: "design slots"). Designs
+     * are permanent and survive prestige, so the slot count is what stops the
+     * player from simply owning every design at once; the design tree sells
+     * more of them through a `designSlots` upgrade effect.
+     */
+    designSlots: z.number().int().positive(),
     slotIdPrefix: IdSchema,
     startingResources: StartingResourcesSchema,
     startingFilament: z.array(StartingFilamentSchema),
@@ -285,6 +311,10 @@ export const UpgradeEffectTypeSchema = z.enum([
   'machineTier',
   'recyclerYieldFraction',
   'marketFeeMultiplier',
+  /** Extra Design Studio slots (spec §5D) — `add`, so nodes stack. */
+  'designSlots',
+  /** Money value of a printed Product (spec §5D) — the studio's own tree. */
+  'productValueMultiplier',
 ]);
 
 export const UpgradeEffectSchema = z
@@ -383,6 +413,20 @@ export const ForksFileSchema = z.array(ForkDefSchema).min(2);
 
 // --- designs.json -----------------------------------------------------------
 
+/**
+ * The Design Studio (spec §5D).
+ *
+ * A Design is drafted once — it costs Money and occupies the studio for
+ * `designDesignMinutes` — and is then **permanent**: it survives prestige, and
+ * printing it makes Products instead of Parts. Every batch printed levels the
+ * design up (`printsPerLevel`), and `levelValueCurveId` turns that level into
+ * the multiplier on `baseProductValue`, which is the whole reason to keep
+ * printing one design rather than drafting another.
+ *
+ * `requiredMaterialId` is how spec §3's "resin is **required** for
+ * Designs/Products/Plates" is expressed: the studio simply cannot draft a
+ * design whose material the machine tree has not opened.
+ */
 export const DesignDefSchema = z
   .object({
     id: IdSchema,
@@ -394,6 +438,11 @@ export const DesignDefSchema = z
     baseProductValue: Positive,
     levelValueCurveId: IdSchema,
     printsPerLevel: z.number().int().positive(),
+    /** Levels stop here, so the value multiplier cannot run away. */
+    maxLevel: z.number().int().positive(),
+    /** Drafting is the Money sink of spec §2's resource flow. */
+    costCurveId: IdSchema,
+    costResource: ResourceKindSchema,
     unlockPhaseId: IdSchema,
   })
   .strict();
@@ -572,6 +621,41 @@ export const FailureFileSchema = z
 
 // --- prestige.json ----------------------------------------------------------
 
+/**
+ * One tier of the money printer (spec §5E: bills → bundles → pallets → "the
+ * central bank"). Tier 1 ships in M5 as the first sink for Plates; the deeper
+ * tiers are M6 and are added here as data, not as code.
+ *
+ * `rateCurveId` is evaluated at the **Plate count**, which is what makes money
+ * printing monotone in Plates (spec §13) without any system knowing the
+ * formula: a curve that does not decrease in `n` cannot produce a rate that
+ * decreases in Plates.
+ */
+export const MoneyPrinterDefSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    tier: z.number().int().positive(),
+    costCurveId: IdSchema,
+    costResource: ResourceKindSchema,
+    maxLevel: z.number().int().positive(),
+    /** Money per design-second, per installed level, read at `plates`. */
+    rateCurveId: IdSchema,
+    unlockPhaseId: IdSchema,
+  })
+  .strict();
+
+/**
+ * Prestige (spec §5D): the melt-down. The run is scrapped, Designs survive
+ * exactly, and the wreckage is engraved into Plates.
+ *
+ * `plateInputResource × plateInputScale` is the reading the `plateCurveId`
+ * curve turns into Plates, so both the input and the shape of the reward are
+ * content. `retainedResources` and `retainedLedgers` are the *whole* rule for
+ * what survives — nothing in `systems/` names a resource or a ledger — which is
+ * what makes "prestige preserves Designs exactly" a property of the data as
+ * well as of the code.
+ */
 export const PrestigeFileSchema = z
   .object({
     requiredDesignId: IdSchema,
@@ -579,10 +663,32 @@ export const PrestigeFileSchema = z
     moneyPrintCurveId: IdSchema,
     meltdownDesignSeconds: Positive,
     retainedResources: z.array(ResourceKindSchema).min(1),
+    /**
+     * Keyed ledgers carried across a melt-down whole. Designs are the spec's
+     * named survivor (§2), and the money printers join them because they are
+     * bought with Plates: an endgame node paid for in prestige currency that
+     * the next melt-down confiscates would be a tax, not a reward (§5E).
+     */
+    retainedLedgers: z.array(z.enum(['designs', 'moneyPrinters'])).min(1),
     plateInputResource: ResourceKindSchema,
     plateInputScale: Positive,
+    /** Plates a melt-down must be worth before the button does anything. */
+    minimumPlates: Positive,
+    unlockPhaseId: IdSchema,
+    moneyPrinters: z.array(MoneyPrinterDefSchema).min(1),
   })
-  .strict();
+  .strict()
+  .refine(
+    (prestige) =>
+      !prestige.retainedLedgers.includes('designs') ||
+      prestige.retainedResources.includes('designs'),
+    {
+      // `resources.designs` mirrors the ledger for the phase gates to read;
+      // keeping one and dropping the other would leave the count lying.
+      message: 'retaining the designs ledger requires retaining the designs resource',
+      path: ['retainedResources'],
+    },
+  );
 
 // --- the whole content set --------------------------------------------------
 
@@ -659,6 +765,7 @@ export type BuyFilamentAutomationDef = z.infer<typeof BuyFilamentAutomationSchem
 export type TradeFilamentAutomationDef = z.infer<typeof TradeFilamentAutomationSchema>;
 export type ChangeoverAutomationDef = z.infer<typeof ChangeoverAutomationSchema>;
 export type FailureContent = z.infer<typeof FailureFileSchema>;
+export type MoneyPrinterDef = z.infer<typeof MoneyPrinterDefSchema>;
 export type PrestigeContent = z.infer<typeof PrestigeFileSchema>;
 export type Content = z.infer<typeof ContentSchema>;
 export type RawContent = Record<ContentFileName, unknown>;

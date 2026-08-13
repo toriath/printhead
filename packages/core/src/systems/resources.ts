@@ -36,8 +36,19 @@ export function withFilament(
   return { ...filament, [materialId]: (filament[materialId] ?? NONE) + grams };
 }
 
-/** The two balances that carry a banked money value alongside their count. */
-export type ValuedPool = 'parts' | 'scrap';
+/**
+ * The balances that carry a banked money value alongside their count: Parts
+ * and Scrap are worth what the material they came from is worth, and a Product
+ * is worth what its Design's level made it worth on the day it printed
+ * (spec §5D). None of the three can be valued after the fact.
+ */
+export type ValuedPool = 'parts' | 'scrap' | 'products';
+
+export const VALUED_POOLS: readonly ValuedPool[] = ['parts', 'scrap', 'products'];
+
+export function isValuedPool(candidate: string): candidate is ValuedPool {
+  return VALUED_POOLS.some((pool) => pool === candidate);
+}
 
 export interface PoolDraw {
   readonly count: number;
@@ -45,12 +56,26 @@ export interface PoolDraw {
 }
 
 export function poolValue(state: GameState, pool: ValuedPool): number {
-  return pool === 'parts' ? state.partsValue : state.scrapValue;
+  switch (pool) {
+    case 'parts':
+      return state.partsValue;
+    case 'scrap':
+      return state.scrapValue;
+    case 'products':
+      return state.productsValue;
+  }
 }
 
 /** Written out per pool rather than by computed key, so the type stays exact. */
 function withPoolValue(state: GameState, pool: ValuedPool, value: number): GameState {
-  return pool === 'parts' ? { ...state, partsValue: value } : { ...state, scrapValue: value };
+  switch (pool) {
+    case 'parts':
+      return { ...state, partsValue: value };
+    case 'scrap':
+      return { ...state, scrapValue: value };
+    case 'products':
+      return { ...state, productsValue: value };
+  }
 }
 
 /**
@@ -117,6 +142,12 @@ export const addParts = (state: GameState, count: number, value: number): GameSt
   addPool(state, 'parts', count, value);
 export const removeParts = (state: GameState, draw: PoolDraw): GameState =>
   removePool(state, 'parts', draw);
+
+export const unitProductValue = (state: GameState): number => unitValueOf(state, 'products');
+export const drawProducts = (state: GameState, requested: number): PoolDraw =>
+  drawPool(state, 'products', requested);
+export const removeProducts = (state: GameState, draw: PoolDraw): GameState =>
+  removePool(state, 'products', draw);
 
 export const unitScrapValue = (state: GameState): number => unitValueOf(state, 'scrap');
 export const drawScrap = (state: GameState, requested: number): PoolDraw =>

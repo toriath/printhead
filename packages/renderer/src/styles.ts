@@ -19,6 +19,7 @@ export const WORKSHOP_CSS = `
   --ph-bay: #10151b;
   --ph-bay-edge: #263141;
   --ph-accent: #4cc2ff;
+  --ph-gold: #e8c469;
     --ph-warn: #ffb454;
   --ph-hot: #ff8a3d;
   --ph-sweep: 3.4s;
@@ -79,6 +80,22 @@ export const WORKSHOP_CSS = `
 .ph-controller { fill: #1b232d; stroke: var(--ph-frame); stroke-width: 1; }
 .ph-controller-screen { fill: var(--ph-accent); opacity: 0.55; }
 .ph-print { fill: var(--ph-accent); opacity: 0.85; }
+/* A Product is not a Part: the studio bay reads gold (spec §5D). */
+.ph-print--product { fill: var(--ph-gold); opacity: 0.95; }
+
+/* The mint (spec §5E): one bill per installed press level, gently breathing. */
+.ph-bill {
+  fill: var(--ph-gold);
+  opacity: 0.8;
+  animation: ph-mint 1.8s ease-in-out infinite;
+}
+@keyframes ph-mint {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-bill { animation: none; opacity: 0.8; }
+}
 
 /* --- the idle print-head animation --------------------------------------- */
 @keyframes ph-sweep {

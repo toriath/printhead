@@ -5,17 +5,23 @@ import {
   type PhaseDef,
   affordableBatch,
   automationAvailability,
+  computeModifiers,
+  designAvailability,
   forkAvailability,
   forkCost,
   hasRecycler,
   isPieceReady,
   maxBuyableGrams,
+  moneyPrinterAvailability,
   nextAutomationCost,
+  nextDesignCost,
+  nextMoneyPrinterCost,
   nextPiece,
   nextPrinterCost,
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  prestigeAvailability,
   quoteFor,
   resolveSlotConfig,
   slotUnlockAvailability,
@@ -49,7 +55,11 @@ export type MeaningfulOption =
   | 'buy-automation'
   | 'feed-idle-slot'
   | 'restock-filament'
-  | 'recycle-scrap';
+  | 'recycle-scrap'
+  | 'draft-design'
+  | 'load-design'
+  | 'prestige'
+  | 'buy-money-printer';
 
 function phaseOf(content: Content, phaseId: string): PhaseDef | undefined {
   return content.pacing.phases.find((phase) => phase.id === phaseId);
@@ -167,10 +177,53 @@ export function meaningfulOptions(
       allows(content, state.phaseId, 'BUY_FILAMENT') &&
       quote !== null &&
       maxBuyableGrams(state, content, config.material.id, state.resources.money) >=
-        config.object.filamentGrams
+        config.filamentGrams
     ) {
       options.push('restock-filament');
       break;
+    }
+  }
+
+  // The meta layer (spec §5D/§5E). A studio with a free bench and the money to
+  // fill it, a Design waiting for a bay, a melt-down that would pay, or a press
+  // to install — each of them is a real decision the player could make.
+  const modifiers = computeModifiers(state, content);
+  if (allows(content, state.phaseId, 'CREATE_DESIGN')) {
+    for (const def of content.designs) {
+      if (
+        designAvailability(state, content, modifiers, def.id) === null &&
+        affordable(nextDesignCost(state, content, curves, def.id))
+      ) {
+        options.push('draft-design');
+        break;
+      }
+    }
+  }
+
+  if (
+    allows(content, state.phaseId, 'SET_SLOT_DESIGN') &&
+    Object.keys(state.designs).length > 0 &&
+    state.slots.some((slot) => slot.designId === null && slot.printerCount > 0)
+  ) {
+    options.push('load-design');
+  }
+
+  if (
+    allows(content, state.phaseId, 'PRESTIGE') &&
+    prestigeAvailability(state, content, curves) === null
+  ) {
+    options.push('prestige');
+  }
+
+  if (allows(content, state.phaseId, 'BUY_MONEY_PRINTER')) {
+    for (const def of content.prestige.moneyPrinters) {
+      if (
+        moneyPrinterAvailability(state, content, def.id) === null &&
+        affordable(nextMoneyPrinterCost(state, content, curves, def.id))
+      ) {
+        options.push('buy-money-printer');
+        break;
+      }
     }
   }
 

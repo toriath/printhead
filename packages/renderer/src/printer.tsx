@@ -66,6 +66,13 @@ export const PRINTER_PART_IDS = [
 
 export type PrinterPartId = (typeof PRINTER_PART_IDS)[number];
 
+/**
+ * What is growing on the bed. A bay printing one of the player's Designs makes
+ * **Products**, not Parts (spec §5D), and the object is drawn differently so
+ * the studio bay reads as the studio bay at a glance.
+ */
+export type PrintOutput = 'parts' | 'products';
+
 export interface PrinterProps {
   readonly machineTier: number;
   /** Which assembly pieces to draw; `'all'` for a finished machine. */
@@ -75,6 +82,8 @@ export interface PrinterProps {
   readonly phaseOffset: number;
   /** 0..1 — how tall the object currently on the bed has grown. */
   readonly progress: number;
+  /** Parts, or a Product from one of the player's Designs (spec §5D). */
+  readonly output?: PrintOutput;
 }
 
 const UNKNOWN_PART_SIZE = 14;
@@ -135,7 +144,11 @@ function Gantry(): ReactElement {
   );
 }
 
-function Bed({ bed, progress }: { bed: string; progress: number }): ReactElement {
+function Bed({
+  bed,
+  progress,
+  output,
+}: { bed: string; progress: number; output: PrintOutput }): ReactElement {
   const printHeight = PRINT_MAX_HEIGHT * Math.min(Math.max(progress, 0), 1);
   return (
     <g data-part="bed">
@@ -156,7 +169,8 @@ function Bed({ bed, progress }: { bed: string; progress: number }): ReactElement
       {printHeight > 0 ? (
         <rect
           data-testid="print-in-progress"
-          className="ph-print"
+          data-output={output}
+          className={output === 'products' ? 'ph-print ph-print--product' : 'ph-print'}
           x={BED_X + (BED_WIDTH - PRINT_WIDTH) / 2}
           y={BED_Y - printHeight}
           width={PRINT_WIDTH}
@@ -255,6 +269,7 @@ export function Printer({
   running,
   phaseOffset,
   progress,
+  output = 'parts',
 }: PrinterProps): ReactElement {
   const style = machineTierStyle(machineTier);
   const visible = parts === 'all' ? new Set<string>(PRINTER_PART_IDS) : new Set(parts);
@@ -296,7 +311,7 @@ export function Printer({
         />
       ) : null}
       {has('gantry') ? <Gantry /> : null}
-      {has('bed') ? <Bed bed={style.bed} progress={progress} /> : null}
+      {has('bed') ? <Bed bed={style.bed} progress={progress} output={output} /> : null}
       {has('extruder') ? <Carriage withNozzle={has('hotend')} /> : null}
       {has('spool-holder') ? <Spool /> : null}
       {has('controller') ? <Controller /> : null}

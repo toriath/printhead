@@ -5,10 +5,28 @@
     "requiredMaterialId": "resin",
     "designDesignMinutes": 6,
     "printDesignSeconds": 90,
-    "filamentGrams": 30,
+    "filamentGrams": 15,
     "baseProductValue": 40,
     "levelValueCurveId": "design-level-value",
     "printsPerLevel": 10,
+    "maxLevel": 20,
+    "costCurveId": "design-cost",
+    "costResource": "money",
+    "unlockPhaseId": "studio"
+  },
+  {
+    "id": "lamp-shade",
+    "name": "Lamp shade",
+    "requiredMaterialId": "resin",
+    "designDesignMinutes": 9,
+    "printDesignSeconds": 140,
+    "filamentGrams": 25,
+    "baseProductValue": 90,
+    "levelValueCurveId": "design-level-value",
+    "printsPerLevel": 8,
+    "maxLevel": 20,
+    "costCurveId": "design-cost",
+    "costResource": "money",
     "unlockPhaseId": "studio"
   },
   {
@@ -17,10 +35,13 @@
     "requiredMaterialId": "resin",
     "designDesignMinutes": 18,
     "printDesignSeconds": 240,
-    "filamentGrams": 120,
+    "filamentGrams": 40,
     "baseProductValue": 500,
     "levelValueCurveId": "design-level-value",
     "printsPerLevel": 4,
+    "maxLevel": 20,
+    "costCurveId": "design-cost",
+    "costResource": "money",
     "unlockPhaseId": "studio"
   }
 ]

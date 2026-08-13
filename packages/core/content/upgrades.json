@@ -127,5 +127,39 @@
         "value": 0.7
       }
     ]
+  },
+  {
+    "id": "design-desk",
+    "name": "Design desk",
+    "tree": "design",
+    "maxLevel": 2,
+    "costCurveId": "design-slot-cost",
+    "costResource": "money",
+    "requiresUpgradeIds": ["sla-unit"],
+    "unlockPhaseId": "studio",
+    "effects": [
+      {
+        "type": "designSlots",
+        "combine": "add",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "polish-station",
+    "name": "Polish station",
+    "tree": "design",
+    "maxLevel": 3,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "money",
+    "requiresUpgradeIds": ["design-desk"],
+    "unlockPhaseId": "studio",
+    "effects": [
+      {
+        "type": "productValueMultiplier",
+        "combine": "multiply",
+        "value": 1.25
+      }
+    ]
   }
 ]

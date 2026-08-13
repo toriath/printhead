@@ -25,7 +25,8 @@ export interface SlotConfiguredEvent extends EventBase {
   readonly type: 'SLOT_CONFIGURED';
   readonly slotId: string;
   readonly materialId: string;
-  readonly objectId: string;
+  /** The object or Design now loaded (spec §5D) — whichever it is. */
+  readonly recipeId: string;
   /** Changeover cost the switch incurred (spec §3); zero for a free swap. */
   readonly downtimeMs: number;
   readonly purgedGrams: number;
@@ -36,7 +37,7 @@ export interface SlotConfiguredEvent extends EventBase {
 export interface PrintStartedEvent extends EventBase {
   readonly type: 'PRINT_STARTED';
   readonly slotId: string;
-  readonly objectId: string;
+  readonly recipeId: string;
   readonly materialId: string;
   readonly batch: number;
   readonly durationMs: number;
@@ -45,11 +46,13 @@ export interface PrintStartedEvent extends EventBase {
 export interface PrintCompletedEvent extends EventBase {
   readonly type: 'PRINT_COMPLETED';
   readonly slotId: string;
-  readonly objectId: string;
+  readonly recipeId: string;
   readonly materialId: string;
   readonly batch: number;
-  readonly parts: number;
-  readonly partsValue: number;
+  /** Units made: Parts for a stock object, Products for a Design (spec §5D). */
+  readonly produced: number;
+  readonly pool: 'parts' | 'products';
+  readonly value: number;
   /** How many of the batch the pity timer failed (spec §7.1). */
   readonly failed: number;
   readonly scrapGrams: number;
@@ -118,6 +121,50 @@ export interface PartSoldEvent extends EventBase {
   readonly money: number;
 }
 
+/** Products sold at the value their Design's level banked (spec §5D). */
+export interface ProductSoldEvent extends EventBase {
+  readonly type: 'PRODUCT_SOLD';
+  readonly products: number;
+  readonly money: number;
+}
+
+/** The studio bench took a commission (spec §5D). */
+export interface DesignStartedEvent extends EventBase {
+  readonly type: 'DESIGN_STARTED';
+  readonly designId: string;
+  readonly designMinutes: number;
+  readonly paid: number;
+}
+
+/** A draft came off the bench: the Design is owned, forever. */
+export interface DesignCreatedEvent extends EventBase {
+  readonly type: 'DESIGN_CREATED';
+  readonly designId: string;
+  readonly designsOwned: number;
+}
+
+export interface DesignLevelledEvent extends EventBase {
+  readonly type: 'DESIGN_LEVELLED';
+  readonly designId: string;
+  readonly level: number;
+}
+
+/** The melt-down (spec §5D): the run is scrapped and engraved into Plates. */
+export interface PrestigedEvent extends EventBase {
+  readonly type: 'PRESTIGED';
+  readonly platesAwarded: number;
+  readonly platesHeld: number;
+  readonly runNumber: number;
+  readonly designsKept: number;
+}
+
+export interface MoneyPrinterInstalledEvent extends EventBase {
+  readonly type: 'MONEY_PRINTER_INSTALLED';
+  readonly moneyPrinterId: string;
+  readonly level: number;
+  readonly paid: number;
+}
+
 export interface FilamentPurchasedEvent extends EventBase {
   readonly type: 'FILAMENT_PURCHASED';
   readonly materialId: string;
@@ -184,7 +231,11 @@ export type ActionRejectedReason =
   | 'slot-idle'
   /** The bay already holds all the machines it can (spec §4). */
   | 'slot-full'
+  /** The melt-down would not be worth `prestige.minimumPlates` yet. */
+  | 'not-worth-it'
   | 'max-level'
+  /** The studio has already drafted this Design (spec §5D). */
+  | 'already-owned'
   | 'missing-prerequisite'
   | 'no-recycler'
   | 'not-tradeable'
@@ -206,6 +257,12 @@ export type DomainEvent =
   | PrintFailedEvent
   | ScrapRecycledEvent
   | PartSoldEvent
+  | ProductSoldEvent
+  | DesignStartedEvent
+  | DesignCreatedEvent
+  | DesignLevelledEvent
+  | PrestigedEvent
+  | MoneyPrinterInstalledEvent
   | FilamentPurchasedEvent
   | FilamentSoldEvent
   | PrinterBuiltEvent
@@ -232,6 +289,12 @@ export const DOMAIN_EVENT_TYPES = [
   'PRINT_FAILED',
   'SCRAP_RECYCLED',
   'PART_SOLD',
+  'PRODUCT_SOLD',
+  'DESIGN_STARTED',
+  'DESIGN_CREATED',
+  'DESIGN_LEVELLED',
+  'PRESTIGED',
+  'MONEY_PRINTER_INSTALLED',
   'FILAMENT_PURCHASED',
   'FILAMENT_SOLD',
   'PRINTER_BUILT',

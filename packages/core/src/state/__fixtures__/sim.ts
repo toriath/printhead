@@ -5,6 +5,7 @@ import { TICK_MS } from '../../engine/constants.js';
 import { createEventBus } from '../../events/bus.js';
 import type { DomainEvent, DomainEventType } from '../../events/types.js';
 import { restoreRng } from '../../rng/mulberry32.js';
+import { resolveSlotConfig } from '../../systems/printing.js';
 import type { Action } from '../actions.js';
 import { tick } from '../actions.js';
 import {
@@ -31,6 +32,7 @@ export function testSlot(over: Partial<SlotState> = {}): SlotState {
     id: 'slot-1',
     materialId: null,
     objectId: null,
+    designId: null,
     printerCount: 0,
     autoRestart: false,
     run: null,
@@ -103,6 +105,18 @@ export function assemblePrinter(sim: Sim): Sim {
     sim.do({ type: 'ATTACH_PIECE', pieceId: piece.id });
   }
   return sim;
+}
+
+/**
+ * A `SlotConfig` for a stock object, built the way the sim builds it, so tests
+ * cannot drift from the real shape of a loaded bay.
+ */
+export function testConfig(materialId: string, objectId: string, content: Content = TEST_CONTENT) {
+  const config = resolveSlotConfig(content, testSlot({ materialId, objectId }));
+  if (config === null) {
+    throw new Error(`no such recipe: ${materialId}/${objectId}`);
+  }
+  return config;
 }
 
 export const FIRST_SLOT_ID = `${TEST_CONTENT.start.slotIdPrefix}-1`;

@@ -1,16 +1,32 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
+import type { CurveRegistry } from '../curves/evaluate.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
-import { MS_PER_SECOND } from '../engine/constants.js';
+import { MS_PER_MINUTE, MS_PER_SECOND } from '../engine/constants.js';
 import { clamp } from '../math/scalar.js';
 import type { GameState, SlotState } from '../state/game-state.js';
 import { assemblyPieces, isPieceReady, nextPiece } from '../systems/assembly.js';
 import { automationAvailability, nextAutomationCost } from '../systems/automation.js';
+import {
+  designAvailability,
+  designSlotCount,
+  freeDesignSlots,
+  nextDesignCost,
+  productValueOf,
+} from '../systems/designs.js';
 import { hasRecycler, recyclerYield } from '../systems/failure.js';
 import { assignedPrinters, fleetCapacity, printersPerSlot } from '../systems/fleet.js';
 import { chosenFork, forkAvailability, forkCost } from '../systems/forks.js';
 import { quoteAll } from '../systems/market.js';
 import { getPhase } from '../systems/phases.js';
+import {
+  moneyPrintRate,
+  moneyPrinterAvailability,
+  moneyPrinterLevel,
+  nextMoneyPrinterCost,
+  platesFor,
+  prestigeAvailability,
+} from '../systems/prestige.js';
 import { bestPrinterTier, resolveSlotConfig, runProgress } from '../systems/printing.js';
 import { countPrinters } from '../systems/requirements.js';
 import { drawScrap } from '../systems/resources.js';
@@ -31,14 +47,18 @@ import {
 import type {
   AssemblyVisual,
   AutomationVisual,
+  DesignVisual,
   FleetVisual,
   ForkVisual,
   LedgerVisual,
   MarketVisual,
+  MoneyPrinterVisual,
+  PrestigeVisual,
   QueueEntryVisual,
   RecyclerVisual,
   SlotUnlockVisual,
   SlotVisual,
+  StudioVisual,
   UpgradeVisual,
   VisualState,
 } from './schema.js';
@@ -114,8 +134,10 @@ function toSlotVisual(
     index,
     materialId: config?.material.id ?? null,
     materialName: config?.material.name ?? null,
-    objectId: config?.object.id ?? null,
-    objectName: config?.object.name ?? null,
+    objectId: config?.recipeId ?? null,
+    objectName: config?.recipeName ?? null,
+    output: config?.pool ?? 'parts',
+    designId: config?.design?.id ?? null,
     machineTier: staffed ? machineTier : NONE,
     printerCount: slot.printerCount,
     printerCapacity,
@@ -197,6 +219,7 @@ function toAssemblyVisual(state: GameState, content: Content): AssemblyVisual {
     nextPieceName: piece?.name ?? null,
     cooldownMs: state.assembly.cooldownMs,
     ready: piece !== null && isPieceReady(state.assembly),
+    selfAssembling: state.selfAssembling,
     // `StartFileSchema` requires at least one assembly piece, so the divisor
     // cannot be zero and there is nothing to guard against.
     progress: attached / pieces.length,
@@ -209,8 +232,102 @@ function toLedgerVisual(state: GameState): LedgerVisual {
     parts: state.resources.parts,
     money: state.resources.money,
     scrap: state.resources.scrap,
+    products: state.resources.products,
+    plates: state.resources.plates,
     filamentGrams: state.filamentGrams,
   };
+}
+
+/**
+ * The Design Studio (spec §5D). Every design in content is projected, drafted
+ * or not, with the reason it cannot be drafted attached — so the shell offers
+ * the catalogue and greys out what the machine tree has not opened, without
+ * knowing that resin is the gate.
+ */
+function toStudioVisual(
+  state: GameState,
+  content: Content,
+  modifiers: ModifierMap,
+  curves: CurveRegistry,
+): StudioVisual {
+  const drafting = state.studio;
+  const draftDef =
+    drafting === null ? undefined : indexById(content.designs).get(drafting.designId);
+  const draftTotalMs = (draftDef?.designDesignMinutes ?? NONE) * MS_PER_MINUTE;
+  const designs: DesignVisual[] = content.designs.map((def) => {
+    const owned = state.designs[def.id];
+    const level = owned?.level ?? NONE;
+    const cost = nextDesignCost(state, content, curves, def.id);
+    const blocked = designAvailability(state, content, modifiers, def.id);
+    return {
+      designId: def.id,
+      name: def.name,
+      materialId: def.requiredMaterialId,
+      level,
+      maxLevel: def.maxLevel,
+      owned: owned !== undefined,
+      levelProgress:
+        owned === undefined || owned.level >= def.maxLevel
+          ? NONE
+          : clamp(owned.printsOnLevel / def.printsPerLevel, NONE, FULL),
+      productValue: productValueOf(def, curves, Math.max(level, FULL), modifiers),
+      capstone: def.id === content.prestige.requiredDesignId,
+      available: blocked === null,
+      affordable: cost !== null && affordable(state, cost.resource, cost.amount),
+      cost: cost?.amount ?? NONE,
+      costResource: cost?.resource ?? def.costResource,
+      blockedReason: blocked,
+    };
+  });
+  return {
+    slots: designSlotCount(content, modifiers),
+    freeSlots: freeDesignSlots(state, content, modifiers),
+    draftingDesignId: drafting?.designId ?? null,
+    draftingName: draftDef?.name ?? null,
+    draftProgress:
+      drafting === null || draftTotalMs <= NONE
+        ? NONE
+        : clamp((draftTotalMs - drafting.remainingMs) / draftTotalMs, NONE, FULL),
+    designs,
+  };
+}
+
+/** The melt-down offer (spec §5D) and the presses it pays for (spec §5E). */
+function toPrestigeVisual(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): PrestigeVisual {
+  const blocked = prestigeAvailability(state, content, curves);
+  return {
+    available: blocked === null,
+    platesOnOffer: platesFor(state, content, curves),
+    platesHeld: state.resources.plates,
+    runsCompleted: state.stats.prestigeCount,
+    moneyPerDesignSecond: moneyPrintRate(state, content, curves),
+    blockedReason: blocked,
+  };
+}
+
+function toMoneyPrinterVisuals(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): readonly MoneyPrinterVisual[] {
+  return content.prestige.moneyPrinters.map((def) => {
+    const cost = nextMoneyPrinterCost(state, content, curves, def.id);
+    return {
+      moneyPrinterId: def.id,
+      name: def.name,
+      tier: def.tier,
+      level: moneyPrinterLevel(state, def.id),
+      maxLevel: def.maxLevel,
+      available: moneyPrinterAvailability(state, content, def.id) === null,
+      affordable: cost !== null && affordable(state, cost.resource, cost.amount),
+      cost: cost?.amount ?? NONE,
+      costResource: cost?.resource ?? def.costResource,
+    };
+  });
 }
 
 function toMarketVisual(state: GameState, content: Content): readonly MarketVisual[] {
@@ -307,6 +424,7 @@ function toRecyclerVisual(
 
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
+  const curves = createCurveRegistry(content.curves);
   const machineTier = bestPrinterTier(state, content, modifiers);
   const fork = chosenFork(state, content);
   /*
@@ -343,6 +461,9 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     upgrades: toUpgradeVisuals(state, content),
     automation: toAutomationVisuals(state, content),
     recycler: toRecyclerVisual(state, content, modifiers),
+    studio: toStudioVisual(state, content, modifiers, curves),
+    prestige: toPrestigeVisual(state, content, curves),
+    moneyPrinters: toMoneyPrinterVisuals(state, content, curves),
   };
 }
 

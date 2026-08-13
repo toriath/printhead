@@ -23,8 +23,8 @@
     {
       "materialId": "resin",
       "basePricePerGram": 0.35,
-      "stockGrams": 2400,
-      "restockGramsPerDesignMinute": 40,
+      "stockGrams": 6000,
+      "restockGramsPerDesignMinute": 120,
       "unlockPhaseId": "farm"
     },
     {

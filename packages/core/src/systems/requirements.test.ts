@@ -68,8 +68,13 @@ describe('design-minute metrics', () => {
 
 describe('readMetric', () => {
   const state = withState({
-    resources: { ...base.resources, parts: 7, scrap: 2, money: 13 },
+    resources: { ...base.resources, parts: 7, scrap: 2, money: 13, products: 6, plates: 4 },
     printers: { 'bench-mk1': 4 },
+    designs: {
+      'phone-stand': { level: 3, printsOnLevel: 2 },
+      'money-plate': { level: 1, printsOnLevel: 0 },
+    },
+    moneyPrinters: { 'bill-printer': 2 },
     upgrades: { 'heated-bed': 1, 'hardened-nozzle': 2 },
     automation: { 'auto-sell': { level: 1, enabled: true, threshold: 40, cooldownMs: 0 } },
     stats: {
@@ -82,6 +87,10 @@ describe('readMetric', () => {
       filamentPurchasedGrams: 100,
       filamentSoldGrams: 25,
       scrapRecycledGrams: 9,
+      productsProduced: 17,
+      productsSold: 12,
+      moneyPrinted: 33,
+      prestigeCount: 2,
     },
     assembly: { attachedPieceIds: ['frame', 'gantry'], cooldownMs: 0 },
     simTimeMs: MS_PER_MINUTE * 8,
@@ -92,7 +101,8 @@ describe('readMetric', () => {
     parts: 7,
     scrap: 2,
     money: 13,
-    plates: 0,
+    plates: 4,
+    products: 6,
     printers: 4,
     slots: 1,
     partsProduced: 19,
@@ -107,6 +117,14 @@ describe('readMetric', () => {
     filamentTradedGrams: 125,
     phaseDesignMinutes: 5,
     totalDesignMinutes: 8,
+    designs: 2,
+    designLevels: 4,
+    capstoneDesigned: 1,
+    productsProduced: 17,
+    productsSold: 12,
+    prestigeCount: 2,
+    moneyPrinted: 33,
+    moneyPrintersInstalled: 2,
   };
 
   it('reads every metric content is allowed to gate on', () => {

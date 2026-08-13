@@ -1,7 +1,7 @@
 {
-  "version": 5,
-  "phaseId": "farm",
-  "phaseName": "Farm",
+  "version": 6,
+  "phaseId": "studio",
+  "phaseName": "Studio",
   "simTimeMs": 4620000,
   "slotCapacity": 4,
   "goliath": false,
@@ -13,6 +13,8 @@
       "materialName": "PLA",
       "objectId": "bracket",
       "objectName": "Bracket",
+      "output": "parts",
+      "designId": null,
       "machineTier": 1,
       "printerCount": 7,
       "printerCapacity": 8,
@@ -34,6 +36,8 @@
       "materialName": "PETG",
       "objectId": "gearset",
       "objectName": "Gear set",
+      "output": "parts",
+      "designId": null,
       "machineTier": 2,
       "printerCount": 3,
       "printerCapacity": 8,
@@ -53,8 +57,10 @@
       "index": 2,
       "materialId": "resin",
       "materialName": "Resin (SLA)",
-      "objectId": "bracket",
-      "objectName": "Bracket",
+      "objectId": "lamp-shade",
+      "objectName": "Lamp shade",
+      "output": "products",
+      "designId": "lamp-shade",
       "machineTier": 3,
       "printerCount": 1,
       "printerCapacity": 8,
@@ -76,6 +82,8 @@
       "materialName": null,
       "objectId": null,
       "objectName": null,
+      "output": "parts",
+      "designId": null,
       "machineTier": 0,
       "printerCount": 0,
       "printerCapacity": 8,
@@ -116,7 +124,7 @@
     {
       "forkId": "goliath",
       "name": "Goliath",
-      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "description": "One giant printer. The whole fleet is melted into a single bay \u2014 and it is the only build that can attempt the final print.",
       "layout": "goliath",
       "chosen": false,
       "available": true,
@@ -142,12 +150,15 @@
     "cooldownMs": 0,
     "ready": false,
     "progress": 1,
-    "complete": true
+    "complete": true,
+    "selfAssembling": true
   },
   "ledger": {
     "parts": 184,
     "money": 512.4,
     "scrap": 12,
+    "products": 6,
+    "plates": 3,
     "filamentGrams": {
       "pla": 940,
       "petg": 310,
@@ -336,5 +347,83 @@
     "scrapGrams": 420,
     "yieldGrams": 210,
     "yieldMaterialId": "petg"
-  }
+  },
+  "studio": {
+    "slots": 2,
+    "freeSlots": 0,
+    "draftingDesignId": "money-plate",
+    "draftingName": "Money plate",
+    "draftProgress": 0.35,
+    "designs": [
+      {
+        "designId": "phone-stand",
+        "name": "Phone stand",
+        "materialId": "resin",
+        "level": 4,
+        "maxLevel": 20,
+        "owned": true,
+        "levelProgress": 0.3,
+        "productValue": 264.5,
+        "capstone": false,
+        "available": false,
+        "affordable": true,
+        "cost": 2200,
+        "costResource": "money",
+        "blockedReason": "already-owned"
+      },
+      {
+        "designId": "lamp-shade",
+        "name": "Lamp shade",
+        "materialId": "resin",
+        "level": 2,
+        "maxLevel": 20,
+        "owned": true,
+        "levelProgress": 0.625,
+        "productValue": 229.6,
+        "capstone": false,
+        "available": false,
+        "affordable": true,
+        "cost": 2200,
+        "costResource": "money",
+        "blockedReason": "already-owned"
+      },
+      {
+        "designId": "money-plate",
+        "name": "Money plate",
+        "materialId": "resin",
+        "level": 0,
+        "maxLevel": 20,
+        "owned": false,
+        "levelProgress": 0,
+        "productValue": 500,
+        "capstone": true,
+        "available": false,
+        "affordable": true,
+        "cost": 17600,
+        "costResource": "money",
+        "blockedReason": "slot-busy"
+      }
+    ]
+  },
+  "prestige": {
+    "available": false,
+    "platesOnOffer": 0,
+    "platesHeld": 3,
+    "runsCompleted": 1,
+    "moneyPerDesignSecond": 12,
+    "blockedReason": "missing-prerequisite"
+  },
+  "moneyPrinters": [
+    {
+      "moneyPrinterId": "bill-printer",
+      "name": "Bill printer",
+      "tier": 1,
+      "level": 1,
+      "maxLevel": 5,
+      "available": true,
+      "affordable": false,
+      "cost": 8,
+      "costResource": "plates"
+    }
+  ]
 }

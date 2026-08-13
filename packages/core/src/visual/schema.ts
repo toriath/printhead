@@ -24,13 +24,20 @@ import { z } from 'zod';
  *   changeover and their pity charge; the market board, the machine tree and
  *   the automation rack are projected as lists, so the shell can offer every
  *   purchase without a content table of its own.
- * - v5 (M4) — **frozen**: slots and scale. The rack knows how many bays are
+ * - v5 (M4) — frozen: slots and scale. The rack knows how many bays are
  *   owned, which one is on sale and what it costs; every bay carries its print
  *   rota and the machines assigned to it; and the run's Farm/Goliath
  *   commitment is projected as a choice *and* as a drawing instruction, so the
  *   renderer switches to the one-giant-printer layout from data.
+ * - v6 (M5) — **frozen**: the meta layer. Every bay says whether it is making
+ *   Parts or Products; the Design Studio is projected as a bench plus a
+ *   catalogue of drafts with their levels; prestige is projected as a single
+ *   offer with the Plates it would pay and the reason it is not on offer; the
+ *   money printers are a list like every other purchase; and the intro carries
+ *   a `selfAssembling` flag so the renderer can show the workshop building
+ *   itself instead of waiting for clicks (spec §6 phase 4).
  */
-export const VISUAL_STATE_VERSION = 5;
+export const VISUAL_STATE_VERSION = 6;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -64,8 +71,13 @@ export const SlotVisualSchema = z
     materialId: NonEmpty.nullable(),
     /** Display name, so the renderer needs no content table (cf. `phaseName`). */
     materialName: NonEmpty.nullable(),
+    /** The object or Design loaded — whichever it is (spec §5D). */
     objectId: NonEmpty.nullable(),
     objectName: NonEmpty.nullable(),
+    /** What a finished print becomes: Parts, or Products from a Design. */
+    output: z.enum(['parts', 'products']),
+    /** The Design this bay is printing, or `null` for a stock object. */
+    designId: NonEmpty.nullable(),
     machineTier: NonNegativeInt,
     printerCount: NonNegativeInt,
     /** Machines this bay can hold (spec §4) — the fleet-allocation ceiling. */
@@ -216,6 +228,12 @@ export const AssemblyVisualSchema = z
     cooldownMs: NonNegative,
     /** The next piece can be attached right now. */
     ready: z.boolean(),
+    /**
+     * The workshop rebuilds itself (spec §6 phase 4). True on every run after
+     * the first melt-down: the pieces clip on by themselves and the renderer
+     * shows a machine assembling rather than a button waiting to be pressed.
+     */
+    selfAssembling: z.boolean(),
     /** 0..1 across the whole assembly. */
     progress: Unit,
     complete: z.boolean(),
@@ -227,7 +245,79 @@ export const LedgerVisualSchema = z
     parts: NonNegative,
     money: NonNegative,
     scrap: NonNegative,
+    products: NonNegative,
+    plates: NonNegative,
     filamentGrams: z.record(NonEmpty, NonNegative),
+  })
+  .strict();
+
+/** One row of the Design Studio catalogue (spec §5D). */
+export const DesignVisualSchema = z
+  .object({
+    designId: NonEmpty,
+    name: NonEmpty,
+    materialId: NonEmpty,
+    /** 0 until it has been drafted; 1 the moment it comes off the bench. */
+    level: NonNegativeInt,
+    maxLevel: z.number().int().positive(),
+    owned: z.boolean(),
+    /** 0..1 towards the next level. */
+    levelProgress: Unit,
+    /** Money one Product is worth at today's level. */
+    productValue: NonNegative,
+    /** The Money Plate: drafting it is what unlocks prestige (spec §5D). */
+    capstone: z.boolean(),
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
+    /** Why it cannot be drafted — `null` when it can. */
+    blockedReason: NonEmpty.nullable(),
+  })
+  .strict();
+
+/** The Design Studio itself: the bench, its capacity and what is on it. */
+export const StudioVisualSchema = z
+  .object({
+    /** Design slots owned (spec §5D) and how many are still free. */
+    slots: z.number().int().positive(),
+    freeSlots: NonNegativeInt,
+    /** The draft on the bench right now, or `null`. */
+    draftingDesignId: NonEmpty.nullable(),
+    draftingName: NonEmpty.nullable(),
+    /** 0..1 through that draft. */
+    draftProgress: Unit,
+    designs: z.array(DesignVisualSchema),
+  })
+  .strict();
+
+/** The melt-down offer (spec §5D) and what it would pay. */
+export const PrestigeVisualSchema = z
+  .object({
+    available: z.boolean(),
+    /** Plates the melt-down would award right now. */
+    platesOnOffer: NonNegative,
+    platesHeld: NonNegative,
+    /** Melt-downs already done — run 1 is the first post-prestige run. */
+    runsCompleted: NonNegativeInt,
+    /** Money printed per design-second by the Plates (spec §5E). */
+    moneyPerDesignSecond: NonNegative,
+    blockedReason: NonEmpty.nullable(),
+  })
+  .strict();
+
+/** One money-printer tier (spec §5E), priced in Plates. */
+export const MoneyPrinterVisualSchema = z
+  .object({
+    moneyPrinterId: NonEmpty,
+    name: NonEmpty,
+    tier: z.number().int().positive(),
+    level: NonNegativeInt,
+    maxLevel: z.number().int().positive(),
+    available: z.boolean(),
+    affordable: z.boolean(),
+    cost: NonNegative,
+    costResource: NonEmpty,
   })
   .strict();
 
@@ -255,6 +345,9 @@ export const VisualStateSchema = z
     upgrades: z.array(UpgradeVisualSchema),
     automation: z.array(AutomationVisualSchema),
     recycler: RecyclerVisualSchema,
+    studio: StudioVisualSchema,
+    prestige: PrestigeVisualSchema,
+    moneyPrinters: z.array(MoneyPrinterVisualSchema),
   })
   .strict();
 
@@ -277,6 +370,10 @@ export type MarketVisual = DeepReadonly<z.infer<typeof MarketVisualSchema>>;
 export type UpgradeVisual = DeepReadonly<z.infer<typeof UpgradeVisualSchema>>;
 export type AutomationVisual = DeepReadonly<z.infer<typeof AutomationVisualSchema>>;
 export type RecyclerVisual = DeepReadonly<z.infer<typeof RecyclerVisualSchema>>;
+export type DesignVisual = DeepReadonly<z.infer<typeof DesignVisualSchema>>;
+export type StudioVisual = DeepReadonly<z.infer<typeof StudioVisualSchema>>;
+export type PrestigeVisual = DeepReadonly<z.infer<typeof PrestigeVisualSchema>>;
+export type MoneyPrinterVisual = DeepReadonly<z.infer<typeof MoneyPrinterVisualSchema>>;
 export type AssemblyVisual = DeepReadonly<z.infer<typeof AssemblyVisualSchema>>;
 export type LedgerVisual = DeepReadonly<z.infer<typeof LedgerVisualSchema>>;
 export type VisualState = DeepReadonly<z.infer<typeof VisualStateSchema>>;

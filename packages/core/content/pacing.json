@@ -111,12 +111,23 @@
         "BUY_SLOT",
         "ASSIGN_PRINTER",
         "SET_SLOT_QUEUE",
-        "CHOOSE_FORK"
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS"
       ],
       "advanceWhen": [
         {
-          "metric": "phaseDesignMinutes",
-          "atLeast": 75
+          "metric": "capstoneDesigned",
+          "atLeast": 1
+        },
+        {
+          "metric": "designs",
+          "atLeast": 2
+        },
+        {
+          "metric": "productsSold",
+          "atLeast": 40
         }
       ]
     },
@@ -139,12 +150,25 @@
         "BUY_SLOT",
         "ASSIGN_PRINTER",
         "SET_SLOT_QUEUE",
-        "CHOOSE_FORK"
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS",
+        "PRESTIGE",
+        "BUY_MONEY_PRINTER"
       ],
       "advanceWhen": [
         {
-          "metric": "phaseDesignMinutes",
-          "atLeast": 90
+          "metric": "prestigeCount",
+          "atLeast": 2
+        },
+        {
+          "metric": "moneyPrintersInstalled",
+          "atLeast": 2
+        },
+        {
+          "metric": "moneyPrinted",
+          "atLeast": 50000
         }
       ]
     },
@@ -167,7 +191,12 @@
         "BUY_SLOT",
         "ASSIGN_PRINTER",
         "SET_SLOT_QUEUE",
-        "CHOOSE_FORK"
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS",
+        "PRESTIGE",
+        "BUY_MONEY_PRINTER"
       ],
       "advanceWhen": [
         {
@@ -195,7 +224,12 @@
         "BUY_SLOT",
         "ASSIGN_PRINTER",
         "SET_SLOT_QUEUE",
-        "CHOOSE_FORK"
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS",
+        "PRESTIGE",
+        "BUY_MONEY_PRINTER"
       ],
       "advanceWhen": [
         {

@@ -37,6 +37,8 @@ describe('toVisualState', () => {
           materialName: null,
           objectId: null,
           objectName: null,
+          output: 'parts',
+          designId: null,
           machineTier: 0,
           printerCount: 0,
           printerCapacity: content.start.printersPerSlot,
@@ -70,6 +72,7 @@ describe('toVisualState', () => {
         nextPieceName: pieces[0]?.name,
         cooldownMs: (pieces[0]?.attachDesignSeconds ?? 0) * 1000,
         ready: false,
+        selfAssembling: false,
         progress: 0,
         complete: false,
       },
@@ -77,6 +80,8 @@ describe('toVisualState', () => {
         parts: 0,
         money: 0,
         scrap: 0,
+        products: 0,
+        plates: 0,
         filamentGrams: state.filamentGrams,
       },
       // The offers are projected too, so the shell holds no content table and
@@ -85,6 +90,11 @@ describe('toVisualState', () => {
       upgrades: toVisualState(state, content).upgrades,
       automation: toVisualState(state, content).automation,
       recycler: { installed: false, scrapGrams: 0, yieldGrams: 0, yieldMaterialId: 'pla' },
+      // The meta layer (spec §5D/§5E): a catalogue, one melt-down offer and the
+      // presses, each projected with the reason it is not on offer.
+      studio: toVisualState(state, content).studio,
+      prestige: toVisualState(state, content).prestige,
+      moneyPrinters: toVisualState(state, content).moneyPrinters,
     });
   });
 
@@ -318,6 +328,8 @@ describe('the frozen VisualState contract (spec §15)', () => {
       'economy',
       'rack',
       'goliath',
+      'studio',
+      'prestige',
       'showcase',
     ]);
     // The M3 states the renderer newly has to draw.

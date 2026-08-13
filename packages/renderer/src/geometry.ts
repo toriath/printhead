@@ -82,6 +82,19 @@ export const QUEUE_Y = BAY_HEIGHT - 6;
 export const QUEUE_PIP_R = 3;
 export const QUEUE_PIP_GAP = 10;
 
+/**
+ * The mint (spec §5E): a strip under the rack that appears only once a money
+ * printer is installed, one bill per installed level. It is drawn *outside* the
+ * bays because it is not a bay — nothing prints there, the Plates do.
+ */
+export const PRESS_HEIGHT = 44;
+export const PRESS_PAD = 8;
+export const BILL_WIDTH = 26;
+export const BILL_HEIGHT = 15;
+export const BILL_GAP = 6;
+/** Negative animation delay per bill, so the strip does not pulse in lockstep. */
+export const BILL_STAGGER_SECONDS = 0.4;
+
 /** Total drawing width for `capacity` bays laid out in a row. */
 export function workshopWidth(capacity: number): number {
   return capacity * BAY_WIDTH + Math.max(capacity - 1, 0) * BAY_GAP;

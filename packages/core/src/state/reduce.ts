@@ -2,7 +2,7 @@ import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import type { ActionRejectedReason } from '../events/types.js';
-import { attachAssemblyPiece, tickAssembly } from '../systems/assembly.js';
+import { attachAssemblyPiece, isPieceReady, nextPiece, tickAssembly } from '../systems/assembly.js';
 import {
   automationAvailability,
   automationLevel,
@@ -10,12 +10,25 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from '../systems/automation.js';
-import { grantPrinter, purchasePrinter, sellPartsFrom } from '../systems/economy.js';
+import { designAvailability, hasDesign, startDesignDraft, tickStudio } from '../systems/designs.js';
+import {
+  grantPrinter,
+  purchasePrinter,
+  sellPartsFrom,
+  sellProductsFrom,
+} from '../systems/economy.js';
 import { recycleScrapInto } from '../systems/failure.js';
 import { assignPrinters, slotRoom } from '../systems/fleet.js';
 import { commitFork, forkAvailability } from '../systems/forks.js';
 import { purchaseFilament, sellFilamentToMarket, tickMarket } from '../systems/market.js';
 import { getPhase, isActionAllowed, isPhaseReached, nextPhaseId } from '../systems/phases.js';
+import {
+  meltDown,
+  moneyPrinterAvailability,
+  prestigeAvailability,
+  purchaseMoneyPrinter,
+  tickMoneyPrinting,
+} from '../systems/prestige.js';
 import {
   applyChangeover,
   beginRun,
@@ -102,6 +115,16 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applySetSlotQueue(state, action, ctx);
     case 'CHOOSE_FORK':
       return applyChooseFork(state, action.forkId, ctx);
+    case 'CREATE_DESIGN':
+      return applyCreateDesign(state, action.designId, ctx);
+    case 'SET_SLOT_DESIGN':
+      return applySetSlotDesign(state, action.slotId, action.designId, ctx);
+    case 'SELL_PRODUCTS':
+      return applySellProducts(state, action.count, ctx);
+    case 'PRESTIGE':
+      return applyPrestige(state, ctx);
+    case 'BUY_MONEY_PRINTER':
+      return applyBuyMoneyPrinter(state, action.moneyPrinterId, ctx);
   }
 }
 
@@ -111,7 +134,7 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
  * One fixed timestep. The order is fixed and load-bearing, because it is what
  * makes a replay reproducible:
  *
- *   assembly → printers → market drift → automation → phase FSM
+ *   assembly → studio → printers → market drift → money press → automation → FSM
  *
  * Automation runs *after* the market has drifted and the printers have paid
  * out, so a bot inside the machine sees exactly the world a player checking in
@@ -128,10 +151,45 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
     tickCount: state.tickCount + 1,
     assembly: tickAssembly(state.assembly, simDtMs),
   };
-  const printed = tickSlots(clocked, ctx.content, simDtMs, ctx.emit);
+  const rebuilt = selfAssemble(clocked, ctx);
+  const drafted = tickDesignStudio(rebuilt, simDtMs, ctx);
+  const printed = tickSlots(drafted, ctx.content, simDtMs, ctx.emit);
   const traded = tickMarket(printed, ctx.content, simDtMs);
-  const automated = tickAutomation(traded, ctx.content, simDtMs, ctx.emit);
+  const curves = createCurveRegistry(ctx.content.curves);
+  const minted = tickMoneyPrinting(traded, ctx.content, simDtMs, curves);
+  const automated = tickAutomation(minted, ctx.content, simDtMs, ctx.emit);
   return advanceWhileReady(automated, ctx);
+}
+
+/**
+ * The intro replay of spec §6 phase 4. After the first melt-down the workshop
+ * knows how to build itself, so the next piece clips on by itself the moment
+ * its bench work is done — through `applyAttachPiece`, the very same path a
+ * clicking player takes, so printer #1 is granted and the events fire exactly
+ * as they did the first time. One piece per tick, because the attach resets the
+ * cooldown and the next piece has to wait its turn like any other.
+ */
+function selfAssemble(state: GameState, ctx: ReduceContext): GameState {
+  if (!state.selfAssembling || !isPieceReady(state.assembly)) {
+    return state;
+  }
+  const piece = nextPiece(state.assembly, ctx.content);
+  return piece === null ? state : applyAttachPiece(state, piece.id, ctx);
+}
+
+/** Advance the studio bench; a finished draft becomes an owned Design. */
+function tickDesignStudio(state: GameState, simDtMs: number, ctx: ReduceContext): GameState {
+  const result = tickStudio(state, simDtMs);
+  if (!('designId' in result)) {
+    return result;
+  }
+  ctx.emit?.({
+    type: 'DESIGN_CREATED',
+    simTimeMs: state.simTimeMs,
+    designId: result.designId,
+    designsOwned: Object.keys(result.state.designs).length,
+  });
+  return result.state;
 }
 
 // --- phase FSM --------------------------------------------------------------
@@ -235,7 +293,8 @@ function applySetSlotConfig(
     // A purge cannot be interrupted; the nozzle is already half-flushed.
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'slot-busy');
   }
-  const config = resolveSlotConfig(ctx.content, { ...slot, materialId, objectId });
+  // Loading a stock object takes the bay out of Design mode (spec §5D).
+  const config = resolveSlotConfig(ctx.content, { ...slot, materialId, objectId, designId: null });
   if (config === null) {
     return reject(ctx, state, 'SET_SLOT_CONFIG', 'unknown-target');
   }
@@ -258,7 +317,62 @@ function applySetSlotConfig(
     simTimeMs: state.simTimeMs,
     slotId,
     materialId,
-    objectId,
+    recipeId: config.recipeId,
+    downtimeMs: changeover.downtimeMs,
+    purgedGrams: changeover.purgedGrams,
+    abandonedBatch,
+  });
+  return withSlot(purged, index, changeover.slot);
+}
+
+/**
+ * Point a bay at a Design (spec §5D). It is the same load as `SET_SLOT_CONFIG`
+ * — same changeover cost, same abandoned batch — with the material chosen for
+ * the player, because a Design says what it must be printed in.
+ */
+function applySetSlotDesign(
+  state: GameState,
+  slotId: string,
+  designId: string,
+  ctx: ReduceContext,
+): GameState {
+  const index = slotIndexOf(state, slotId);
+  const slot = state.slots.at(index);
+  if (index < 0 || slot === undefined) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'unknown-target');
+  }
+  const def = indexById(ctx.content.designs).get(designId);
+  if (def === undefined) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'unknown-target');
+  }
+  if (!hasDesign(state, designId)) {
+    // The design exists in content but the studio has not drafted it.
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'missing-prerequisite');
+  }
+  if (!isMaterialAvailable(state, ctx.content, def.requiredMaterialId)) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'locked');
+  }
+  if (slot.changeoverMs > 0) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'slot-busy');
+  }
+  const config = resolveSlotConfig(ctx.content, {
+    ...slot,
+    materialId: def.requiredMaterialId,
+    objectId: null,
+    designId,
+  });
+  if (config === null) {
+    return reject(ctx, state, 'SET_SLOT_DESIGN', 'unknown-target');
+  }
+  const abandonedBatch = slot.run?.batch ?? 0;
+  const idle = withSlot(state, index, { ...slot, run: null });
+  const { state: purged, changeover } = applyChangeover(idle, { ...slot, run: null }, config);
+  ctx.emit?.({
+    type: 'SLOT_CONFIGURED',
+    simTimeMs: state.simTimeMs,
+    slotId,
+    materialId: def.requiredMaterialId,
+    recipeId: config.recipeId,
     downtimeMs: changeover.downtimeMs,
     purgedGrams: changeover.purgedGrams,
     abandonedBatch,
@@ -319,6 +433,20 @@ function applySellParts(state: GameState, count: number | null, ctx: ReduceConte
     type: 'PART_SOLD',
     simTimeMs: state.simTimeMs,
     parts: sale.parts,
+    money: sale.money,
+  });
+  return sale.state;
+}
+
+function applySellProducts(state: GameState, count: number | null, ctx: ReduceContext): GameState {
+  const sale = sellProductsFrom(state, count);
+  if (sale === null) {
+    return reject(ctx, state, 'SELL_PRODUCTS', 'nothing-to-do');
+  }
+  ctx.emit?.({
+    type: 'PRODUCT_SOLD',
+    simTimeMs: state.simTimeMs,
+    products: sale.parts,
     money: sale.money,
   });
   return sale.state;
@@ -625,4 +753,74 @@ function applyRecycleScrap(
     filamentGrams: result.filamentGrams,
   });
   return result.state;
+}
+
+// --- the Design Studio, prestige and the presses (spec §5D, §5E) -------------
+
+function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContext): GameState {
+  const modifiers = computeModifiers(state, ctx.content);
+  const blocked = designAvailability(state, ctx.content, modifiers, designId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'CREATE_DESIGN', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const draft = startDesignDraft(state, ctx.content, curves, designId);
+  if (draft === null) {
+    return reject(ctx, state, 'CREATE_DESIGN', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'DESIGN_STARTED',
+    simTimeMs: state.simTimeMs,
+    designId,
+    designMinutes: draft.def.designDesignMinutes,
+    paid: draft.cost.amount,
+  });
+  return draft.state;
+}
+
+/**
+ * The melt-down (spec §5D). Everything the run built is scrapped; the Designs
+ * and the retained balances cross over untouched, and the next run rebuilds
+ * itself because the workshop has now done it once.
+ */
+function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
+  const curves = createCurveRegistry(ctx.content.curves);
+  const blocked = prestigeAvailability(state, ctx.content, curves);
+  if (blocked !== null) {
+    return reject(ctx, state, 'PRESTIGE', blocked);
+  }
+  const result = meltDown(state, ctx.content, curves);
+  ctx.emit?.({
+    type: 'PRESTIGED',
+    simTimeMs: state.simTimeMs,
+    platesAwarded: result.platesAwarded,
+    platesHeld: result.state.resources.plates,
+    runNumber: result.state.stats.prestigeCount,
+    designsKept: Object.keys(result.state.designs).length,
+  });
+  return result.state;
+}
+
+function applyBuyMoneyPrinter(
+  state: GameState,
+  moneyPrinterId: string,
+  ctx: ReduceContext,
+): GameState {
+  const blocked = moneyPrinterAvailability(state, ctx.content, moneyPrinterId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'BUY_MONEY_PRINTER', blocked);
+  }
+  const curves = createCurveRegistry(ctx.content.curves);
+  const purchase = purchaseMoneyPrinter(state, ctx.content, curves, moneyPrinterId);
+  if (purchase === null) {
+    return reject(ctx, state, 'BUY_MONEY_PRINTER', 'insufficient-resources');
+  }
+  ctx.emit?.({
+    type: 'MONEY_PRINTER_INSTALLED',
+    simTimeMs: state.simTimeMs,
+    moneyPrinterId,
+    level: purchase.level,
+    paid: purchase.cost.amount,
+  });
+  return purchase.state;
 }

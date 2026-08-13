@@ -176,6 +176,75 @@ runRack(() => state.resources.parts >= forkTarget);
 apply({ type: 'CHOOSE_FORK', forkId: 'farm-path' });
 tickSeconds(30);
 
+/*
+ * The M5 state — Designs owned and levelling, a bay making Products, a
+ * commission on the studio bench, Plates on the books, a press installed and an
+ * intro that rebuilds itself — needs the run to have been *melted down*, which
+ * is another eighty design-minutes of economy away. The reference bot is handed
+ * the wheel again as far as the melt-down phase; the M5 decisions after that go
+ * through the real reducer, exactly as the M4 ones did.
+ */
+state = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'prestige', seed: 7 }).finalState;
+apply({ type: 'PRESTIGE' });
+
+/**
+ * Parts and Money handed to the rebuilt workshop. A melt-down leaves a bare
+ * bench (that is the point), and grinding the whole studio back up a second
+ * time would double the generator's runtime for no extra coverage. Every action
+ * below still goes through the real reducer and its real availability rules, so
+ * the state it produces is one the game can reach.
+ */
+const REBUILD_FIXTURE_PARTS = 4000;
+const REBUILD_FIXTURE_MONEY = 400_000;
+
+// Let the workshop rebuild itself (spec §6 phase 4) — the pieces clip on with
+// no clicks at all, which is the whole point of `selfAssembling`. The first one
+// waits out the melt-down on top of its own bench time, so this waits for the
+// *state* rather than counting seconds.
+const pieceCount = content.start.assemblyPieces.length;
+for (let second = 0; second < MAX_GRIND_SECONDS; second += 1) {
+  if (state.assembly.attachedPieceIds.length >= pieceCount) {
+    break;
+  }
+  tickSeconds(1);
+}
+state = {
+  ...state,
+  resources: {
+    ...state.resources,
+    parts: state.resources.parts + REBUILD_FIXTURE_PARTS,
+    money: state.resources.money + REBUILD_FIXTURE_MONEY,
+  },
+};
+
+// The resin gate of spec §3, re-earned: a Design cannot be printed until the
+// machine tree opens the material it names.
+for (const upgradeId of ['heated-bed', 'enclosure', 'sla-unit', 'design-desk', 'design-desk']) {
+  apply({ type: 'BUY_UPGRADE', upgradeId });
+}
+const press = content.prestige.moneyPrinters[0];
+if (press !== undefined) {
+  apply({ type: 'BUY_MONEY_PRINTER', moneyPrinterId: press.id });
+}
+const capstone = content.designs.find((def) => def.id === content.prestige.requiredDesignId);
+const firstBay = state.slots[0];
+if (capstone !== undefined && firstBay !== undefined) {
+  apply({ type: 'BUY_FILAMENT', materialId: capstone.requiredMaterialId, grams: 2000 });
+  apply({ type: 'SET_SLOT_DESIGN', slotId: firstBay.id, designId: capstone.id });
+  apply({ type: 'START_PRINT', slotId: firstBay.id });
+  // Long enough for the batch to land, so the save carries Products *and* the
+  // banked value they were worth at the level their Design had reached.
+  tickSeconds(capstone.printDesignSeconds * 3);
+}
+// A commission on the bench: `studio` is the one nullable new field a save can
+// carry mid-flight, and a fixture that never populated it would not prove the
+// migration writes it.
+const spare = content.designs.find((def) => state.designs[def.id] === undefined);
+if (spare !== undefined) {
+  apply({ type: 'CREATE_DESIGN', designId: spare.id });
+  tickSeconds(30);
+}
+
 const target = resolve(
   import.meta.dirname,
   `../packages/core/src/save/__fixtures__/save-v${SAVE_SCHEMA_VERSION}.json`,

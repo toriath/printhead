@@ -1,11 +1,14 @@
 import { indexById } from '../content/load.js';
-import type { Content, MaterialDef, ObjectDef } from '../content/schema.js';
+import type { Content, DesignDef, MaterialDef, ObjectDef } from '../content/schema.js';
+import type { CurveRegistry } from '../curves/evaluate.js';
+import { createCurveRegistry } from '../curves/evaluate.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
+import { creditDesignPrints, productValueOf } from './designs.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
 import { isQueueRunning, nextQueueEntry, queueEntryDone, queueStockFloor } from './queue.js';
-import { addParts, withFilament } from './resources.js';
+import { addPool, withFilament } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 
 /**
@@ -25,21 +28,74 @@ import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
 const NONE = 0;
 const FULL = 1;
 
+/**
+ * What a bay is set up to make. Since M5 that is either a stock **Object**
+ * (which yields Parts) or one of the player's **Designs** (which yields
+ * Products, spec §5D) — never both, and the rest of the print loop is written
+ * against the flattened numbers rather than against which of the two it is.
+ *
+ * `recipeId`/`recipeName` are whichever of the pair is loaded, so events, the
+ * projection and the bots name the thing being printed without asking.
+ */
+export type PrintPool = 'parts' | 'products';
+
 export interface SlotConfig {
   readonly material: MaterialDef;
-  readonly object: ObjectDef;
+  /** The stock object, or `null` when the bay is printing a Design. */
+  readonly object: ObjectDef | null;
+  /** The Design, or `null` when the bay is printing a stock object. */
+  readonly design: DesignDef | null;
+  readonly recipeId: string;
+  readonly recipeName: string;
+  readonly printDesignSeconds: number;
+  readonly filamentGrams: number;
+  /** Which valued pool a successful print fills (spec §2). */
+  readonly pool: PrintPool;
+}
+
+function objectConfig(material: MaterialDef, object: ObjectDef): SlotConfig {
+  return {
+    material,
+    object,
+    design: null,
+    recipeId: object.id,
+    recipeName: object.name,
+    printDesignSeconds: object.printDesignSeconds,
+    filamentGrams: object.filamentGrams,
+    pool: 'parts',
+  };
+}
+
+function designConfig(material: MaterialDef, design: DesignDef): SlotConfig {
+  return {
+    material,
+    object: null,
+    design,
+    recipeId: design.id,
+    recipeName: design.name,
+    printDesignSeconds: design.printDesignSeconds,
+    filamentGrams: design.filamentGrams,
+    pool: 'products',
+  };
 }
 
 export function resolveSlotConfig(content: Content, slot: SlotState): SlotConfig | null {
-  if (slot.materialId === null || slot.objectId === null) {
+  if (slot.materialId === null) {
     return null;
   }
   const material = indexById(content.materials).get(slot.materialId);
-  const object = indexById(content.objects).get(slot.objectId);
-  if (material === undefined || object === undefined) {
+  if (material === undefined) {
     return null;
   }
-  return { material, object };
+  if (slot.designId !== null) {
+    const design = indexById(content.designs).get(slot.designId);
+    return design === undefined ? null : designConfig(material, design);
+  }
+  if (slot.objectId === null) {
+    return null;
+  }
+  const object = indexById(content.objects).get(slot.objectId);
+  return object === undefined ? null : objectConfig(material, object);
 }
 
 /**
@@ -108,33 +164,61 @@ export function runDesignMs(config: SlotConfig, speedMultiplier: number): number
   if (speed <= NONE) {
     throw new RangeError(`print speed must be positive, received ${speed}`);
   }
-  return (config.object.printDesignSeconds * MS_PER_SECOND) / speed;
+  return (config.printDesignSeconds * MS_PER_SECOND) / speed;
 }
 
 export function filamentPerBatch(config: SlotConfig, batch: number): number {
-  return config.object.filamentGrams * batch;
+  return config.filamentGrams * batch;
 }
 
 /** How many of a slot's printers the filament in stock can actually feed. */
 export function affordableBatch(config: SlotConfig, printerCount: number, grams: number): number {
-  const perPrint = config.object.filamentGrams;
+  const perPrint = config.filamentGrams;
   if (perPrint <= NONE) {
-    throw new RangeError(`object "${config.object.id}" must consume filament`);
+    throw new RangeError(`recipe "${config.recipeId}" must consume filament`);
   }
   return Math.min(printerCount, Math.floor(grams / perPrint));
 }
 
 export interface BatchYield {
-  readonly parts: number;
+  /** Units produced — Parts for an object, Products for a Design. */
+  readonly count: number;
   readonly value: number;
+  readonly pool: PrintPool;
 }
 
-/** Parts and money value produced by the *successful* prints in a batch. */
-export function batchYield(config: SlotConfig, batch: number, yieldMultiplier: number): BatchYield {
-  const parts = config.object.partsYield * batch * yieldMultiplier;
+/**
+ * What the *successful* prints in a batch are worth.
+ *
+ * An object yields its `partsYield` per print at the material's value; a Design
+ * yields one Product per print at whatever its current level makes it worth
+ * (spec §5D). `designLevel` is passed in rather than read here so this stays a
+ * pure function of the recipe and the modifiers.
+ */
+export function batchYield(
+  config: SlotConfig,
+  batch: number,
+  modifiers: ModifierMap,
+  curves: CurveRegistry,
+  designLevel: number,
+): BatchYield {
+  if (config.design !== null) {
+    const count = batch;
+    return {
+      count,
+      value: count * productValueOf(config.design, curves, designLevel, modifiers),
+      pool: config.pool,
+    };
+  }
+  if (config.object === null) {
+    return { count: NONE, value: NONE, pool: config.pool };
+  }
+  const count =
+    config.object.partsYield * batch * modifierOf(modifiers, 'partsYieldMultiplier', FULL);
   return {
-    parts,
-    value: parts * config.object.basePartValue * config.material.valueMultiplier,
+    count,
+    value: count * config.object.basePartValue * config.material.valueMultiplier,
+    pool: config.pool,
   };
 }
 
@@ -197,12 +281,19 @@ export function applyChangeover(
   slot: SlotState,
   next: SlotConfig,
 ): { readonly state: GameState; readonly changeover: Changeover } {
+  // Exactly one of the two is loaded, so the other is always cleared: a bay
+  // that switches from a Design to an object must stop making Products.
+  const loaded = {
+    materialId: next.material.id,
+    objectId: next.object?.id ?? null,
+    designId: next.design?.id ?? null,
+  };
   const switching = slot.materialId !== null && slot.materialId !== next.material.id;
   if (!switching) {
     return {
       state,
       changeover: {
-        slot: { ...slot, materialId: next.material.id, objectId: next.object.id },
+        slot: { ...slot, ...loaded },
         purgedMaterialId: null,
         purgedGrams: NONE,
         downtimeMs: NONE,
@@ -218,8 +309,7 @@ export function applyChangeover(
     changeover: {
       slot: {
         ...slot,
-        materialId: next.material.id,
-        objectId: next.object.id,
+        ...loaded,
         changeoverMs: downtimeMs,
         // A fresh nozzle is a fresh pity timer: the charge belongs to the
         // material that built it up, not to the slot forever.
@@ -279,7 +369,7 @@ export function beginRun(
     type: 'PRINT_STARTED',
     simTimeMs: state.simTimeMs,
     slotId: slot.id,
-    objectId: config.object.id,
+    recipeId: config.recipeId,
     materialId: config.material.id,
     batch,
     durationMs: run.totalMs,
@@ -293,6 +383,7 @@ function completeRun(
   index: number,
   emit: EventSink | undefined,
   modifiers: ModifierMap,
+  curves: CurveRegistry,
 ): GameState {
   const slot = state.slots.at(index);
   const run = slot?.run;
@@ -310,35 +401,49 @@ function completeRun(
     modifiers,
   );
   const outcome = resolveBatchFailures(content.failure, slot.failureCharge, run.batch, perPrint);
-  const produced = batchYield(
-    config,
-    outcome.succeeded,
-    modifierOf(modifiers, 'partsYieldMultiplier', FULL),
-  );
-  const scrapped = scrapFromFailure(config.material, config.object.filamentGrams * outcome.failed);
+  const level = config.design === null ? NONE : (state.designs[config.design.id]?.level ?? NONE);
+  const produced = batchYield(config, outcome.succeeded, modifiers, curves, level);
+  const scrapped = scrapFromFailure(config.material, config.filamentGrams * outcome.failed);
 
-  const banked = bankScrap(addParts(state, produced.parts, produced.value), scrapped);
+  const banked = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
+  // A Design levels on what it *made*, so only the successful prints count.
+  const progress =
+    config.design === null
+      ? { designs: banked.designs, levelUp: null }
+      : creditDesignPrints(banked.designs, config.design, outcome.succeeded);
+  const madeProducts = produced.pool === 'products';
   const counted: GameState = {
     ...banked,
+    designs: progress.designs,
     stats: {
       ...banked.stats,
       printsCompleted: banked.stats.printsCompleted + outcome.succeeded,
       printsFailed: banked.stats.printsFailed + outcome.failed,
-      partsProduced: banked.stats.partsProduced + produced.parts,
+      partsProduced: banked.stats.partsProduced + (madeProducts ? NONE : produced.count),
+      productsProduced: banked.stats.productsProduced + (madeProducts ? produced.count : NONE),
     },
   };
   emit?.({
     type: 'PRINT_COMPLETED',
     simTimeMs: state.simTimeMs,
     slotId: slot.id,
-    objectId: config.object.id,
+    recipeId: config.recipeId,
     materialId: config.material.id,
     batch: run.batch,
-    parts: produced.parts,
-    partsValue: produced.value,
+    produced: produced.count,
+    pool: produced.pool,
+    value: produced.value,
     failed: outcome.failed,
     scrapGrams: scrapped.grams,
   });
+  if (progress.levelUp !== null) {
+    emit?.({
+      type: 'DESIGN_LEVELLED',
+      simTimeMs: state.simTimeMs,
+      designId: progress.levelUp.designId,
+      level: progress.levelUp.level,
+    });
+  }
   if (outcome.failed > NONE) {
     emit?.({
       type: 'PRINT_FAILED',
@@ -398,10 +503,12 @@ function rotateQueue(
   if (entry === null) {
     return null;
   }
+  // A rota names stock objects, so a rotation always leaves Design mode.
   const config = resolveSlotConfig(content, {
     ...slot,
     materialId: entry.materialId,
     objectId: entry.objectId,
+    designId: null,
   });
   if (config === null) {
     return null;
@@ -416,7 +523,7 @@ function rotateQueue(
     simTimeMs: state.simTimeMs,
     slotId: slot.id,
     materialId: config.material.id,
-    objectId: config.object.id,
+    recipeId: config.recipeId,
     downtimeMs: changeover.downtimeMs,
     purgedGrams: changeover.purgedGrams,
     abandonedBatch: NONE,
@@ -440,10 +547,11 @@ export function tickSlots(
   dtMs: number,
   emit: EventSink | undefined,
   modifiers: ModifierMap = computeModifiers(state, content),
+  curves: CurveRegistry = createCurveRegistry(content.curves),
 ): GameState {
   let next = state;
   for (let index = NONE; index < next.slots.length; index += FULL) {
-    next = tickSlot(next, content, index, dtMs, emit, modifiers);
+    next = tickSlot(next, content, index, dtMs, emit, modifiers, curves);
   }
   return next;
 }
@@ -485,6 +593,7 @@ function tickSlot(
   dtMs: number,
   emit: EventSink | undefined,
   modifiers: ModifierMap,
+  curves: CurveRegistry,
 ): GameState {
   const purge = tickChangeover(state, index, dtMs, emit);
   let next = purge.state;
@@ -522,7 +631,7 @@ function tickSlot(
     if (slot === undefined || slot.run === null || !isRunComplete(slot.run)) {
       return next;
     }
-    next = completeRun(next, content, index, emit, modifiers);
+    next = completeRun(next, content, index, emit, modifiers, curves);
     completions += FULL;
   }
   return next;
