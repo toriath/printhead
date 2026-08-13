@@ -160,6 +160,43 @@ v5 by a strict zod schema plus the fixture corpus in
   Plate count* — so the shape of the reward lives in `curves.json` where content
   can see it, and no fold in the code can make more Plates pay less.
 
+### The endgame (spec §5E, §6 phases 5–6, §7.3)
+
+- **The Endgame Tree is priced in Plates** and is an ordinary `upgrades.json`
+  tree with `tree: "endgame"` — exotic feedstock, a printed building, a printed
+  factory, and the blueprint for the Universal Fabricator. It survives a
+  melt-down for the same reason the presses do: a node bought with prestige
+  currency that prestige confiscates is a tax, not a reward.
+- **The presses read Plates *engraved*, not Plates held.** `stats.platesEarned`
+  is the count `moneyPrintRate` evaluates its curve at. Reading the balance
+  looked right and was a trap: the tree is the only thing Plates buy, so
+  spending them switched the money printers off and the run could never earn its
+  way back. An engraved plate keeps printing; what the tree spends is the metal.
+- **Inflation is caused, not scheduled** (§6 phase 5). The index is a curve read
+  at a reading of the run — by default the money the presses have printed — and
+  it is applied in exactly two places: every market quote, and the money banked
+  with a batch as it comes off the bed. Both sides move together, so the print
+  economy stays roughly neutral in real terms while the numbers run away. The
+  exotic feedstock is bought with Plates, so it is the one shelf inflation
+  cannot spoil.
+- **The final print commits the whole workshop** (§4): every active bay staffed,
+  `fabricator.requiredPrinters` machines standing in them, and the fork that
+  declares `requiredForFinalPrint`. A Farm build stays viable by **pre-printing
+  sections** (§7.3) — each one takes `sectionDesignMinutes` off the build, and
+  they cross a melt-down because `prestige.retainedLedgers` says they do. That is
+  the whole mechanism: the sections survive, the fork does not.
+- **It is the one synced render.** `VisualState` carries `layer` / `layers`,
+  derived from the run's own clock, and the renderer draws the build band by
+  band from them — no timer of its own, and two viewers of the same save are on
+  the same layer.
+- **The ending is state, not a script.** `numbers → museum → credits` are
+  durations in `endgame.json` timed from `fabricator.completedAtMs`, so a save
+  reloaded mid-credits resumes on the same line. The credits themselves are
+  content. Behind them the FSM comes to rest in `ended` — the post-game sandbox,
+  where the workshop keeps running and **New Game Plus** is on offer: a new run
+  keeping the Designs, plus whatever optional modifiers the player ticks, folded
+  into the same modifier map the upgrade trees use.
+
 ### The dev editor panel (spec §14)
 
 `pnpm --filter @printhead/app dev`, then the **Editor** button, bottom right.
@@ -240,36 +277,34 @@ intro             5.0      5.0   4.0..6.0
 bench            25.9     30.0   24.0..36.0
 farm             80.3     80.0   64.0..96.0
 studio           74.6     75.0   60.0..90.0
-prestige         89.9     90.0   72.0..108.0
+prestige         86.7     90.0   72.0..108.0
+absurd           84.0     80.0   64.0..96.0
+end              63.4     60.0   48.0..72.0
 ```
 
-> **Read the green light correctly.** `intro` … `prestige` are gated on real
-> mechanics — assemble, print, sell; four printers, two machine nodes and a
-> recycler run; fourteen printers, six nodes and three automations; the capstone
-> Design, a second Design and forty Products sold; two melt-downs, two presses
-> and fifty thousand printed. `absurd` and `end` still advance on
-> `phaseDesignMinutes` alone, so they sit on budget by construction and will stay
-> green no matter what the economy does. They become meaningful gates in M6, and
-> the last phase absorbs any drift from the earlier ones because the run stops at
-> the total budget rather than at a gate of its own.
+> **Every phase of the arc is now gated on something the player did.** Assemble,
+> print, sell; four printers, two machine nodes and a recycler run; fourteen
+> printers, six nodes and three automations; the capstone Design, a second Design
+> and forty Products sold; two melt-downs, two presses and a quarter-million
+> printed; the whole Endgame Tree, a rebuilt fleet and three million printed;
+> and finally the credits. M6 removed the last placeholders, so the green light
+> above means what it says — `isPlaceholderPhase` now matches nothing, and the
+> test that proves it is a test of the *detector* rather than of the content.
 >
-> The tools know which is which without being told: a phase whose only
-> requirement is `phaseDesignMinutes` **is** a placeholder (`isPlaceholderPhase`),
-> and the wait-wall gate is scoped to the rest. At M4 the detector correctly
-> reported dead zones in `studio`…`end`, and the harness asserted the overrun
-> rather than raising the budgets to hide it. M5 closed them: a melt-down to take,
-> a press to install and a commission to put on the bench are meaningful actions
-> wherever the player is, so the whole timeline is now live and that assertion is
-> inverted rather than deleted.
+> The terminal `ended` sandbox is checked for being **reached**, not for how long
+> the player stays: nothing advances out of it, so a run that stopped at an
+> arbitrary limit would report that choice as a balance regression. Reaching it
+> is the assertion that the bot finished the game.
 >
 > The bots disagree with each other, and that is the point. `greedy-spender`
-> buys capacity the instant it can afford it. At M3 that stalled it; at M4 the bay
-> ceiling forced it to buy a config slot and it finished the arc. At M5 it takes
-> Goliath — slower prints, far bigger batches — so it finishes *fewer* prints than
-> the reference player while fielding more machines and banking several times the
-> money. It is still the impatient player; it is no longer the busier one.
+> buys capacity the instant it can afford it: at M3 that stalled it, at M4 the bay
+> ceiling forced it to buy a config slot, and at M5 it took Goliath and banked
+> several times the money while finishing fewer prints. At M6 it reaches the last
+> phase and starts the Fabricator but does not see the credits inside the run
+> limit — it spends phase 5 rebuilding one enormous bay instead of banking Plates.
 > `idle-heavy` still stalls in the farm, which is what a ten-minute check-in buys
-> you. Between them both sides of the fork get played.
+> you. Only the reference player finishes, and the gate measures the reference
+> player.
 
 ## Layout
 

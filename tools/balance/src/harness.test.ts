@@ -22,12 +22,35 @@ import {
   isPlaceholderPhase,
   placeholderPhaseIds,
 } from './budget.js';
-import { runHeadless } from './harness.js';
+import { type Bot, type RunLog, runHeadless } from './harness.js';
 import { checkWaitWalls } from './waitwall.js';
 
 const content = loadContent(RAW_CONTENT);
 const table = buildBudgetTable(content.pacing);
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/**
+ * A full arc is a quarter of a million ticks, and this file wants the same few
+ * runs from several angles. The harness is deterministic — same content, same
+ * bot, same seed, same log — so a run is memoised rather than repeated. Without
+ * this the suite replays the whole game a dozen times and CI feels it.
+ */
+const runs = new Map<string, RunLog>();
+
+function playthrough(bot: Bot, stopAtPhaseId?: string): RunLog {
+  const key = `${bot.id}:${stopAtPhaseId ?? 'end'}`;
+  const cached = runs.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const log = runHeadless({
+    content,
+    bot,
+    ...(stopAtPhaseId === undefined ? {} : { stopAtPhaseId }),
+  });
+  runs.set(key, log);
+  return log;
+}
 
 describe('budget table', () => {
   it('mirrors the spec §6 budgets with a ±20 % window', () => {
@@ -98,7 +121,7 @@ describe('the bot roster', () => {
 
 describe('headless harness', () => {
   it('runs the real core and logs the run', () => {
-    const log = runHeadless({ content, bot: balancedBot });
+    const log = playthrough(balancedBot);
     expect(log.botId).toBe('balanced');
     expect(log.ticks).toBeGreaterThan(0);
     expect(log.designMinutes).toBeGreaterThanOrEqual(table.totalDesignMinutes);
@@ -106,8 +129,11 @@ describe('headless harness', () => {
   });
 
   it('is deterministic for a given seed', () => {
-    const a = runHeadless({ content, bot: balancedBot, seed: 7 });
-    const b = runHeadless({ content, bot: balancedBot, seed: 7 });
+    // A hundred and twenty design-minutes is plenty to prove determinism —
+    // three phases, thousands of ticks, a market and a failure model — and it
+    // keeps the suite from replaying the whole game twice more.
+    const a = runHeadless({ content, bot: balancedBot, seed: 7, limitDesignMinutes: 120 });
+    const b = runHeadless({ content, bot: balancedBot, seed: 7, limitDesignMinutes: 120 });
     expect(b.phaseDurations).toEqual(a.phaseDurations);
     expect(b.ticks).toBe(a.ticks);
     expect(b.finalState).toEqual(a.finalState);
@@ -117,7 +143,7 @@ describe('headless harness', () => {
     const fastRaw = deepClone(RAW_CONTENT);
     (fastRaw.pacing as { targetHours: number }).targetHours = 4;
     const fast = loadContent(fastRaw);
-    const slow = runHeadless({ content, bot: balancedBot });
+    const slow = playthrough(balancedBot);
     const quick = runHeadless({ content: fast, bot: balancedBot });
     expect([...quick.phaseEnteredAt.keys()]).toEqual([...slow.phaseEnteredAt.keys()]);
     expect(quick.designMinutes).toBeCloseTo(slow.designMinutes, 6);
@@ -180,7 +206,7 @@ describe('headless harness', () => {
 const GATED_PHASES = gatedPhaseIds(content);
 
 describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
-  const log = runHeadless({ content, bot: REFERENCE_BOT });
+  const log = playthrough(REFERENCE_BOT);
 
   it('finishes the whole game — every phase, through to the post-game', () => {
     expect(log.finalPhaseId).toBe('ended');
@@ -260,7 +286,7 @@ describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
  * recycle, upgrade, automate, trade — driven by a bot through the real reducer.
  */
 describe('the balanced bot plays the M3 loop end to end', () => {
-  const log = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'studio' });
+  const log = playthrough(balancedBot, 'studio');
   const state = log.finalState;
 
   it('finishes the intro assembly by attaching every piece', () => {
@@ -324,17 +350,13 @@ describe('the balanced bot plays the M3 loop end to end', () => {
  * noticed.
  */
 describe('the strategies are genuinely different players', () => {
-  const balanced = runHeadless({ content, bot: balancedBot });
-  const greedy = runHeadless({ content, bot: greedySpenderBot });
-  const idleHeavy = runHeadless({ content, bot: idleHeavyBot });
+  const balanced = playthrough(balancedBot);
+  const greedy = playthrough(greedySpenderBot);
+  const idleHeavy = playthrough(idleHeavyBot);
   // Anything a melt-down resets — the fork, the rack, the production counters —
   // has to be read before one happens (spec §5D).
-  const balancedRunOne = runHeadless({ content, bot: balancedBot, stopAtPhaseId: 'prestige' });
-  const greedyRunOne = runHeadless({
-    content,
-    bot: greedySpenderBot,
-    stopAtPhaseId: 'prestige',
-  });
+  const balancedRunOne = playthrough(balancedBot, 'prestige');
+  const greedyRunOne = playthrough(greedySpenderBot, 'prestige');
 
   /**
    * The reference player finishes the game. `greedy-spender` reaches the last
@@ -418,7 +440,7 @@ describe('the balanced bot plays the M4 loop end to end', () => {
    * (spec §5D), so the *final* state of a completed arc is a bare bench and
    * says nothing about whether the M4 loop was ever played.
    */
-  const log = runHeadless({ content, bot: REFERENCE_BOT, stopAtPhaseId: 'prestige' });
+  const log = playthrough(REFERENCE_BOT, 'prestige');
   const state = log.finalState;
 
   it('outgrows its first bay and buys another (spec §4)', () => {
@@ -455,7 +477,7 @@ describe('the balanced bot plays the M4 loop end to end', () => {
  * the app dispatches into.
  */
 describe('the balanced bot plays the M6 endgame end to end', () => {
-  const log = runHeadless({ content, bot: REFERENCE_BOT });
+  const log = playthrough(REFERENCE_BOT);
   const state = log.finalState;
 
   it('buys the whole Endgame Tree with Plates (spec §5E)', () => {

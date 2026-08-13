@@ -29,6 +29,14 @@ Products and their banked value, Plates, an installed press and
 `selfAssembling`. Parts and Money are granted to the rebuilt workshop (a
 documented concession, like the fork Parts before it) so the generator does not
 have to grind the whole studio back up a second time; every action after the
-grant still goes through the real reducer and its real availability rules. Its exact numbers depend on the content set at the time of
+grant still goes through the real reducer and its real availability rules.
+
+Since v6 the wheel goes over one last time, as far as the phase that allows the
+final print, and the M6 state is made there: the Endgame Tree is bought with
+Plates, the giant printer is committed to, a section of the Universal
+Fabricator is pre-printed (spec §7.3) and the last print is started — so the
+fixture carries a build in flight, the factory's accumulator and the count of
+Plates ever engraved. Plates and Parts are granted for it on the same terms as
+the M5 rebuild. Its exact numbers depend on the content set at the time of
 generation, which is fine and expected — the fixture records one historical
 save, not the current balance.

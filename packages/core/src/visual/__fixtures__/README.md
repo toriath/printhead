@@ -22,6 +22,9 @@ the documents the projection's freeze test does.
 | `goliath.json` | generated | M4: the other side of the fork — one giant printer, no rack |
 | `studio.json` | generated | M5: Designs owned and levelling, a bay making Products, the melt-down on offer |
 | `prestige.json` | generated | M5: after the melt-down — Plates banked, a press installed, the intro rebuilding itself |
+| `endgame.json` | generated | M6: the Plate-bought tree, a printed city behind the rack, prices inflating |
+| `fabricator.json` | generated | M6: the one synced render — the last print, half built, layer by layer |
+| `ending.json` | generated | M6: the credits printing out, one line at a time |
 | `showcase.json` | hand-authored | four bays, three machine tiers, badges, a purge in progress, one empty outline |
 
 Regenerate the *generated* ones (only when adding a new version) with:

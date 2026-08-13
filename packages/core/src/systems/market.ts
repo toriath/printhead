@@ -6,7 +6,7 @@ import type {
   MaterialDef,
   ScalarResourceKind,
 } from '../content/schema.js';
-import { createCurveRegistry } from '../curves/evaluate.js';
+import { curveRegistryFor } from '../curves/evaluate.js';
 import { MS_PER_MINUTE, TRADE_SEARCH_ITERATIONS } from '../engine/constants.js';
 import { TAU, clamp, signedUnit } from '../math/scalar.js';
 import { hashUnit } from '../rng/mulberry32.js';
@@ -159,7 +159,7 @@ function quoteFrom(
  * caller that forgot would quietly sell at last week's prices.
  */
 function priceIndex(state: GameState, content: Content): number {
-  return inflationMultiplier(state, content, createCurveRegistry(content.curves));
+  return inflationMultiplier(state, content, curveRegistryFor(content.curves));
 }
 
 /** The balance a gram of this material is paid out of (spec §3). */

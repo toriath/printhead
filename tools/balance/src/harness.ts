@@ -8,6 +8,7 @@ import {
   MS_PER_SECOND,
   type PaceMapping,
   type ReduceContext,
+  TICK_MS,
   advance,
   countEventsByType,
   createCurveRegistry,
@@ -150,6 +151,15 @@ export function runHeadless(options: RunOptions): RunLog {
   const bus = createEventBus();
 
   let state = createInitialState(content, { seed: options.seed ?? DEFAULT_SEED });
+  /*
+   * How much time the run has *simulated*, which is not the same as what the
+   * clock says: New Game Plus (spec §18 M6) starts the arc again with the clock
+   * back at zero, and a loop bounded by `state.simTimeMs` would never end —
+   * the bot finishes the game, restarts it, and rewinds the very number the
+   * harness was watching. Found exactly that way: a run that should have taken
+   * two seconds ran until the test timeout killed it.
+   */
+  let elapsedSimMs = 0;
   let carrySimMs = 0;
   let ticks = 0;
   let decisions = 0;
@@ -197,7 +207,7 @@ export function runHeadless(options: RunOptions): RunLog {
 
   maybeSample();
 
-  while (designMinutesOf(state.simTimeMs) < limit) {
+  while (designMinutesOf(elapsedSimMs) < limit) {
     if (options.stopAtPhaseId !== undefined && state.phaseId === options.stopAtPhaseId) {
       break;
     }
@@ -232,6 +242,9 @@ export function runHeadless(options: RunOptions): RunLog {
       tick: (current, simDtMs) =>
         reduce(current, { type: 'TICK', simDtMs }, { ...ctx(), rng: restoreRng(current.rng) }),
     });
+    // Ticks, not clocks: `advance` runs whole `TICK_MS` steps, so this is
+    // exactly the time simulated — and it cannot be rewound by a restart.
+    elapsedSimMs += result.ticks * TICK_MS;
     state = result.state;
     carrySimMs = result.carrySimMs;
     ticks += result.ticks;
