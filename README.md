@@ -284,8 +284,9 @@ bench            25.9     30.0   24.0..36.0
 farm             80.3     80.0   64.0..96.0
 studio           74.6     75.0   60.0..90.0
 prestige         86.7     90.0   72.0..108.0
-absurd           84.0     80.0   64.0..96.0
-end              63.4     60.0   48.0..72.0
+absurd           84.1     80.0   64.0..96.0
+end              63.1     60.0   48.0..72.0
+ended         sandbox        —   reached, and that is the test
 ```
 
 > **Every phase of the arc is now gated on something the player did.** Assemble,
