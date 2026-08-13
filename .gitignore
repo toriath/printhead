@@ -16,6 +16,5 @@ dist-types/
 .pnpm-store/
 .stryker-tmp/
 dev-dist/
-.mutation-full.log
-.mutation-systems.log
-.mutation-visual.log
+# Local mutation-run transcripts. CI is the system of record for the score.
+.mutation-*.log

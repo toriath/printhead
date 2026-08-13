@@ -3,6 +3,7 @@ import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_MINUTE } from '../engine/constants.js';
 import { nextDesignCost, productValueOf } from '../systems/designs.js';
 import { nextMoneyPrinterCost, platesFor } from '../systems/prestige.js';
+import { slotUnlockAvailability } from '../systems/slots.js';
 import { computeModifiers } from '../systems/upgrades.js';
 import { TEST_CONTENT, createSim, testSlot } from './__fixtures__/sim.js';
 import {
@@ -306,6 +307,39 @@ describe('PRESTIGE (spec §5D)', () => {
   it('keeps the presses, so the Plates buy something that lasts (spec §5E)', () => {
     const sim = meltable({ moneyPrinters: { [pressId]: 1 } }).do(prestige());
     expect(sim.state.moneyPrinters[pressId]).toBe(1);
+  });
+
+  /**
+   * Spec §4: "slot 4 prestige-gated". M4 could only prove that gate by granting
+   * a Plate, because nothing in the game could mint one. This is the same gate,
+   * opened the way the game opens it.
+   */
+  it('opens the fourth bay, which nothing before the melt-down could', () => {
+    const fourth = content.slots.at(-1);
+    expect(fourth?.id).toBe('slot-4');
+    const before = meltable();
+    expect(slotUnlockAvailability(before.state, content, fourth?.id ?? '')).not.toBeNull();
+
+    const after = meltable().do(prestige());
+    expect(after.state.resources.plates).toBeGreaterThan(0);
+    // Everything the earlier bays needed has to be re-earned, so the fourth is
+    // gated on the rack below it rather than on the Plates alone...
+    const rebuilt = {
+      ...after.state,
+      slots: ['slot-1', 'slot-2', 'slot-3'].map((id) => testSlot({ id })),
+      resources: { ...after.state.resources, parts: 1e9 },
+      partsValue: 1e9,
+      upgrades: { enclosure: 1 },
+    };
+    // ...and with the rack back, the Plates are what open it.
+    expect(slotUnlockAvailability(rebuilt, content, fourth?.id ?? '')).toBeNull();
+    expect(
+      slotUnlockAvailability(
+        { ...rebuilt, resources: { ...rebuilt.resources, plates: 0 } },
+        content,
+        fourth?.id ?? '',
+      ),
+    ).toBe('locked');
   });
 });
 

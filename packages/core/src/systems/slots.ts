@@ -94,8 +94,9 @@ export function slotUnlockAvailability(
       return 'missing-prerequisite';
     }
   }
-  // Slot 4 is prestige-gated through this list (spec §4): `plates >= 1` cannot
-  // be satisfied until M5 mints the first Plate, so the bay stays shut.
+  // Slot 4 is prestige-gated through this list (spec §4): `plates >= 1`, which
+  // only a melt-down can mint (spec §5D). The bay stays shut until the workshop
+  // has been through one, and nothing in code names either the bay or the Plate.
   if (!meetsRequirements(state, content, def.requires)) {
     return 'locked';
   }
