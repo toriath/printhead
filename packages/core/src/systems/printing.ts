@@ -39,21 +39,38 @@ const FULL = 1;
  */
 export type PrintPool = 'parts' | 'products';
 
-export interface SlotConfig {
+/** What every loaded bay has, whichever of the two it is holding. */
+interface SlotConfigBase {
   readonly material: MaterialDef;
-  /** The stock object, or `null` when the bay is printing a Design. */
-  readonly object: ObjectDef | null;
-  /** The Design, or `null` when the bay is printing a stock object. */
-  readonly design: DesignDef | null;
   readonly recipeId: string;
   readonly recipeName: string;
   readonly printDesignSeconds: number;
   readonly filamentGrams: number;
-  /** Which valued pool a successful print fills (spec §2). */
-  readonly pool: PrintPool;
 }
 
-function objectConfig(material: MaterialDef, object: ObjectDef): SlotConfig {
+export interface ObjectSlotConfig extends SlotConfigBase {
+  /** Which valued pool a successful print fills (spec §2). */
+  readonly pool: 'parts';
+  readonly object: ObjectDef;
+  readonly design: null;
+}
+
+export interface DesignSlotConfig extends SlotConfigBase {
+  readonly pool: 'products';
+  readonly object: null;
+  readonly design: DesignDef;
+}
+
+/**
+ * A discriminated union rather than two nullable fields, so "exactly one of
+ * them is loaded" is a fact the type checker enforces. The alternative needs a
+ * `config.object === null` branch after the Design case that nothing can ever
+ * reach — dead code the tests cannot cover and the mutation gate is right to
+ * complain about.
+ */
+export type SlotConfig = ObjectSlotConfig | DesignSlotConfig;
+
+function objectConfig(material: MaterialDef, object: ObjectDef): ObjectSlotConfig {
   return {
     material,
     object,
@@ -66,7 +83,7 @@ function objectConfig(material: MaterialDef, object: ObjectDef): SlotConfig {
   };
 }
 
-function designConfig(material: MaterialDef, design: DesignDef): SlotConfig {
+function designConfig(material: MaterialDef, design: DesignDef): DesignSlotConfig {
   return {
     material,
     object: null,
@@ -202,16 +219,12 @@ export function batchYield(
   curves: CurveRegistry,
   designLevel: number,
 ): BatchYield {
-  if (config.design !== null) {
-    const count = batch;
+  if (config.pool === 'products') {
     return {
-      count,
-      value: count * productValueOf(config.design, curves, designLevel, modifiers),
+      count: batch,
+      value: batch * productValueOf(config.design, curves, designLevel, modifiers),
       pool: config.pool,
     };
-  }
-  if (config.object === null) {
-    return { count: NONE, value: NONE, pool: config.pool };
   }
   const count =
     config.object.partsYield * batch * modifierOf(modifiers, 'partsYieldMultiplier', FULL);
@@ -287,7 +300,7 @@ export function applyChangeover(
     materialId: next.material.id,
     objectId: next.object?.id ?? null,
     designId: next.design?.id ?? null,
-  };
+  } as const;
   const switching = slot.materialId !== null && slot.materialId !== next.material.id;
   if (!switching) {
     return {
@@ -401,16 +414,17 @@ function completeRun(
     modifiers,
   );
   const outcome = resolveBatchFailures(content.failure, slot.failureCharge, run.batch, perPrint);
-  const level = config.design === null ? NONE : (state.designs[config.design.id]?.level ?? NONE);
+  const level =
+    config.pool === 'products' ? (state.designs[config.design.id]?.level ?? NONE) : NONE;
   const produced = batchYield(config, outcome.succeeded, modifiers, curves, level);
   const scrapped = scrapFromFailure(config.material, config.filamentGrams * outcome.failed);
 
   const banked = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
   // A Design levels on what it *made*, so only the successful prints count.
   const progress =
-    config.design === null
-      ? { designs: banked.designs, levelUp: null }
-      : creditDesignPrints(banked.designs, config.design, outcome.succeeded);
+    config.pool === 'products'
+      ? creditDesignPrints(banked.designs, config.design, outcome.succeeded)
+      : { designs: banked.designs, levelUp: null };
   const madeProducts = produced.pool === 'products';
   const counted: GameState = {
     ...banked,
