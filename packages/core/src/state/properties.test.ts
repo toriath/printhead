@@ -8,7 +8,10 @@ import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
 import { runOfflineCatchUp } from '../engine/offline.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
+import { fabricatorDurationMs, startNewGamePlus } from '../systems/endgame.js';
+import { endingTotalMs } from '../systems/ending.js';
 import { assignedPrinters, printersPerSlot } from '../systems/fleet.js';
+import { inflationMultiplier } from '../systems/inflation.js';
 import { marketStateOf, priceMultiplier, quoteFor } from '../systems/market.js';
 import { moneyPrintRate } from '../systems/prestige.js';
 import { countPrinters } from '../systems/requirements.js';
@@ -1203,6 +1206,104 @@ describe('property: money printing is monotone in Plates (spec §13)', () => {
     };
     expect(minted(10)).toBeGreaterThan(minted(1));
     expect(minted(1)).toBeGreaterThan(minted(0));
+  });
+});
+
+/**
+ * The M6 invariants (spec §5E, §6 phase 5, §7.3, §18). Three rules the endgame
+ * would be broken without, and none of them provable by example alone.
+ */
+describe('property: the endgame holds its shape', () => {
+  const curves = createCurveRegistry(content.curves);
+  const inflating = (printed: number): GameState => ({
+    ...createInitialState(content, { seed: 4 }),
+    phaseId: content.endgame.inflation.startPhaseId,
+    stats: { ...createInitialState(content, { seed: 4 }).stats, moneyPrinted: printed },
+  });
+
+  /**
+   * Inflation only ever goes one way, and never past the ceiling. It multiplies
+   * every price the player sees, so a curve that dipped would make a shelf
+   * cheaper the more money was printed — the opposite of the joke.
+   */
+  it('never falls as the presses print, and never leaves [1, max]', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 2 ** 40 }),
+        fc.integer({ min: 0, max: 2 ** 40 }),
+        (a, b) => {
+          const [low, high] = a <= b ? [a, b] : [b, a];
+          const at = (printed: number): number =>
+            inflationMultiplier(inflating(printed), content, curves);
+          expect(at(high)).toBeGreaterThanOrEqual(at(low));
+          expect(at(low)).toBeGreaterThanOrEqual(1);
+          expect(at(high)).toBeLessThanOrEqual(content.endgame.inflation.maxMultiplier);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  /**
+   * Spec §7.3: a pre-printed section is never wasted and never trivialises the
+   * build. Every section takes time off it; the floor content declares is the
+   * floor.
+   */
+  it('shortens the final print with every section, down to the content floor', () => {
+    const fabricator = content.endgame.fabricator;
+    const base = createInitialState(content, { seed: 4 });
+    const withSections = (sections: number): GameState => ({
+      ...base,
+      fabricator: { ...base.fabricator, sections },
+    });
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 40 }), (sections) => {
+        const shorter = fabricatorDurationMs(withSections(sections + 1), content);
+        const longer = fabricatorDurationMs(withSections(sections), content);
+        expect(shorter).toBeLessThanOrEqual(longer);
+        expect(shorter).toBeGreaterThanOrEqual(fabricator.minDesignMinutes * MS_PER_MINUTE);
+        expect(longer).toBeLessThanOrEqual(fabricator.designMinutes * MS_PER_MINUTE);
+      }),
+      { numRuns: 41 },
+    );
+  });
+
+  /**
+   * Spec §18 M6: a new run *keeps the designs*. The same invariant prestige has,
+   * for the same reason — the Designs are the only thing in the game that is
+   * meant to outlive the workshop that made them.
+   */
+  it('starts a new game keeping the Designs exactly, and nothing else', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom(...content.designs.map((def) => def.id)), { maxLength: 3 }),
+        fc.integer({ min: 1, max: 20 }),
+        (ids, level) => {
+          const base = createInitialState(content, { seed: 4 });
+          const designs = Object.fromEntries(
+            ids.map((id) => [id, { level, printsOnLevel: 0 }] as const),
+          );
+          const before: GameState = {
+            ...base,
+            designs,
+            phaseId: 'end',
+            upgrades: { 'heated-bed': 1 },
+            printers: { 'bench-mk1': 9 },
+            resources: { ...base.resources, parts: 1234, plates: 7 },
+            fabricator: { ...base.fabricator, completedAtMs: 0 },
+            simTimeMs: endingTotalMs(content),
+          };
+          const after = startNewGamePlus(before, content, []).state;
+          expect(after.designs).toEqual(designs);
+          expect(after.upgrades).toEqual({});
+          expect(after.printers).toEqual({});
+          expect(after.resources.parts).toBe(content.start.startingResources.parts);
+          expect(after.fabricator).toEqual(base.fabricator);
+          expect(after.simTimeMs).toBe(0);
+        },
+      ),
+      { numRuns: 30 },
+    );
   });
 });
 

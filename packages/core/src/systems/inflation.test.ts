@@ -65,9 +65,15 @@ describe('the inflation index', () => {
     expect(inflationReading(state, 'platesEarned')).toBe(30);
     const byPlates: Content = {
       ...content,
-      endgame: { ...content.endgame, inflation: { ...content.endgame.inflation, metric: 'platesEarned' } },
+      endgame: {
+        ...content.endgame,
+        inflation: { ...content.endgame.inflation, metric: 'platesEarned' },
+      },
     };
-    expect(inflationInput(state, byPlates)).toBeCloseTo(30 * content.endgame.inflation.inputScale, 9);
+    expect(inflationInput(state, byPlates)).toBeCloseTo(
+      30 * content.endgame.inflation.inputScale,
+      9,
+    );
   });
 
   it('never runs past the ceiling content declares', () => {

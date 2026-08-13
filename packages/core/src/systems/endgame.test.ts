@@ -7,8 +7,8 @@ import { type GameState, createInitialState } from '../state/game-state.js';
 import {
   allSlotsCommitted,
   beginFabricatorPrint,
-  committedSlots,
   buildProgress,
+  committedSlots,
   currentBackdropId,
   currentLayer,
   fabricatorAvailability,
@@ -472,10 +472,9 @@ describe('the ending (spec §6 phase 6)', () => {
       (numbersDesignSeconds + museumDesignSeconds + creditsDesignSeconds) * MS_PER_SECOND,
     );
     // Half way through the whole sequence is half way through the fade.
-    expect(endingProgress(finishedAt(endingTotalMs(content) / MS_PER_SECOND / 2), content)).toBeCloseTo(
-      0.5,
-      6,
-    );
+    expect(
+      endingProgress(finishedAt(endingTotalMs(content) / MS_PER_SECOND / 2), content),
+    ).toBeCloseTo(0.5, 6);
   });
 
   it('is still on the numbers a second in — the stages are seconds, not milliseconds', () => {
