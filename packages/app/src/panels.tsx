@@ -100,8 +100,12 @@ export function MarketPanel({ store, visual }: PanelProps): ReactElement | null 
 
 export function UpgradePanel({ store, visual }: PanelProps): ReactElement | null {
   // Nodes nothing has unlocked yet stay off the screen entirely: the machine
-  // tree should reveal itself, not taunt with a wall of grey.
-  const rows = visual.upgrades.filter((row) => row.available || row.level > 0);
+  // tree should reveal itself, not taunt with a wall of grey. The Endgame Tree
+  // is left out because it has a panel of its own — it is priced in Plates and
+  // it is the last thing in the game, not another row of the machine list.
+  const rows = visual.upgrades.filter(
+    (row) => row.tree !== 'endgame' && (row.available || row.level > 0),
+  );
   if (rows.length === 0) {
     return null;
   }

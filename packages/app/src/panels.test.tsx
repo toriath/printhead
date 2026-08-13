@@ -164,6 +164,15 @@ describe('UpgradePanel', () => {
     expect(text).toContain('installed');
   });
 
+  it('leaves the Plate-priced endgame tree to its own panel (spec §5E)', () => {
+    const { store } = stubStore();
+    const endgame = visualFixture('endgame');
+    render(<UpgradePanel store={store} visual={endgame} />);
+    for (const node of endgame.upgrades.filter((row) => row.tree === 'endgame')) {
+      expect(screen.queryByTestId(`buy-${node.upgradeId}`)).toBeNull();
+    }
+  });
+
   it('is invisible while the whole tree is locked', () => {
     const { store } = stubStore();
     const { container } = render(<UpgradePanel store={store} visual={fresh} />);
