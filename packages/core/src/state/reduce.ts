@@ -168,6 +168,13 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
  * clicking player takes, so printer #1 is granted and the events fire exactly
  * as they did the first time. One piece per tick, because the attach resets the
  * cooldown and the next piece has to wait its turn like any other.
+ *
+ * It calls the handler rather than re-entering `reduce`, and that is the point:
+ * `ATTACH_PIECE` belongs to the intro phase's `allowedActions`, while the
+ * replay happens in phase 4. Going through the gate would reject every piece.
+ * The shell agrees — `buildControlModel` offers no Attach button outside the
+ * intro — so nothing is being routed around except the phase FSM's opinion
+ * about an action the *player* is no longer taking.
  */
 function selfAssemble(state: GameState, ctx: ReduceContext): GameState {
   if (!state.selfAssembling || !isPieceReady(state.assembly)) {
