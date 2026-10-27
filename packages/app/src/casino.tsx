@@ -57,6 +57,19 @@ interface Reel {
   readonly at: Spot;
 }
 
+/** The melt-down, over the floor it melts. */
+interface Melt {
+  readonly id: number;
+  readonly plates: number;
+  readonly run: number;
+  readonly box: {
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly height: number;
+  };
+}
+
 interface Jackpot {
   readonly id: number;
   /** On the printer that rolled the Perfect. */
@@ -64,6 +77,7 @@ interface Jackpot {
 }
 
 export interface Casino {
+  readonly melt: Melt | null;
   readonly coins: readonly Coin[];
   readonly floats: readonly Float[];
   readonly bursts: readonly Burst[];
@@ -75,6 +89,8 @@ const COIN_FLIGHT_MS = 900;
 /** Frames to wait for a counter that is only now being revealed. */
 const SHOWER_RETRIES = 6;
 const FLOAT_MS = 1100;
+/** The melt-down's moment on the floor, from first glow to the plate. */
+const MELT_MS = 4200;
 const MAX_FLOATS = 6;
 const BURST_MS = 700;
 const MAX_BURSTS = 4;
@@ -113,6 +129,7 @@ function centre(selector: string): { x: number; y: number } | null {
 export function useCasino(store: GameStore): Casino {
   const [coins, setCoins] = useState<readonly Coin[]>([]);
   const [jackpot, setJackpot] = useState<Jackpot | null>(null);
+  const [melt, setMelt] = useState<Melt | null>(null);
   const [floats, setFloats] = useState<readonly Float[]>([]);
   const [bursts, setBursts] = useState<readonly Burst[]>([]);
   // Where the player last pressed: a purchase sparks from the button it was.
@@ -308,6 +325,23 @@ export function useCasino(store: GameStore): Casino {
         case 'PRINT_FAILED':
           sfx.thud();
           break;
+        case 'PRESTIGED': {
+          const stage = document.querySelector('.stage')?.getBoundingClientRect();
+          if (stage === undefined || stage.width === 0) {
+            break;
+          }
+          nextId.current += 1;
+          const entry = {
+            id: nextId.current,
+            plates: event.platesAwarded,
+            run: event.runNumber,
+            box: { left: stage.left, top: stage.top, width: stage.width, height: stage.height },
+          };
+          sfx.meltdown();
+          setMelt(entry);
+          later(MELT_MS, () => setMelt((current) => (current?.id === entry.id ? null : current)));
+          break;
+        }
         case 'CUSTOMER_SERVED':
           sfx.bell();
           shower('[data-testid="shop"]', event.money);
@@ -374,7 +408,7 @@ export function useCasino(store: GameStore): Casino {
     };
   }, [store]);
 
-  return { coins, floats, bursts, jackpot, reel };
+  return { melt, coins, floats, bursts, jackpot, reel };
 }
 
 export function CasinoLayer({ casino }: { casino: Casino }): ReactElement {
@@ -443,6 +477,7 @@ export function CasinoLayer({ casino }: { casino: Casino }): ReactElement {
         </div>
       )}
       {casino.reel === null ? null : <ReelCard key={casino.reel.id} reel={casino.reel} />}
+      {casino.melt === null ? null : <MeltCard key={casino.melt.id} melt={casino.melt} />}
     </div>
   );
 }
@@ -549,3 +584,48 @@ export function MusicToggle(): ReactElement {
     </button>
   );
 }
+
+/**
+ * The melt-down, staged on the floor it melts: the room glows red, a molten
+ * pool rises, and out of it a plate is struck — its count spinning up like the
+ * order reel before it lands.
+ */
+function MeltCard({ melt }: { melt: Melt }): ReactElement {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const started = performance.now();
+    let frame = 0;
+    const spin = (): void => {
+      const t = Math.min((performance.now() - started - MELT_COUNT_DELAY_MS) / MELT_COUNT_MS, 1);
+      setShown(t <= 0 ? 0 : melt.plates * (1 - (1 - t) ** 3));
+      if (t < 1) {
+        frame = requestAnimationFrame(spin);
+      }
+    };
+    frame = requestAnimationFrame(spin);
+    return () => cancelAnimationFrame(frame);
+  }, [melt]);
+  return (
+    <div
+      className="melt"
+      style={{
+        left: melt.box.left,
+        top: melt.box.top,
+        width: melt.box.width,
+        height: melt.box.height,
+        animationDuration: `${MELT_MS}ms`,
+      }}
+    >
+      <span className="melt__pool" />
+      <span className="melt__plate">
+        <span className="melt__count">{`+${shown.toFixed(shown < 10 ? 1 : 0)}`}</span>
+        <span className="melt__unit">plates</span>
+      </span>
+      <span className="melt__line">{`Melt-down. Run ${melt.run} begins.`}</span>
+    </div>
+  );
+}
+
+/** The plate count waits for the pool, then spins up. */
+const MELT_COUNT_DELAY_MS = 1200;
+const MELT_COUNT_MS = 1600;

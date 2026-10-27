@@ -161,6 +161,15 @@ export function thud(): void {
   tone(160, { length: 0.25, wave: 'sawtooth', volume: 0.35, slideTo: 55 });
 }
 
+/** The melt-down: a long falling rumble, then the plate rings. */
+export function meltdown(): void {
+  tone(220, { length: 1.4, wave: 'sawtooth', volume: 0.22, slideTo: 40 });
+  tone(110, { at: 0.2, length: 1.2, wave: 'square', volume: 0.12, slideTo: 30 });
+  [0, 7, 12, 16, 19].forEach((step, index) => {
+    tone(note(step), { at: 1.5 + index * 0.08, length: 0.6, wave: 'triangle', volume: 0.35 });
+  });
+}
+
 /** A client at the door: two knocks on wood. */
 export function knock(): void {
   tone(180, { length: 0.07, wave: 'triangle', volume: 0.5, slideTo: 120 });
