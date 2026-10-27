@@ -77,6 +77,8 @@ interface Jackpot {
 }
 
 export interface Casino {
+  /** Gains in a row, each within `STREAK_WINDOW_MS` of the last (0 when cold). */
+  readonly streak: number;
   readonly melt: Melt | null;
   readonly coins: readonly Coin[];
   readonly floats: readonly Float[];
@@ -89,6 +91,10 @@ const COIN_FLIGHT_MS = 900;
 /** Frames to wait for a counter that is only now being revealed. */
 const SHOWER_RETRIES = 6;
 const FLOAT_MS = 1100;
+/** Gains this close together keep a streak going. */
+const STREAK_WINDOW_MS = 8000;
+/** Streak lengths that set off a fanfare. */
+const STREAK_MILESTONES = [5, 10, 20, 50];
 /** The melt-down's moment on the floor, from first glow to the plate. */
 const MELT_MS = 4200;
 const MAX_FLOATS = 6;
@@ -130,6 +136,9 @@ export function useCasino(store: GameStore): Casino {
   const [coins, setCoins] = useState<readonly Coin[]>([]);
   const [jackpot, setJackpot] = useState<Jackpot | null>(null);
   const [melt, setMelt] = useState<Melt | null>(null);
+  const [streak, setStreak] = useState(0);
+  const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streakCount = useRef(0);
   const [floats, setFloats] = useState<readonly Float[]>([]);
   const [bursts, setBursts] = useState<readonly Burst[]>([]);
   // Where the player last pressed: a purchase sparks from the button it was.
@@ -285,7 +294,40 @@ export function useCasino(store: GameStore): Casino {
 
     const clients = (): readonly { id: string; name: string }[] =>
       store.getContent().commissions.clients;
+    /** A gain keeps the streak alive; a quiet spell lets it go cold. */
+    const gain = (): void => {
+      // Counted in a ref so the fanfare fires once, outside any state updater.
+      streakCount.current += 1;
+      const next = streakCount.current;
+      setStreak(next);
+      if (STREAK_MILESTONES.includes(next)) {
+        sfx.fanfare();
+        later(0, () => {
+          const pill = centre('[data-testid="streak"]');
+          if (pill !== null) {
+            lastPress.current = { x: pill.x, y: pill.y, at: performance.now() };
+            burst();
+          }
+        });
+      }
+      if (streakTimer.current !== null) {
+        clearTimeout(streakTimer.current);
+      }
+      streakTimer.current = setTimeout(() => {
+        streakCount.current = 0;
+        setStreak(0);
+      }, STREAK_WINDOW_MS);
+    };
     const unsubscribe = store.onEvent((event: DomainEvent) => {
+      if (
+        event.type === 'PART_SOLD' ||
+        event.type === 'PRODUCT_SOLD' ||
+        event.type === 'CUSTOMER_SERVED' ||
+        event.type === 'COMMISSION_COMPLETED' ||
+        (event.type === 'PRINT_COMPLETED' && event.perfect)
+      ) {
+        gain();
+      }
       switch (event.type) {
         case 'PART_SOLD':
         case 'PRODUCT_SOLD':
@@ -408,7 +450,7 @@ export function useCasino(store: GameStore): Casino {
     };
   }, [store]);
 
-  return { melt, coins, floats, bursts, jackpot, reel };
+  return { streak, melt, coins, floats, bursts, jackpot, reel };
 }
 
 export function CasinoLayer({ casino }: { casino: Casino }): ReactElement {
@@ -629,3 +671,29 @@ function MeltCard({ melt }: { melt: Melt }): ReactElement {
 /** The plate count waits for the pool, then spins up. */
 const MELT_COUNT_DELAY_MS = 1200;
 const MELT_COUNT_MS = 1600;
+
+/** The hot streak, beside the money it is making: it flames up as it grows. */
+export function StreakPill({ streak }: { streak: number }): ReactElement | null {
+  if (streak < STREAK_SHOW_FROM) {
+    return null;
+  }
+  const heat = Math.min(streak / STREAK_HOTTEST, 1);
+  return (
+    <span
+      key={streak}
+      className="streak"
+      data-testid="streak"
+      style={{ '--heat': heat } as CSSProperties}
+      title="Gains in a row"
+    >
+      <span className="streak__flame" aria-hidden="true">
+        🔥
+      </span>
+      {`×${streak}`}
+    </span>
+  );
+}
+
+const STREAK_SHOW_FROM = 2;
+/** The pill is at its hottest from this many in a row. */
+const STREAK_HOTTEST = 20;

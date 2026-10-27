@@ -3,7 +3,7 @@ import { Workshop } from '@printhead/renderer';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 import { AgentsPanel } from './agents.js';
 import { AssemblyBench, Awakening } from './assembly.js';
-import { CasinoLayer, MusicToggle, MuteToggle, useCasino } from './casino.js';
+import { CasinoLayer, MusicToggle, MuteToggle, StreakPill, useCasino } from './casino.js';
 import { CommissionsPanel } from './commissions.js';
 import { buildControlModel } from './controls-model.js';
 import { ActionBar, Controls } from './controls.js';
@@ -190,6 +190,7 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
           </p>
         </div>
         <Hud visual={visual} content={content} showFilament={false} reveal={reveal} />
+        <StreakPill streak={casino.streak} />
         <DiaryButton diary={diary} onOpen={() => setReading(true)} />
         <MusicToggle />
         <MuteToggle />
