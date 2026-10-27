@@ -149,7 +149,10 @@ export function UpgradePanel({ store, visual }: PanelProps): ReactElement | null
 }
 
 export function AutomationPanel({ store, visual }: PanelProps): ReactElement | null {
-  const rows = visual.automation.filter((row) => row.available || row.installed);
+  // Agents have their own tab (`agents.tsx`); this is the machinery.
+  const rows = visual.automation.filter(
+    (row) => row.agent === null && (row.available || row.installed),
+  );
   if (rows.length === 0) {
     return null;
   }

@@ -120,6 +120,22 @@ describe('toVisualState', () => {
       },
       // The commission board opens in the bench; a fresh save has none yet.
       commissions: { open: false, offers: [], completed: 0 },
+      shop: {
+        open: false,
+        priceLevelId: content.shop.openingPriceLevel,
+        levels: content.shop.priceLevels.map(({ id, name, priceMultiplier, demandMultiplier }) => ({
+          id,
+          name,
+          priceMultiplier,
+          demandMultiplier,
+        })),
+        reputation: content.shop.reputationStart,
+        unitPrice: 0,
+        wholesalePrice:
+          (content.objects[0]?.basePartValue ?? 0) * (content.materials[0]?.valueMultiplier ?? 0),
+        served: 0,
+        missed: 0,
+      },
     });
   });
 

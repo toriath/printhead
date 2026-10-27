@@ -48,8 +48,12 @@ import { z } from 'zod';
  *   is making: the failure coming and the Perfect print coming.
  * - v9 — **frozen**: the commission board — every open order with its client,
  *   what it wants, how much is delivered, the time left and what it pays.
+ * - v10 — **frozen**: the shop front (price levels, reputation, what a Part
+ *   sells for over the counter, customers served and missed), orders that
+ *   start as proposals (`accepted`) with the client's loyalty, and automations
+ *   that are agents (`agent`: a name and a job title).
  */
-export const VISUAL_STATE_VERSION = 9;
+export const VISUAL_STATE_VERSION = 10;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -86,6 +90,36 @@ export const CommissionVisualSchema = z
     timeLeft: Unit,
     remainingMs: NonNegative,
     reward: NonNegative,
+    /** False while it is still a proposal waiting for an answer. */
+    accepted: z.boolean(),
+    /** Orders this client has had delivered before: a regular pays more. */
+    loyalty: NonNegativeInt,
+  })
+  .strict();
+
+/** One price the shop can be set to. */
+export const ShopPriceVisualSchema = z
+  .object({
+    id: NonEmpty,
+    name: NonEmpty,
+    priceMultiplier: NonNegative,
+    demandMultiplier: NonNegative,
+  })
+  .strict();
+
+export const ShopVisualSchema = z
+  .object({
+    /** The shop has opened this run. */
+    open: z.boolean(),
+    priceLevelId: NonEmpty,
+    levels: z.array(ShopPriceVisualSchema),
+    reputation: Unit,
+    /** What one Part fetches over the counter at the current price. */
+    unitPrice: NonNegative,
+    /** What one Part fetches wholesale, for comparison. */
+    wholesalePrice: NonNegative,
+    served: NonNegativeInt,
+    missed: NonNegativeInt,
   })
   .strict();
 
@@ -264,6 +298,8 @@ export const AutomationVisualSchema = z
     affordable: z.boolean(),
     cost: NonNegative,
     costResource: NonEmpty,
+    /** A member of staff rather than a machine: who they are and their job. */
+    agent: z.object({ name: NonEmpty, role: NonEmpty }).strict().nullable(),
   })
   .strict();
 
@@ -512,6 +548,7 @@ export const VisualStateSchema = z
     fabricator: FabricatorVisualSchema,
     ending: EndingVisualSchema,
     commissions: CommissionsVisualSchema,
+    shop: ShopVisualSchema,
   })
   .strict();
 

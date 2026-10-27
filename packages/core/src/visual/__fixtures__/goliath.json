@@ -1,8 +1,8 @@
 {
-  "version": 9,
+  "version": 10,
   "phaseId": "absurd",
   "phaseName": "The Absurd",
-  "simTimeMs": 24660000,
+  "simTimeMs": 16545000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -92,11 +92,11 @@
     "complete": false
   },
   "ledger": {
-    "parts": 48316,
-    "money": 1000136.0361925564,
+    "parts": 48368,
+    "money": 999306.1753892374,
     "scrap": 0,
     "products": 0,
-    "plates": 26.7729,
+    "plates": 22.4524,
     "filamentGrams": {
       "pla": 516,
       "petg": 0,
@@ -112,7 +112,7 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.10977207933666007,
+      "buyPerGram": 0.10096323629128995,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
@@ -124,9 +124,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.1384166847534311,
-      "sellPerGram": 0.11765418204041644,
-      "priceMultiplier": 0.7880913661622055,
+      "buyPerGram": 0.13057929824604594,
+      "sellPerGram": 0.11099240350913905,
+      "priceMultiplier": 0.8083344433246873,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -136,9 +136,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.9040119858577752,
-      "sellPerGram": 0.7684101879791089,
-      "priceMultiplier": 1.1764792120970946,
+      "buyPerGram": 0.8741567612740275,
+      "sellPerGram": 0.7430332470829234,
+      "priceMultiplier": 1.2368812838424672,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -148,9 +148,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 3.543451233935188,
-      "sellPerGram": 3.0119335488449095,
-      "priceMultiplier": 1.1528599125400338,
+      "buyPerGram": 3.249295238583862,
+      "sellPerGram": 2.7619009527962826,
+      "priceMultiplier": 1.149391231735541,
       "stockGrams": 800,
       "heldGrams": 0
     },
@@ -318,8 +318,8 @@
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
-      "cost": 24.4542,
+      "affordable": false,
+      "cost": 27.0952,
       "costResource": "plates"
     },
     {
@@ -330,7 +330,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": true,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     },
     {
@@ -341,7 +341,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": true,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     },
     {
@@ -352,7 +352,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     }
   ],
@@ -368,7 +368,8 @@
       "available": true,
       "affordable": true,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-buy-filament",
@@ -381,7 +382,8 @@
       "available": true,
       "affordable": true,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-recycler",
@@ -394,7 +396,8 @@
       "available": false,
       "affordable": true,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-trade",
@@ -407,7 +410,8 @@
       "available": false,
       "affordable": true,
       "cost": 404.747,
-      "costResource": "money"
+      "costResource": "money",
+      "agent": null
     },
     {
       "automationId": "auto-changeover",
@@ -420,7 +424,42 @@
       "available": true,
       "affordable": true,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
+    },
+    {
+      "automationId": "agent-pitch",
+      "name": "Sales agent",
+      "behavior": "run-shop",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 60,
+      "available": true,
+      "affordable": true,
+      "cost": 404.747,
+      "costResource": "money",
+      "agent": {
+        "name": "Pitch",
+        "role": "Sales agent"
+      }
+    },
+    {
+      "automationId": "agent-deal",
+      "name": "Account manager",
+      "behavior": "answer-proposals",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 2,
+      "available": true,
+      "affordable": true,
+      "cost": 404.747,
+      "costResource": "money",
+      "agent": {
+        "name": "Deal",
+        "role": "Account manager"
+      }
     }
   ],
   "recycler": {
@@ -448,7 +487,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 4342.516324163998,
+        "cost": 10991.994445540124,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -464,7 +503,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 4342.516324163998,
+        "cost": 10991.994445540124,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -480,7 +519,7 @@
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 4342.516324163998,
+        "cost": 10991.994445540124,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -489,9 +528,9 @@
   "prestige": {
     "available": true,
     "platesOnOffer": 7,
-    "platesHeld": 26.7729,
+    "platesHeld": 22.4524,
     "runsCompleted": 6,
-    "moneyPerDesignSecond": 262.11304,
+    "moneyPerDesignSecond": 206.4955,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -502,8 +541,8 @@
       "level": 2,
       "maxLevel": 5,
       "available": true,
-      "affordable": false,
-      "cost": 27,
+      "affordable": true,
+      "cost": 18,
       "costResource": "plates"
     },
     {
@@ -513,7 +552,7 @@
       "level": 1,
       "maxLevel": 5,
       "available": true,
-      "affordable": true,
+      "affordable": false,
       "cost": 23,
       "costResource": "plates"
     },
@@ -534,17 +573,17 @@
       "tier": 4,
       "level": 0,
       "maxLevel": 3,
-      "available": false,
+      "available": true,
       "affordable": false,
-      "cost": 60,
+      "cost": 25,
       "costResource": "plates"
     }
   ],
   "backdrop": "workshop",
   "inflation": {
     "active": true,
-    "multiplier": 2.1954415867332013,
-    "moneyPrinted": 845751.0203995309
+    "multiplier": 2.0192647258257987,
+    "moneyPrinted": 644698.9460995265
   },
   "fabricator": {
     "unlocked": false,
@@ -586,12 +625,49 @@
         "materialName": "PLA",
         "count": 12,
         "delivered": 0,
-        "timeLeft": 0.9333333333333333,
-        "remainingMs": 140000,
-        "reward": 79.03589712239526
+        "timeLeft": 0.7777777777777778,
+        "remainingMs": 35000,
+        "reward": 138.11770724648463,
+        "accepted": false,
+        "loyalty": 37
       }
     ],
-    "completed": 144
+    "completed": 97
+  },
+  "shop": {
+    "open": true,
+    "priceLevelId": "closed",
+    "levels": [
+      {
+        "id": "closed",
+        "name": "Closed",
+        "priceMultiplier": 0,
+        "demandMultiplier": 0
+      },
+      {
+        "id": "bargain",
+        "name": "Bargain",
+        "priceMultiplier": 1.2,
+        "demandMultiplier": 1.7
+      },
+      {
+        "id": "fair",
+        "name": "Fair",
+        "priceMultiplier": 1.6,
+        "demandMultiplier": 1
+      },
+      {
+        "id": "premium",
+        "name": "Premium",
+        "priceMultiplier": 2.4,
+        "demandMultiplier": 0.45
+      }
+    ],
+    "reputation": 0.5,
+    "unitPrice": 0,
+    "wholesalePrice": 0,
+    "served": 0,
+    "missed": 0
   },
   "ending": {
     "stage": "none",

@@ -3,10 +3,10 @@ import { FLOOR_WIDTH } from './geometry.js';
 
 /**
  * The workshop's back wall, which fills up as the print does. Each layer hangs
- * one more thing — tools, a spool shelf, a blueprint, the plates, a neon sign,
+ * one more thing — a spool shelf, a blueprint, the plates, a neon sign,
  * fairy lights — so a glance at the room says how far the game has come,
  * without a word or a number. Art, not rules: the ids below only pick
- * decorations, and an unknown phase simply shows the bare wall.
+ * decorations, and the wall starts bare.
  */
 const WALL_ORDER = ['intro', 'bench', 'farm', 'studio', 'prestige', 'absurd', 'end', 'ended'];
 
@@ -18,47 +18,6 @@ function stage(phaseId: string): number {
 }
 
 const SPOOL_COLOURS = ['#E23673', '#1FA595', '#F5A23A', '#9AA6B2'];
-
-function Pegboard(): ReactElement {
-  return (
-    <g data-wall="pegboard" className="ph-wall-item">
-      <rect x={40} y={22} width={130} height={70} rx={6} className="ph-wall-board" />
-      {Array.from({ length: 24 }, (_unused, index) => (
-        <circle
-          // biome-ignore lint/suspicious/noArrayIndexKey: holes in a board have no identity
-          key={index}
-          cx={52 + (index % 8) * 15}
-          cy={32 + Math.floor(index / 8) * 22}
-          r={1.6}
-          className="ph-wall-hole"
-        />
-      ))}
-      {/* A wrench, pliers and a spatula: the printer kit. */}
-      <path d="M62 40l14 32M58 38a5 5 0 1 0 8-2" className="ph-wall-tool" />
-      <path d="M96 36v30M106 36v30M96 66l5 10 5-10" className="ph-wall-tool" />
-      <path d="M140 34v28M134 62h12l-2 14h-8z" className="ph-wall-tool" />
-    </g>
-  );
-}
-
-function Window(): ReactElement {
-  return (
-    <g data-wall="window" className="ph-wall-item">
-      <rect
-        x={FLOOR_WIDTH - 150}
-        y={18}
-        width={100}
-        height={74}
-        rx={4}
-        className="ph-wall-window"
-      />
-      <path
-        d={`M${FLOOR_WIDTH - 100} 18v74M${FLOOR_WIDTH - 150} 55h100`}
-        className="ph-wall-frame"
-      />
-    </g>
-  );
-}
 
 function SpoolShelf(): ReactElement {
   return (
@@ -149,8 +108,6 @@ export function WorkshopWall({ phaseId }: { phaseId: string }): ReactElement {
     <g data-testid="workshop-wall" data-wall-stage={reached}>
       <rect x={0} y={0} width={FLOOR_WIDTH} height={WALL_HEIGHT} className="ph-wall" />
       <path d={`M0 ${WALL_HEIGHT}H${FLOOR_WIDTH}`} className="ph-wall-skirting" />
-      <Pegboard />
-      <Window />
       {reached >= stage('farm') ? <SpoolShelf /> : null}
       {reached >= stage('farm') ? <Clock /> : null}
       {reached >= stage('studio') ? <Blueprint /> : null}

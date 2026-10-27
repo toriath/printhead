@@ -36,6 +36,11 @@ export const CHARACTER_CSS = `
 .pc-resin-c { fill: var(--char-amber, #F5A23A); }
 .pc-blueprint-c { fill: #4c86e8; }
 .pc-plate-in { fill: #2a323b; }
+.pc-mat-pla { fill: #E23673; }
+.pc-mat-petg { fill: #1FA595; }
+.pc-mat-resin { fill: #F5A23A; }
+.pc-mat-metal { fill: #9AA6B2; }
+.pc-mat-composite { fill: #4C5563; }
 .pc-print-product { fill: var(--ph-gold, #e2b65a); }
 .pc-resin-print { fill: #f3c98a; }
 .pc-screen { fill: var(--char-screen, #142A2C); }

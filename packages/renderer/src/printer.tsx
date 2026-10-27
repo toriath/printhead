@@ -52,6 +52,9 @@ export interface PrinterProps {
   readonly progress: number;
   /** Parts, or a Product from one of the player's Designs (spec §5D). */
   readonly output?: PrintOutput;
+  /** The object on the bed and its filament: it prints as itself. */
+  readonly object?: string | null;
+  readonly material?: string | null;
   /** Which member of the cast; defaults to the machine tier's printer. */
   readonly kind?: CharacterKind;
   /** The LCD expression; defaults to focus while printing, idle otherwise. */
@@ -94,6 +97,8 @@ export function Printer({
   phaseOffset,
   progress,
   output = 'parts',
+  object = null,
+  material = null,
   kind,
   face,
   overclocked = false,
@@ -137,6 +142,8 @@ export function Printer({
           overclocked={overclocked}
           phaseOffset={phaseOffset}
           output={output}
+          object={object}
+          material={material}
         />
       </g>
       {extras.map((id, index) => (

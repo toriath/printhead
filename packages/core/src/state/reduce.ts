@@ -11,7 +11,7 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from '../systems/automation.js';
-import { tickCommissions } from '../systems/commissions.js';
+import { answerProposal, tickCommissions } from '../systems/commissions.js';
 import { designAvailability, hasDesign, startDesignDraft, tickStudio } from '../systems/designs.js';
 import {
   grantPrinter,
@@ -56,6 +56,7 @@ import {
 } from '../systems/printing.js';
 import { changeoverAutomationDefs, queueEntriesResolve } from '../systems/queue.js';
 import { meetsRequirements, totalDesignMinutes } from '../systems/requirements.js';
+import { setShopPriceLevel, tickShop } from '../systems/shop.js';
 import { purchaseSlot, slotUnlockAvailability } from '../systems/slots.js';
 import {
   computeModifiers,
@@ -110,6 +111,16 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applyStartPrint(state, action.slotId, ctx);
     case 'OVERCLOCK_SLOT':
       return applyOverclock(state, action.slotId, ctx);
+    case 'SET_SHOP_PRICE':
+      return (
+        setShopPriceLevel(state, ctx.content, action.priceLevelId) ??
+        reject(ctx, state, 'SET_SHOP_PRICE', 'unknown-target')
+      );
+    case 'ANSWER_COMMISSION':
+      return (
+        answerProposal(state, ctx.content, action.serial, action.accept, ctx.emit) ??
+        reject(ctx, state, 'ANSWER_COMMISSION', 'unknown-target')
+      );
     case 'SELL_PARTS':
       return applySellParts(state, action.count, ctx);
     case 'BUY_FILAMENT':
@@ -188,7 +199,8 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const built = tickTheFinalPrint(state, manufactured, simDtMs, ctx);
   const automated = tickAutomation(built, ctx.content, simDtMs, ctx.emit);
   const posted = tickCommissions(automated, ctx.content, simDtMs, ctx.emit);
-  return advanceWhileReady(posted, ctx);
+  const shopped = tickShop(posted, ctx.content, simDtMs, ctx.emit);
+  return advanceWhileReady(shopped, ctx);
 }
 
 /**

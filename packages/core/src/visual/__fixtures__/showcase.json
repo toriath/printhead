@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "phaseId": "studio",
   "phaseName": "Studio",
   "simTimeMs": 4620000,
@@ -152,7 +152,7 @@
     {
       "forkId": "goliath",
       "name": "Goliath",
-      "description": "One giant printer. The whole fleet is melted into a single bay \u2014 and it is the only build that can attempt the final print.",
+      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
       "layout": "goliath",
       "chosen": false,
       "available": true,
@@ -345,7 +345,8 @@
       "available": false,
       "affordable": false,
       "cost": 419,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-buy-filament",
@@ -358,7 +359,8 @@
       "available": false,
       "affordable": false,
       "cost": 200,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-trade",
@@ -371,7 +373,8 @@
       "available": false,
       "affordable": false,
       "cost": 199.34029440000003,
-      "costResource": "money"
+      "costResource": "money",
+      "agent": null
     }
   ],
   "recycler": {
@@ -502,13 +505,13 @@
       "PRINTHEAD",
       "a finite idle game about a 3D printer",
       "",
-      "Printer #1 \u2014 assembled by hand, seven pieces",
-      "The Bench \u2014 where a Part was first worth something",
-      "The Farm \u2014 fourteen machines and a market",
-      "The Studio \u2014 resin, designs, products",
-      "The Melt-down \u2014 everything you built, engraved",
-      "The Absurd \u2014 the economy ate itself",
-      "The Fabricator \u2014 it printed the last thing left to print",
+      "Printer #1 — assembled by hand, seven pieces",
+      "The Bench — where a Part was first worth something",
+      "The Farm — fourteen machines and a market",
+      "The Studio — resin, designs, products",
+      "The Melt-down — everything you built, engraved",
+      "The Absurd — the economy ate itself",
+      "The Fabricator — it printed the last thing left to print",
       "",
       "Every number you saw came out of content/*.json",
       "Every phase you passed was a row in pacing.json",
@@ -542,7 +545,7 @@
       {
         "serial": 3,
         "templateId": "petg-gears",
-        "clientName": "The corner caf\u00e9",
+        "clientName": "The corner café",
         "objectId": "gearset",
         "objectName": "Gear set",
         "materialId": "petg",
@@ -551,9 +554,62 @@
         "delivered": 36,
         "timeLeft": 0.55,
         "remainingMs": 198000,
-        "reward": 422.4
+        "reward": 422.4,
+        "accepted": true,
+        "loyalty": 1
+      },
+      {
+        "serial": 4,
+        "templateId": "pla-brackets",
+        "clientName": "The robotics club",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "pla",
+        "materialName": "PLA",
+        "count": 12,
+        "delivered": 0,
+        "timeLeft": 0.8,
+        "remainingMs": 36000,
+        "reward": 57.6,
+        "accepted": false,
+        "loyalty": 0
       }
     ],
     "completed": 2
+  },
+  "shop": {
+    "open": true,
+    "priceLevelId": "fair",
+    "levels": [
+      {
+        "id": "closed",
+        "name": "Closed",
+        "priceMultiplier": 0,
+        "demandMultiplier": 0
+      },
+      {
+        "id": "bargain",
+        "name": "Bargain",
+        "priceMultiplier": 1.2,
+        "demandMultiplier": 1.7
+      },
+      {
+        "id": "fair",
+        "name": "Fair",
+        "priceMultiplier": 1.6,
+        "demandMultiplier": 1
+      },
+      {
+        "id": "premium",
+        "name": "Premium",
+        "priceMultiplier": 2.4,
+        "demandMultiplier": 0.45
+      }
+    ],
+    "reputation": 0.72,
+    "unitPrice": 0.64,
+    "wholesalePrice": 0.4,
+    "served": 41,
+    "missed": 3
   }
 }

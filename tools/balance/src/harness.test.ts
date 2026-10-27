@@ -24,6 +24,7 @@ import {
   placeholderPhaseIds,
 } from './budget.js';
 import { type Bot, type RunLog, runHeadless } from './harness.js';
+import { HUMAN_LIMIT_DESIGN_MINUTES, HUMAN_SEEDS, createHumanBot } from './human.js';
 import { checkWaitWalls } from './waitwall.js';
 
 const content = loadContent(RAW_CONTENT);
@@ -72,8 +73,8 @@ describe('budget table', () => {
       ['intro', 1],
       ['bench', 1],
       ['farm', 400],
-      ['studio', 75],
-      ['prestige', 90],
+      ['studio', 45],
+      ['prestige', 120],
       ['absurd', 80],
       ['ended', 999],
     ]);
@@ -545,6 +546,7 @@ describe('the balanced bot plays the M6 endgame end to end', () => {
       newGamePlusModifierIds: [modifier.id],
       overclockBelowRisk: 0.5,
       chaseCommissions: true,
+      shopPrice: 'fair',
     });
     const replay = runHeadless({ content, bot: restarting });
     expect(replay.eventCounts.NEW_GAME_PLUS_STARTED ?? 0).toBeGreaterThan(0);
@@ -579,5 +581,38 @@ describe('placeholder phases (spec §18)', () => {
     expect(
       isPlaceholderPhase({ ...absurd, advanceWhen: [{ metric: 'designs', atLeast: 1 } as never] }),
     ).toBe(false);
+  });
+});
+
+/**
+ * The crowd (`human.ts`). The policy bots are the rulers the windows are cut
+ * to; these are the witnesses. Every one of them must finish the game, and
+ * none may take more than the arc's budget plus its per-phase slack — a
+ * balance that only a perfect player can finish in time is not balanced.
+ */
+describe('a crowd of human-ish players', () => {
+  const crowd = HUMAN_SEEDS.slice(0, 4).map((seed) =>
+    runHeadless({
+      content,
+      bot: createHumanBot(seed),
+      limitDesignMinutes: HUMAN_LIMIT_DESIGN_MINUTES,
+    }),
+  );
+
+  it('all finish the game', () => {
+    expect(crowd.map((log) => log.finalPhaseId)).toEqual(crowd.map(() => 'ended'));
+  });
+
+  it('all finish within the arc budget plus the per-phase slack', () => {
+    for (const log of crowd) {
+      expect(log.phaseEnteredAt.get('ended') ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+        table.totalDesignMinutes * (1 + table.tolerance),
+      );
+    }
+  });
+
+  it('really are different people', () => {
+    const arcs = new Set(crowd.map((log) => Math.round(log.phaseEnteredAt.get('ended') ?? 0)));
+    expect(arcs.size).toBeGreaterThan(1);
   });
 });

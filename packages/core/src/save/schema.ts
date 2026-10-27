@@ -303,13 +303,45 @@ export const StatsStateV8Schema = StatsStateV6Schema.extend({
 }).strict();
 
 export const GameStateV8Schema = GameStateV7Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  saveVersion: z.literal(8),
   commissions: CommissionBoardStateSchema,
   stats: StatsStateV8Schema,
 }).strict();
 
+// --- v9 (the shop front; proposals and loyalty) -------------------------------
+
+export const CommissionStateV9Schema = CommissionStateSchema.extend({
+  accepted: z.boolean(),
+}).strict();
+
+export const CommissionBoardStateV9Schema = CommissionBoardStateSchema.extend({
+  open: z.array(CommissionStateV9Schema),
+  loyalty: z.record(z.string().min(1), z.number().int().nonnegative()),
+}).strict();
+
+export const ShopStateSchema = z
+  .object({
+    priceLevelId: z.string().min(1),
+    reputation: z.number().finite().min(0).max(1),
+    nextCustomerMs: z.number(),
+    visits: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const StatsStateV9Schema = StatsStateV8Schema.extend({
+  customersServed: z.number().int().nonnegative(),
+  customersMissed: z.number().int().nonnegative(),
+}).strict();
+
+export const GameStateV9Schema = GameStateV8Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  commissions: CommissionBoardStateV9Schema,
+  shop: ShopStateSchema,
+  stats: StatsStateV9Schema,
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV8Schema;
+export const GameStateSchema = GameStateV9Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -328,3 +360,4 @@ export type GameStateV5 = z.infer<typeof GameStateV5Schema>;
 export type GameStateV6 = z.infer<typeof GameStateV6Schema>;
 export type GameStateV7 = z.infer<typeof GameStateV7Schema>;
 export type GameStateV8 = z.infer<typeof GameStateV8Schema>;
+export type GameStateV9 = z.infer<typeof GameStateV9Schema>;

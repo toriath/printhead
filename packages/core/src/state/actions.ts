@@ -166,6 +166,19 @@ export interface NewGamePlusAction {
   readonly modifierIds: readonly string[];
 }
 
+/** Set the shop's price level (see `content/shop.json`). */
+export interface SetShopPriceAction {
+  readonly type: 'SET_SHOP_PRICE';
+  readonly priceLevelId: string;
+}
+
+/** Take on a client's proposal, or turn it down. */
+export interface AnswerCommissionAction {
+  readonly type: 'ANSWER_COMMISSION';
+  readonly serial: number;
+  readonly accept: boolean;
+}
+
 /** Commit to Farm or Goliath for this run (spec §5B). One choice, forever. */
 export interface ChooseForkAction {
   readonly type: 'CHOOSE_FORK';
@@ -198,13 +211,24 @@ export type Action =
   | BuyMoneyPrinterAction
   | PrintSectionAction
   | StartFabricatorAction
-  | NewGamePlusAction;
+  | NewGamePlusAction
+  | SetShopPriceAction
+  | AnswerCommissionAction;
 
 export type ActionType = Action['type'];
 
 export type GatedAction = Extract<Action, { type: GatedActionType }>;
 
 export const tick = (simDtMs: number): TickAction => ({ type: 'TICK', simDtMs });
+export const setShopPrice = (priceLevelId: string): SetShopPriceAction => ({
+  type: 'SET_SHOP_PRICE',
+  priceLevelId,
+});
+export const answerCommission = (serial: number, accept: boolean): AnswerCommissionAction => ({
+  type: 'ANSWER_COMMISSION',
+  serial,
+  accept,
+});
 export const advancePhase = (): AdvancePhaseAction => ({ type: 'ADVANCE_PHASE' });
 export const attachPiece = (pieceId: string): AttachPieceAction => ({
   type: 'ATTACH_PIECE',

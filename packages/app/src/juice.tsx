@@ -34,7 +34,7 @@ export interface Banner {
 export interface LogEntry {
   readonly id: number;
   readonly text: string;
-  readonly tone: PopupTone | 'layer';
+  readonly tone: PopupTone | 'layer' | 'agent';
 }
 
 export interface Juice {
@@ -71,6 +71,9 @@ const REFUSALS: Partial<Record<ActionRejectedReason, string>> = {
   'nothing-to-do': 'Nothing to do there right now.',
 };
 
+/** An agent speaks up at most this often. */
+const AGENT_QUIET_MS = 40_000;
+
 /** The log keeps this many lines. */
 const MAX_LOG = 6;
 
@@ -102,6 +105,8 @@ export function useJuice(store: GameStore): Juice {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [shake, setShake] = useState(0);
   const [log, setLog] = useState<readonly LogEntry[]>([]);
+  const nextLine = useRef(0);
+  const lastPrice = useRef('');
   const nextId = useRef(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -125,6 +130,44 @@ export function useJuice(store: GameStore): Juice {
       const entry = { id: nextId.current, text, tone };
       setLog((current) => [entry, ...current].slice(0, MAX_LOG));
     };
+    /*
+     * Agents talk about what they do: a line from their persona, now and then,
+     * when the thing they were hired for happens on their watch.
+     */
+    const spoke = new Map<string, number>();
+    const speak = (behavior: string): void => {
+      const state = store.getState();
+      const def = store
+        .getContent()
+        .automation.find(
+          (candidate) =>
+            candidate.behavior === behavior &&
+            candidate.persona !== undefined &&
+            (state.automation[candidate.id]?.level ?? 0) > 0 &&
+            state.automation[candidate.id]?.enabled === true,
+        );
+      const persona = def?.persona;
+      const now = performance.now();
+      if (
+        def === undefined ||
+        persona === undefined ||
+        now - (spoke.get(def.id) ?? -AGENT_QUIET_MS) < AGENT_QUIET_MS
+      ) {
+        return;
+      }
+      spoke.set(def.id, now);
+      nextLine.current += 1;
+      const line = persona.lines[nextLine.current % persona.lines.length] ?? '';
+      note(`${persona.name}: ${line}`, 'agent');
+    };
+    lastPrice.current = store.getState().shop.priceLevelId;
+    const unwatch = store.subscribe(() => {
+      const priceLevelId = store.getState().shop.priceLevelId;
+      if (priceLevelId !== lastPrice.current) {
+        lastPrice.current = priceLevelId;
+        speak('run-shop');
+      }
+    });
     const client = (clientId: string): string =>
       store.getContent().commissions.clients.find((c) => c.id === clientId)?.name ?? clientId;
     const react = (slotId: string, face: FaceId, ms: number): void => {
@@ -205,6 +248,11 @@ export function useJuice(store: GameStore): Juice {
         case 'ASSEMBLY_COMPLETED':
           note('It is alive.', 'layer');
           break;
+        case 'COMMISSION_ANSWERED':
+          if (event.accepted) {
+            speak('answer-proposals');
+          }
+          break;
         case 'ACTION_REJECTED':
           note(REFUSALS[event.reason] ?? `Can't do that (${event.reason}).`, 'fail');
           break;
@@ -214,6 +262,7 @@ export function useJuice(store: GameStore): Juice {
     });
     return () => {
       unsubscribe();
+      unwatch();
       for (const timer of timers.current) {
         clearTimeout(timer);
       }

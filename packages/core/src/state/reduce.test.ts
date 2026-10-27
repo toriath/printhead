@@ -298,7 +298,11 @@ describe('selling and buying', () => {
   });
 
   it('buys printer #2 for the curve price and assigns it to the slot', () => {
-    const sim = stocked().tickMs(TICK_MS);
+    // Machines are sold from the Bench on: finish the intro first (sell the
+    // first Part), and restock so the bay keeps printing while it saves up.
+    const sim = stocked().do(sellParts(1)).tickMs(TICK_MS);
+    expect(sim.state.phaseId).toBe('bench');
+    sim.do(buyFilament(FIRST_MATERIAL_ID, 200));
     // One printer is already owned, so this is the N=1 point on the cost curve.
     const price = nextPrinterCost(sim.state, content, curves, content.start.printerId);
     expect(price?.resource).toBe('parts');

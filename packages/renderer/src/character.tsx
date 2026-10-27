@@ -28,6 +28,9 @@ export interface CharacterProps {
   readonly overclocked?: boolean;
   readonly phaseOffset: number;
   readonly output?: 'parts' | 'products';
+  /** What is printing and in what: the bed grows the real object. */
+  readonly object?: string | null;
+  readonly material?: string | null;
 }
 
 function ShapeEl({ shape }: { shape: Shape }): ReactElement {
@@ -55,12 +58,16 @@ export function Character({
   overclocked = false,
   phaseOffset,
   output = 'parts',
+  object = null,
+  material = null,
 }: CharacterProps): ReactElement {
   const drawing = drawCharacter(kind, {
     face,
     output,
     progress,
     parts: parts === undefined ? 'all' : new Set(parts),
+    object,
+    material,
   });
   const front = FRONT_SHAPES[kind] ?? [];
   const screen = drawing.screen;

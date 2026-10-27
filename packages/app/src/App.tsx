@@ -1,6 +1,7 @@
 import { buyFilament, overclockSlot } from '@printhead/core';
 import { Workshop } from '@printhead/renderer';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { AgentsPanel } from './agents.js';
 import { AssemblyBench, Awakening } from './assembly.js';
 import { CasinoLayer, MusicToggle, MuteToggle, useCasino } from './casino.js';
 import { CommissionsPanel } from './commissions.js';
@@ -22,6 +23,7 @@ import { AutomationPanel, MarketPanel, RecyclerPanel, UpgradePanel } from './pan
 import { useReveal } from './reveal.js';
 import * as sfx from './sfx.js';
 import { unlockAudio } from './sfx.js';
+import { ShopPanel } from './shop.js';
 import { useShortcuts } from './shortcuts.js';
 import { starvedSlots } from './starve.js';
 import type { GameStore } from './store.js';
@@ -206,6 +208,9 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
         <div className="reveal" hidden={!reveal.filament}>
           <SpoolShelf visual={visual} content={content} />
         </div>
+        <div className="reveal" hidden={!visual.shop.open}>
+          <ShopPanel store={store} visual={visual} />
+        </div>
         <div className="reveal" hidden={!reveal.orders}>
           <CommissionsPanel store={store} visual={visual} slotId={model.slotId} />
         </div>
@@ -311,7 +316,7 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
                 <kbd>1</kbd>–<kbd>4</kbd> bays,{' '}
               </>
             ) : null}
-            <kbd>L</kbd> load, <kbd>P</kbd> print, <kbd>O</kbd> overclock
+            <kbd>L</kbd> load, <kbd>P</kbd> print
             {reveal.sell ? (
               <>
                 , <kbd>S</kbd> sell
@@ -354,6 +359,12 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
               label: 'Automation',
               icon: 'automation',
               content: reveal.automation ? <AutomationPanel store={store} visual={visual} /> : null,
+            },
+            {
+              id: 'agents',
+              label: 'Agents',
+              icon: 'agent',
+              content: <AgentsPanel store={store} visual={visual} />,
             },
             {
               id: 'market',

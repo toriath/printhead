@@ -5,13 +5,12 @@ import {
   attachPiece,
   buyFilament,
   buyPrinter,
-  overclockSlot,
   sellParts,
   setSlotConfig,
   setSlotQueue,
   startPrint,
 } from '@printhead/core';
-import { type CSSProperties, type ReactElement, useState } from 'react';
+import { type ReactElement, useState } from 'react';
 import { price } from './afford.js';
 import { type ControlModel, buildControlModel } from './controls-model.js';
 import { formatAmount, formatCountdown, formatGrams, formatMoney } from './format.js';
@@ -106,8 +105,6 @@ export function Controls({
   const materialName = model.materials.find((m) => m.id === chosenMaterial)?.name ?? '';
   const objectName = model.objects.find((o) => o.id === chosenObject)?.name ?? '';
   const loaded = slot?.materialId === chosenMaterial && slot?.objectId === chosenObject;
-  // Offered once the bay has a print to speed up; tapping the printer does the same.
-  const overclock = slot?.occupied === true ? slot.overclock : null;
   /** Append to the bay's rota, keeping what is already on it (spec §5B). */
   const appendToRota = (): void => {
     const existing: readonly SlotQueueEntry[] =
@@ -286,25 +283,6 @@ export function Controls({
                 onClick={() => loadAndPrint(store, model.slotId, chosenMaterial, chosenObject)}
               >
                 {`Load ${materialName} ${objectName.toLowerCase()} & print`}
-              </button>
-            )}
-            {overclock === null ? null : (
-              <button
-                type="button"
-                className={
-                  overclock.active ? 'btn-overclock btn-overclock--active' : 'btn-overclock'
-                }
-                data-testid="overclock"
-                data-key="O"
-                disabled={!overclock.ready}
-                onClick={() => store.dispatch(overclockSlot(model.slotId))}
-                style={
-                  {
-                    '--oc-fill': overclock.active ? overclock.remaining : 1 - overclock.cooldown,
-                  } as CSSProperties
-                }
-              >
-                {overclock.active ? 'Overclocked' : overclock.ready ? 'Overclock ×2' : 'Cooling'}
               </button>
             )}
           </div>

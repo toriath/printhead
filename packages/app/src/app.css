@@ -2086,7 +2086,9 @@ kbd {
   height: 18px;
   margin: -9px 0 0 -9px;
   animation-name: coin-x;
-  animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6);
+  /* Sideways slow then fast, upwards fast then slow: together, an arc that
+     leaves the pile rising and swoops into the counter. */
+  animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45);
   animation-fill-mode: both;
 }
 
@@ -2098,7 +2100,7 @@ kbd {
   background: radial-gradient(circle at 35% 30%, #fff3b0, #f2c230 45%, #b07c10 100%);
   box-shadow: 0 0 0 2px #7a5208, 0 0 10px rgb(255 210 80 / 0.7);
   animation-name: coin-y;
-  animation-timing-function: cubic-bezier(0.3, -0.9, 0.7, 1);
+  animation-timing-function: cubic-bezier(0.15, 0.75, 0.4, 1);
   animation-fill-mode: both;
 }
 
@@ -2915,4 +2917,300 @@ button:not(:disabled):active {
   50% {
     transform: translate(-50%, calc(-100% - 4px));
   }
+}
+
+/* --- orders: proposals at the door --------------------------------------- */
+.order--proposal {
+  border: 2px dashed color-mix(in srgb, var(--gold) 60%, var(--plate-line));
+  animation: knock-in 520ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes knock-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-14px) rotate(-1deg);
+  }
+  60% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+}
+
+.order__knock {
+  display: inline-block;
+  margin-right: 6px;
+  animation: knock 1.4s ease-in-out infinite;
+}
+
+@keyframes knock {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  66% {
+    transform: rotate(-22deg) translateY(-1px);
+  }
+  72% {
+    transform: rotate(0);
+  }
+  78% {
+    transform: rotate(-22deg) translateY(-1px);
+  }
+  84% {
+    transform: rotate(0);
+  }
+}
+
+.order__stars {
+  margin-left: 6px;
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.order__fuse {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--plate-line);
+  overflow: hidden;
+}
+
+.order__fuse span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b57, var(--gold));
+  transition: width 400ms linear;
+}
+
+.order__answer {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 6px;
+}
+
+.order__answer button {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+/* --- the shop front ------------------------------------------------------- */
+.shopfront {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+  animation: card-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+.shopfront.is-shut {
+  border-style: dashed;
+}
+
+.shopfront__stars {
+  color: var(--gold);
+  letter-spacing: 1px;
+  font-size: 13px;
+}
+
+.shopfront__stars-off {
+  color: var(--plate-line);
+}
+
+.shopfront__prices {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.shopfront__prices > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.shopfront__price {
+  min-height: 0;
+  margin: 0;
+  padding: 6px 2px;
+  display: grid;
+  gap: 2px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  box-shadow: none;
+  background: var(--plate-sunken);
+  color: var(--ink-muted);
+}
+
+.shopfront__price[aria-pressed="true"] {
+  border-color: var(--money);
+  background: color-mix(in srgb, var(--money) 14%, var(--plate-raised));
+  color: var(--ink);
+}
+
+.shopfront__price.is-closed[aria-pressed="true"] {
+  border-color: var(--plate-line-strong);
+  background: var(--plate-sunken);
+}
+
+.shopfront__price-name {
+  font: 700 11px / 14px var(--font-sans);
+}
+
+.shopfront__price-each {
+  font: 500 10px / 12px var(--font-mono);
+}
+
+.shopfront__counter {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  min-height: 64px;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  border-radius: 10px;
+  background: var(--plate-sunken);
+  font: 500 11px / 15px var(--font-mono);
+}
+
+.shopfront__visit {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--money);
+}
+
+.shopfront__visit:first-child {
+  animation: walk-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.shopfront__visit.is-missed {
+  color: #ff6b57;
+}
+
+.shopfront__visit.is-quiet {
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.shopfront__who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+@keyframes walk-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+.shopfront__tally {
+  margin: 0;
+  font: 500 11px / 14px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+/* --- agents ------------------------------------------------------------- */
+.agents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.agent {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--plate-sunken);
+  border: 1px solid var(--plate-line);
+}
+
+.agent.is-working {
+  border-color: color-mix(in srgb, var(--blueprint) 60%, var(--plate-line));
+}
+
+.agent__who {
+  display: grid;
+  gap: 1px;
+}
+
+.agent__name {
+  font: 400 17px / 20px var(--font-display);
+}
+
+.agent__role {
+  font: 600 11px / 14px var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blueprint);
+}
+
+.agent__face {
+  width: 44px;
+  height: 44px;
+}
+
+.agent__head {
+  fill: #dce0de;
+  stroke: #1c2330;
+  stroke-width: 2.5;
+}
+.agent__antenna {
+  stroke: #1c2330;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.agent__bulb {
+  fill: #6c7884;
+}
+.agent__screen {
+  fill: #1c2330;
+}
+.agent__eye {
+  fill: #4c5563;
+}
+
+.agent__face.is-on .agent__bulb {
+  fill: #5ad1ff;
+  animation: bulb-blink 1.8s steps(2, start) infinite;
+}
+
+.agent__face.is-on .agent__eye {
+  fill: #7ef0c4;
+  animation: agent-blink 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes bulb-blink {
+  to {
+    fill: #2e5fc2;
+  }
+}
+
+@keyframes agent-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.15);
+  }
+}
+
+.log__entry--agent {
+  color: var(--blueprint);
 }

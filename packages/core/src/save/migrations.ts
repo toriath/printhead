@@ -198,6 +198,33 @@ function migrateV7ToV8(payload: unknown): unknown {
 }
 
 /**
+ * v8 → v9: the shop front, and proposals. A v8 save had no shop, so it opens
+ * shut, with a middling name, until the player opens it; orders already on its board were
+ * taken on implicitly back then, so they stay accepted; nobody is a regular
+ * yet. (The values `shop.json` ships with are not known here, so the shipped
+ * defaults are restated.)
+ */
+const V9_SHOP = { priceLevelId: 'closed', reputation: 0.5, nextCustomerMs: 14_000, visits: 0 };
+function migrateV8ToV9(payload: unknown): unknown {
+  const v8 = payload as Record<string, unknown>;
+  const stats = (v8.stats ?? {}) as Record<string, unknown>;
+  const board = (v8.commissions ?? { open: [], nextOfferMs: 0, issued: 0 }) as {
+    open: Record<string, unknown>[];
+  } & Record<string, unknown>;
+  return {
+    ...v8,
+    saveVersion: 9,
+    commissions: {
+      ...board,
+      open: board.open.map((offer) => ({ ...offer, accepted: true })),
+      loyalty: {},
+    },
+    shop: V9_SHOP,
+    stats: { ...stats, customersServed: 0, customersMissed: 0 },
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
@@ -209,6 +236,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   5: migrateV5ToV6,
   6: migrateV6ToV7,
   7: migrateV7ToV8,
+  8: migrateV8ToV9,
 };
 
 export class SaveMigrationError extends Error {

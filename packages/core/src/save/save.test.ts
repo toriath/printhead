@@ -10,6 +10,7 @@ import fixtureV5 from './__fixtures__/save-v5.json' with { type: 'json' };
 import fixtureV6 from './__fixtures__/save-v6.json' with { type: 'json' };
 import fixtureV7 from './__fixtures__/save-v7.json' with { type: 'json' };
 import fixtureV8 from './__fixtures__/save-v8.json' with { type: 'json' };
+import fixtureV9 from './__fixtures__/save-v9.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -55,7 +56,7 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
@@ -64,6 +65,7 @@ describe('save fixture corpus', () => {
     expect(fixtureV6.version).toBe(6);
     expect(fixtureV7.version).toBe(7);
     expect(fixtureV8.version).toBe(8);
+    expect(fixtureV9.version).toBe(9);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -166,12 +168,17 @@ describe('save fixture corpus', () => {
       expect(slot.overclockMs).toBe(0);
       expect(slot.overclockCooldownMs).toBe(0);
     }
-    const { commissions: _board, ...rest } = loaded;
+    const { commissions: _board, shop: _shop, ...rest } = loaded;
     expect({
       ...rest,
       saveVersion: 6,
       slots: fixtureV6.state.slots,
-      stats: { ...rest.stats, commissionsCompleted: undefined },
+      stats: {
+        ...rest.stats,
+        commissionsCompleted: undefined,
+        customersServed: undefined,
+        customersMissed: undefined,
+      },
     }).toEqual({
       ...fixtureV6.state,
       stats: { ...fixtureV6.state.stats, commissionsCompleted: undefined },
@@ -193,8 +200,17 @@ describe('save fixture corpus', () => {
     expect(loaded.stats.commissionsCompleted).toBe(0);
   });
 
-  it('loads the released v8 fixture untouched', () => {
-    expect(fromSaveFile(fixtureV8)).toEqual(fixtureV8.state);
+  it('migrates the released v8 fixture to a shut shop and a board of taken-on orders', () => {
+    const loaded = fromSaveFile(fixtureV8);
+    expect(loaded.slots).toEqual(fixtureV8.state.slots);
+    expect(loaded.shop.priceLevelId).toBe('closed');
+    expect(loaded.commissions.loyalty).toEqual({});
+    expect(loaded.commissions.open.every((offer) => offer.accepted)).toBe(true);
+    expect(loaded.stats.customersServed).toBe(0);
+  });
+
+  it('loads the released v9 fixture untouched', () => {
+    expect(fromSaveFile(fixtureV9)).toEqual(fixtureV9.state);
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

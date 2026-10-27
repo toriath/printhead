@@ -1,0 +1,29 @@
+{
+  "unlockPhaseId": "bench",
+  "priceLevels": [
+    { "id": "closed", "name": "Closed", "priceMultiplier": 0, "demandMultiplier": 0 },
+    { "id": "bargain", "name": "Bargain", "priceMultiplier": 1.2, "demandMultiplier": 1.7 },
+    { "id": "fair", "name": "Fair", "priceMultiplier": 1.6, "demandMultiplier": 1 },
+    { "id": "premium", "name": "Premium", "priceMultiplier": 2.4, "demandMultiplier": 0.45 }
+  ],
+  "openingPriceLevel": "closed",
+  "customerEveryDesignSeconds": 14,
+  "partsPerCustomerMin": 1,
+  "partsPerCustomerMax": 5,
+  "reputationStart": 0.5,
+  "reputationGainPerSale": 0.02,
+  "reputationLossPerMiss": 0.06,
+  "reputationDemandMin": 0.5,
+  "reputationDemandMax": 1.6,
+  "customers": [
+    { "id": "hobbyist", "name": "A hobbyist" },
+    { "id": "student", "name": "A student" },
+    { "id": "plumber", "name": "A plumber in a hurry" },
+    { "id": "grandma", "name": "Somebody's grandma" },
+    { "id": "cosplayer", "name": "A cosplayer" },
+    { "id": "teacher", "name": "A teacher" },
+    { "id": "robot", "name": "A robot (suspicious)" },
+    { "id": "neighbour", "name": "The neighbour" },
+    { "id": "gary-fan", "name": "Someone asking about Gary" }
+  ]
+}

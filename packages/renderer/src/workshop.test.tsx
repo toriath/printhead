@@ -358,7 +358,11 @@ describe('the intro assembly (spec §6 phase 0)', () => {
   it('grows the object on the bed as the batch prints', () => {
     render(<Workshop visual={printing} />);
     const printed = screen.getByTestId('print-in-progress');
-    expect(Number(printed.getAttribute('height'))).toBeGreaterThan(0);
+    // The real object, in its filament: a silhouette, not a coloured block.
+    expect(printed.tagName.toLowerCase()).toBe('path');
+    expect(printed.getAttribute('d')?.length ?? 0).toBeGreaterThan(0);
+    const slot = printing.slots.find((bay) => bay.running);
+    expect(printed.getAttribute('class')).toContain(`pc-mat-${slot?.materialId ?? ''}`);
     cleanup();
     render(<Workshop visual={fresh} />);
     expect(screen.queryByTestId('print-in-progress')).toBeNull();
@@ -561,13 +565,45 @@ describe('the workshop wall', () => {
     const farm = wallOf('farm');
     const absurd = wallOf('absurd');
     const end = wallOf('end');
-    expect(intro).toEqual(['pegboard', 'window']);
+    expect(intro).toEqual([]);
     expect(farm).toEqual(expect.arrayContaining([...intro, 'shelf', 'clock']));
     expect(absurd).toEqual(expect.arrayContaining([...farm, 'blueprint', 'plates', 'neon']));
     expect(end).toEqual(expect.arrayContaining([...absurd, 'lights']));
   });
 
   it('shows a bare wall for a phase it does not know', () => {
-    expect(wallOf('somewhere-new')).toEqual(['pegboard', 'window']);
+    expect(wallOf('somewhere-new')).toEqual([]);
+  });
+});
+
+describe('the print on the bed', () => {
+  const printing = visualFixture('printing');
+  const running = printing.slots.find((bay) => bay.running);
+  const printedAs = (objectId: string, progress: number): string => {
+    cleanup();
+    if (running === undefined) {
+      throw new Error('the printing fixture needs a running bay');
+    }
+    const visual: VisualState = {
+      ...printing,
+      slots: printing.slots.map((bay) =>
+        bay.slotId === running.slotId ? { ...bay, objectId, progress } : bay,
+      ),
+    };
+    render(<Workshop visual={visual} />);
+    return screen.getByTestId('print-in-progress').getAttribute('d') ?? '';
+  };
+
+  it('prints a bracket foot first, then raises its leg', () => {
+    const early = printedAs('bracket', 0.25);
+    const late = printedAs('bracket', 1);
+    // A plain slab while only the foot is down; an L once the leg rises.
+    expect(early.split(/[VH]/).length).toBeLessThan(late.split(/[VH]/).length);
+  });
+
+  it('prints a gear set with teeth on its top layer', () => {
+    const gear = printedAs('gearset', 1);
+    const block = printedAs('mystery-design', 1);
+    expect(gear.length).toBeGreaterThan(block.length);
   });
 });

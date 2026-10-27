@@ -48,7 +48,7 @@
       "costResource": "plates",
       "maxLevel": 3,
       "rateCurveId": "money-print-rate-central-bank",
-      "unlockPhaseId": "end"
+      "unlockPhaseId": "absurd"
     }
   ]
 }

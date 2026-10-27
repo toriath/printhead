@@ -161,6 +161,29 @@ export function thud(): void {
   tone(160, { length: 0.25, wave: 'sawtooth', volume: 0.35, slideTo: 55 });
 }
 
+/** A client at the door: two knocks on wood. */
+export function knock(): void {
+  tone(180, { length: 0.07, wave: 'triangle', volume: 0.5, slideTo: 120 });
+  tone(180, { at: 0.16, length: 0.07, wave: 'triangle', volume: 0.5, slideTo: 120 });
+}
+
+/** An order taken on: the rubber stamp. */
+export function stamp(): void {
+  tone(90, { length: 0.12, wave: 'square', volume: 0.35, slideTo: 60 });
+  tone(1400, { at: 0.02, length: 0.05, wave: 'triangle', volume: 0.15 });
+}
+
+/** A customer at the counter: the shop bell. */
+export function bell(): void {
+  tone(1568, { length: 0.5, wave: 'sine', volume: 0.3 });
+  tone(2093, { at: 0.04, length: 0.45, wave: 'sine', volume: 0.18 });
+}
+
+/** A customer leaving with nothing: a small, sad note. */
+export function sigh(): void {
+  tone(330, { length: 0.3, wave: 'triangle', volume: 0.25, slideTo: 260 });
+}
+
 /** Something new to find: a soft, high twinkle. */
 export function discover(): void {
   [19, 24, 28].forEach((step, index) => {

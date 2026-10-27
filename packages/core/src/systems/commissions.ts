@@ -9,11 +9,13 @@ import { withResource } from './resources.js';
 import { isInstalled } from './upgrades.js';
 
 /**
- * The commission board (content: `commissions.json`). Clients post orders —
- * so many of an object in a material, before a deadline — and pay a bonus on
- * delivery. Every finished print counts towards every matching order, so the
- * player's decision is *which* order to chase with which bay, never a click per
- * delivery.
+ * The commission board (content: `commissions.json`). Clients come with
+ * proposals — so many of an object in a material, before a deadline — and the
+ * player takes them on or turns them down. An accepted order counts every
+ * matching print towards it and pays a bonus on delivery; a client whose
+ * orders keep arriving pays more the next time (loyalty), so a good client
+ * turns into a standing contract. An unanswered proposal walks off when its
+ * window closes.
  *
  * Offers are drawn from a hash of the run's seed and the board's issue counter,
  * not from the rng stream, so the board is a pure function of the save and
@@ -60,11 +62,18 @@ export function offerableTemplates(
   });
 }
 
-/** What delivering a commission pays, in money (inflation included). */
+/** How much more a client pays for having had `orders` delivered before. */
+export function loyaltyMultiplier(content: Content, orders: number): number {
+  const { loyaltyBonusPerOrder, loyaltyMaxOrders } = content.commissions;
+  return ONE + loyaltyBonusPerOrder * Math.min(orders, loyaltyMaxOrders);
+}
+
+/** What delivering a commission pays, in money (inflation and loyalty included). */
 export function commissionReward(
   content: Content,
   template: CommissionTemplate,
   inflation: number,
+  loyalOrders = NONE,
 ): number {
   const material = indexById(content.materials).get(template.materialId);
   const object = indexById(content.objects).get(template.objectId);
@@ -76,7 +85,8 @@ export function commissionReward(
     object.basePartValue *
     material.valueMultiplier *
     template.rewardMultiplier *
-    inflation
+    inflation *
+    loyaltyMultiplier(content, loyalOrders)
   );
 }
 
@@ -132,7 +142,9 @@ export function tickCommissions(
     templateId: template.id,
     clientId: client.id,
     delivered: NONE,
-    remainingMs: template.timeLimitDesignSeconds * MS_PER_SECOND,
+    // A proposal first: the clock is the answer window, not the deadline.
+    remainingMs: content.commissions.offerWindowDesignSeconds * MS_PER_SECOND,
+    accepted: false,
   };
   emit?.({
     type: 'COMMISSION_OFFERED',
@@ -144,6 +156,7 @@ export function tickCommissions(
   next = {
     ...next,
     commissions: {
+      ...next.commissions,
       open: [...next.commissions.open, offer],
       nextOfferMs: everyMs,
       issued: issued + ONE,
@@ -171,10 +184,12 @@ export function creditCommissions(
   }
   let money = NONE;
   let completed = NONE;
+  let loyalty = state.commissions.loyalty;
   const open: CommissionState[] = [];
   for (const offer of state.commissions.open) {
     const template = commissionTemplate(content, offer.templateId);
     if (
+      !offer.accepted ||
       template === undefined ||
       template.materialId !== materialId ||
       template.objectId !== objectId
@@ -187,9 +202,10 @@ export function creditCommissions(
       open.push({ ...offer, delivered });
       continue;
     }
-    const reward = commissionReward(content, template, inflation);
+    const reward = commissionReward(content, template, inflation, loyalty[offer.clientId] ?? NONE);
     money += reward;
     completed += ONE;
+    loyalty = { ...loyalty, [offer.clientId]: (loyalty[offer.clientId] ?? NONE) + ONE };
     emit?.({
       type: 'COMMISSION_COMPLETED',
       simTimeMs: state.simTimeMs,
@@ -202,11 +218,49 @@ export function creditCommissions(
   return {
     ...state,
     resources: withResource(state.resources, 'money', money),
-    commissions: { ...state.commissions, open },
+    commissions: { ...state.commissions, open, loyalty },
     stats: {
       ...state.stats,
       moneyEarned: state.stats.moneyEarned + money,
       commissionsCompleted: state.stats.commissionsCompleted + completed,
     },
   };
+}
+
+/**
+ * Answer a proposal: accept it and its deadline starts; decline it and the
+ * client goes. Answering an order already taken on, or one not on the board,
+ * is refused (`null`).
+ */
+export function answerProposal(
+  state: GameState,
+  content: Content,
+  serial: number,
+  accept: boolean,
+  emit: EventSink | undefined,
+): GameState | null {
+  const offer = state.commissions.open.find((candidate) => candidate.serial === serial);
+  const template = offer === undefined ? undefined : commissionTemplate(content, offer.templateId);
+  if (offer === undefined || template === undefined || offer.accepted) {
+    return null;
+  }
+  emit?.({
+    type: 'COMMISSION_ANSWERED',
+    simTimeMs: state.simTimeMs,
+    serial,
+    clientId: offer.clientId,
+    accepted: accept,
+  });
+  const open = accept
+    ? state.commissions.open.map((candidate) =>
+        candidate.serial === serial
+          ? {
+              ...candidate,
+              accepted: true,
+              remainingMs: template.timeLimitDesignSeconds * MS_PER_SECOND,
+            }
+          : candidate,
+      )
+    : state.commissions.open.filter((candidate) => candidate.serial !== serial);
+  return { ...state, commissions: { ...state.commissions, open } };
 }

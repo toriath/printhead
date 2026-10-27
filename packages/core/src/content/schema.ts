@@ -50,6 +50,8 @@ export const GatedActionTypeSchema = z.enum([
   'SET_SLOT_CONFIG',
   'START_PRINT',
   'OVERCLOCK_SLOT',
+  'SET_SHOP_PRICE',
+  'ANSWER_COMMISSION',
   'SELL_PARTS',
   'BUY_FILAMENT',
   'SELL_FILAMENT',
@@ -560,6 +562,19 @@ const AutomationBase = {
   maxLevel: z.number().int().positive(),
   /** Design-seconds between firings — the bot inside the machine's check-in. */
   intervalDesignSeconds: Positive,
+  /**
+   * An automation can be an *agent*: a named member of staff with a job title
+   * and a few things they say when they act. Pure presentation — the
+   * behaviour is the same with or without one.
+   */
+  persona: z
+    .object({
+      name: z.string().min(1),
+      role: z.string().min(1),
+      lines: z.array(z.string().min(1)).min(1),
+    })
+    .strict()
+    .optional(),
 };
 
 export const SellPartsAutomationSchema = z
@@ -634,12 +649,51 @@ export const RecycleScrapAutomationSchema = z
   })
   .strict();
 
+/**
+ * The sales agent: runs the shop front by the stock on the shelf. Below
+ * `defaultThreshold` Parts it shuts the shop (the workshop needs them); while
+ * stock is scarce it sells dear; with a healthy shelf it sells fair; past
+ * `glutMultiple` × the threshold it clears stock at a bargain.
+ */
+export const RunShopAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('run-shop'),
+    /** Parts the agent will not sell below. */
+    defaultThreshold: NonNegative,
+    /** Stock above this multiple of the threshold is a glut. */
+    glutMultiple: Positive,
+    /** Stock below this multiple of the threshold is scarce. */
+    scarceMultiple: Positive,
+    shutPrice: z.string().min(1),
+    scarcePrice: z.string().min(1),
+    steadyPrice: z.string().min(1),
+    glutPrice: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * The account manager: takes on clients' proposals as they knock, up to
+ * `defaultThreshold` orders open at once. It does not turn anyone down — a
+ * proposal it has no room for simply waits, as it would for the player.
+ */
+export const AnswerProposalsAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('answer-proposals'),
+    /** Orders it will hold open at once. */
+    defaultThreshold: Positive,
+  })
+  .strict();
+
 export const AutomationDefSchema = z.discriminatedUnion('behavior', [
   SellPartsAutomationSchema,
   BuyFilamentAutomationSchema,
   TradeFilamentAutomationSchema,
   ChangeoverAutomationSchema,
   RecycleScrapAutomationSchema,
+  RunShopAutomationSchema,
+  AnswerProposalsAutomationSchema,
 ]);
 
 export const AutomationFileSchema = z.array(AutomationDefSchema).min(1);
@@ -964,8 +1018,56 @@ export const CommissionsFileSchema = z
     offerEveryDesignSeconds: Positive,
     /** The first offer after the board opens, so it does not open empty. */
     firstOfferDesignSeconds: Positive,
+    /** How long a proposal waits for an answer before the client walks off. */
+    offerWindowDesignSeconds: Positive,
+    /**
+     * Repeat business: each order a client has had delivered raises what
+     * their next one pays by this fraction, up to `loyaltyMaxOrders` orders.
+     */
+    loyaltyBonusPerOrder: NonNegative,
+    loyaltyMaxOrders: z.number().int().nonnegative(),
     clients: z.array(z.object({ id: IdSchema, name: z.string().min(1) }).strict()).min(1),
     templates: z.array(CommissionTemplateSchema).min(1),
+  })
+  .strict();
+
+// --- shop.json --------------------------------------------------------------
+
+/**
+ * The shop front. From its unlock phase customers walk in and buy Parts off
+ * the shelf at the price level the player sets: a higher price earns more per
+ * Part and brings fewer customers; a customer who finds the shelf empty leaves
+ * and costs reputation, and reputation is what brings customers in. Selling
+ * Parts outright (wholesale) stays available — the shop pays better, slower,
+ * and only while there is stock to sell.
+ */
+export const ShopPriceLevelSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    /** Retail price as a multiple of what a Part fetches wholesale. */
+    priceMultiplier: NonNegative,
+    /** Customer arrivals relative to the fair price (0 = the shop is shut). */
+    demandMultiplier: NonNegative,
+  })
+  .strict();
+
+export const ShopFileSchema = z
+  .object({
+    unlockPhaseId: IdSchema,
+    priceLevels: z.array(ShopPriceLevelSchema).min(1),
+    openingPriceLevel: IdSchema,
+    /** Seconds between customers at the fair price and middling reputation. */
+    customerEveryDesignSeconds: Positive,
+    partsPerCustomerMin: z.number().int().positive(),
+    partsPerCustomerMax: z.number().int().positive(),
+    reputationStart: Fraction,
+    reputationGainPerSale: Fraction,
+    reputationLossPerMiss: Fraction,
+    /** Demand at reputation 0 and at reputation 1, as multipliers. */
+    reputationDemandMin: Positive,
+    reputationDemandMax: Positive,
+    customers: z.array(z.object({ id: IdSchema, name: z.string().min(1) }).strict()).min(1),
   })
   .strict();
 
@@ -989,6 +1091,7 @@ export const ContentSchema = z
     prestige: PrestigeFileSchema,
     endgame: EndgameFileSchema,
     commissions: CommissionsFileSchema,
+    shop: ShopFileSchema,
   })
   .strict();
 
@@ -1010,6 +1113,7 @@ export const CONTENT_FILE_SCHEMAS = {
   prestige: PrestigeFileSchema,
   endgame: EndgameFileSchema,
   commissions: CommissionsFileSchema,
+  shop: ShopFileSchema,
 } as const;
 
 export type ContentFileName = keyof typeof CONTENT_FILE_SCHEMAS;

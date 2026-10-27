@@ -102,11 +102,11 @@ describe('tunePhase', () => {
       },
       { raw: RAW_CONTENT },
     );
-    expect(result.budgetDesignMinutes).toBe(30);
+    expect(result.budgetDesignMinutes).toBe(26);
     expect(result.steps).toHaveLength(8);
     // The bisection aims well inside the gate: ±20 % of the budget.
-    expect(result.actualDesignMinutes).toBeGreaterThanOrEqual(30 * 0.8);
-    expect(result.actualDesignMinutes).toBeLessThanOrEqual(30 * 1.2);
+    expect(result.actualDesignMinutes).toBeGreaterThanOrEqual(26 * 0.8);
+    expect(result.actualDesignMinutes).toBeLessThanOrEqual(26 * 1.2);
   });
 
   it('confirms the shipped content is what the tuner would pick', () => {

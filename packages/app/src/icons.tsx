@@ -29,14 +29,17 @@ export type IconName =
   | 'bracket'
   | 'gearset'
   | 'design'
-  | 'diary';
+  | 'diary'
+  | 'agent';
 
 const PATHS: Record<IconName, ReactNode> = {
   money: (
     <>
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <circle cx="12" cy="12" r="2.6" />
-      <path d="M6.5 9.5v5M17.5 9.5v5" />
+      {/* A stack of coins, because coins are what fly into it. */}
+      <ellipse cx="12" cy="6.5" rx="7" ry="3" />
+      <path d="M5 6.5v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
+      <path d="M5 10.5v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
+      <path d="M5 14.5v3c0 1.7 3.1 3 7 3s7-1.3 7-3v-3" />
     </>
   ),
   parts: (
@@ -168,6 +171,12 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M9 3.5v2M9 14.5v2M2.5 10h2M13.5 10h2M4.4 5.4l1.4 1.4M12.2 13.2l1.4 1.4M4.4 14.6l1.4-1.4M12.2 6.8l1.4-1.4" />
       <circle cx="17" cy="17" r="2.5" />
       <path d="M17 12.5v1.5M17 20v1.5M12.5 17h1.5M20 17h1.5" />
+    </>
+  ),
+  agent: (
+    <>
+      <rect x="5" y="7" width="14" height="11" rx="3" />
+      <path d="M12 7V4M9 12h.01M15 12h.01M9.5 15h5M3 11v3M21 11v3" />
     </>
   ),
   diary: (

@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "phaseId": "bench",
   "phaseName": "Bench",
   "simTimeMs": 30000,
@@ -327,7 +327,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     },
     {
@@ -338,7 +338,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     },
     {
@@ -349,7 +349,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     },
     {
@@ -360,7 +360,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 12.2271,
+      "cost": 13.5476,
       "costResource": "plates"
     }
   ],
@@ -376,7 +376,8 @@
       "available": true,
       "affordable": false,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-buy-filament",
@@ -389,7 +390,8 @@
       "available": true,
       "affordable": false,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-recycler",
@@ -402,7 +404,8 @@
       "available": false,
       "affordable": false,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
     },
     {
       "automationId": "auto-trade",
@@ -415,7 +418,8 @@
       "available": false,
       "affordable": false,
       "cost": 404.747,
-      "costResource": "money"
+      "costResource": "money",
+      "agent": null
     },
     {
       "automationId": "auto-changeover",
@@ -428,7 +432,42 @@
       "available": false,
       "affordable": false,
       "cost": 405,
-      "costResource": "parts"
+      "costResource": "parts",
+      "agent": null
+    },
+    {
+      "automationId": "agent-pitch",
+      "name": "Sales agent",
+      "behavior": "run-shop",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 60,
+      "available": false,
+      "affordable": false,
+      "cost": 404.747,
+      "costResource": "money",
+      "agent": {
+        "name": "Pitch",
+        "role": "Sales agent"
+      }
+    },
+    {
+      "automationId": "agent-deal",
+      "name": "Account manager",
+      "behavior": "answer-proposals",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 404.747,
+      "costResource": "money",
+      "agent": {
+        "name": "Deal",
+        "role": "Account manager"
+      }
     }
   ],
   "recycler": {
@@ -456,7 +495,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 232.032,
+        "cost": 174.024,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -472,7 +511,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 232.032,
+        "cost": 174.024,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -488,7 +527,7 @@
         "capstone": true,
         "available": false,
         "affordable": false,
-        "cost": 232.032,
+        "cost": 174.024,
         "costResource": "money",
         "blockedReason": "locked"
       }
@@ -511,7 +550,7 @@
       "maxLevel": 5,
       "available": false,
       "affordable": false,
-      "cost": 2,
+      "cost": 1,
       "costResource": "plates"
     },
     {
@@ -544,7 +583,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 60,
+      "cost": 25,
       "costResource": "plates"
     }
   ],
@@ -594,12 +633,49 @@
         "materialName": "PLA",
         "count": 12,
         "delivered": 0,
-        "timeLeft": 0.994,
-        "remainingMs": 149100,
-        "reward": 36
+        "timeLeft": 0.98,
+        "remainingMs": 44100,
+        "reward": 36,
+        "accepted": false,
+        "loyalty": 0
       }
     ],
     "completed": 0
+  },
+  "shop": {
+    "open": true,
+    "priceLevelId": "closed",
+    "levels": [
+      {
+        "id": "closed",
+        "name": "Closed",
+        "priceMultiplier": 0,
+        "demandMultiplier": 0
+      },
+      {
+        "id": "bargain",
+        "name": "Bargain",
+        "priceMultiplier": 1.2,
+        "demandMultiplier": 1.7
+      },
+      {
+        "id": "fair",
+        "name": "Fair",
+        "priceMultiplier": 1.6,
+        "demandMultiplier": 1
+      },
+      {
+        "id": "premium",
+        "name": "Premium",
+        "priceMultiplier": 2.4,
+        "demandMultiplier": 0.45
+      }
+    ],
+    "reputation": 0.5,
+    "unitPrice": 0,
+    "wholesalePrice": 1,
+    "served": 0,
+    "missed": 0
   },
   "ending": {
     "stage": "none",

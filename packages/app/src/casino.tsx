@@ -72,6 +72,8 @@ export interface Casino {
 }
 
 const COIN_FLIGHT_MS = 900;
+/** Frames to wait for a counter that is only now being revealed. */
+const SHOWER_RETRIES = 6;
 const FLOAT_MS = 1100;
 const MAX_FLOATS = 6;
 const BURST_MS = 700;
@@ -101,6 +103,10 @@ function centre(selector: string): { x: number; y: number } | null {
     return null;
   }
   const rect = element.getBoundingClientRect();
+  // A hidden element (not revealed yet) has no box and no place on screen.
+  if (rect.width === 0 && rect.height === 0) {
+    return null;
+  }
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
@@ -177,12 +183,37 @@ export function useCasino(store: GameStore): Casino {
         setCoins((current) => current.filter((c) => !ids.has(c.id))),
       );
     };
-    const shower = (from: string, money: number): void => {
+    const shower = (from: string, money: number, attempt = 0): void => {
       const start = centre(from) ?? centre('.center');
       const end = centre('[data-casino="money"]');
-      if (start === null || end === null) {
+      // The first sale is also the moment the money counter appears: until
+      // it is laid out it has no position, and coins aimed at it would fly
+      // to the corner of the screen. Wait a frame or two for it.
+      if (end === null) {
+        if (attempt < SHOWER_RETRIES) {
+          const from_ = start;
+          requestAnimationFrame(() =>
+            from_ === null ? undefined : showerFrom(from_, money, attempt + 1),
+          );
+        }
         return;
       }
+      if (start === null) {
+        return;
+      }
+      launch(start, end, money);
+    };
+    const showerFrom = (start: Spot, money: number, attempt: number): void => {
+      const end = centre('[data-casino="money"]');
+      if (end === null) {
+        if (attempt < SHOWER_RETRIES) {
+          requestAnimationFrame(() => showerFrom(start, money, attempt + 1));
+        }
+        return;
+      }
+      launch(start, end, money);
+    };
+    const launch = (start: Spot, end: Spot, money: number): void => {
       const count = coinsFor(money);
       const level = sfx.combo(performance.now());
       const batch: Coin[] = [];
@@ -276,6 +307,22 @@ export function useCasino(store: GameStore): Casino {
           break;
         case 'PRINT_FAILED':
           sfx.thud();
+          break;
+        case 'CUSTOMER_SERVED':
+          sfx.bell();
+          shower('[data-testid="shop"]', event.money);
+          break;
+        case 'CUSTOMER_LEFT':
+          sfx.sigh();
+          break;
+        case 'COMMISSION_OFFERED':
+          sfx.knock();
+          break;
+        case 'COMMISSION_ANSWERED':
+          if (event.accepted) {
+            sfx.stamp();
+            burst();
+          }
           break;
         case 'COMMISSION_COMPLETED': {
           nextId.current += 1;

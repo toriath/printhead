@@ -44,6 +44,8 @@ describe('bundled content', () => {
         // Likewise the endgame (spec §5E, §6 phases 5–6): the tree, the
         // inflation index, the Fabricator, the credits and New Game Plus.
         'endgame',
+        // And the shop front: prices, customers and reputation are numbers.
+        'shop',
       ].sort(),
     );
   });

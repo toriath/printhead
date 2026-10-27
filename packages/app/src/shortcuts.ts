@@ -11,7 +11,6 @@ export const SHORTCUTS: Readonly<Record<string, string>> = {
   a: 'attach',
   l: 'configure',
   p: 'print',
-  o: 'overclock',
   s: 'sell',
   f: 'buy-filament',
   b: 'buy-printer',

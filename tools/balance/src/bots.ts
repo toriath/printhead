@@ -14,6 +14,7 @@ import {
   type UpgradeDef,
   affordableBatch,
   affordableFilamentGrams,
+  answerCommission,
   assignPrinter,
   attachPiece,
   automationAvailability,
@@ -43,6 +44,7 @@ import {
   isMaterialAvailable,
   isPhaseReached,
   isPieceReady,
+  isShopOpen,
   maxBuyableGrams,
   moneyPrinterAvailability,
   newGamePlus,
@@ -70,6 +72,7 @@ import {
   sellParts,
   sellProducts,
   setAutomation,
+  setShopPrice,
   setSlotConfig,
   setSlotDesign,
   setSlotQueue,
@@ -338,6 +341,8 @@ function affordableUpgrade(
  * buy first: it is the one automation that keeps the workshop *varying* what it
  * makes while nobody is looking.
  */
+const AGENT_BEHAVIORS: readonly AutomationDef['behavior'][] = ['run-shop', 'answer-proposals'];
+
 function affordableAutomation(
   state: GameState,
   content: Content,
@@ -351,7 +356,12 @@ function affordableAutomation(
       })
     : content.automation;
   for (const def of ordered) {
-    if (automationAvailability(state, content, def.id) !== null) {
+    // The bots run the shop and answer clients themselves; the agents are
+    // for a player who would rather not.
+    if (
+      AGENT_BEHAVIORS.includes(def.behavior) ||
+      automationAvailability(state, content, def.id) !== null
+    ) {
       continue;
     }
     const cost = nextAutomationCost(state, content, curves, def.id);
@@ -641,6 +651,64 @@ function overclockMoves(state: GameState, content: Content, belowRisk: number): 
  * The open commission most worth chasing: the biggest reward per part still
  * owed, among those the workshop can stock today.
  */
+/**
+ * Whether this order can be delivered in `remainingMs`: enough batches before
+ * the deadline with every machine on it, and the filament affordable now.
+ */
+function canDeliver(
+  state: GameState,
+  content: Content,
+  offer: { readonly delivered: number },
+  template: NonNullable<ReturnType<typeof commissionTemplate>>,
+  remainingMs: number,
+): boolean {
+  const material = content.materials.find((def) => def.id === template.materialId);
+  const object = content.objects.find((def) => def.id === template.objectId);
+  if (material === undefined || object === undefined) {
+    return false;
+  }
+  const owed = Math.max(template.count - offer.delivered, 1);
+  const batchSeconds = object.printDesignSeconds / material.printSpeedMultiplier;
+  const batches = remainingMs / 1000 / batchSeconds;
+  const deliverable = batches * object.partsYield * countPrinters(state);
+  const grams = (owed / object.partsYield) * object.filamentGrams;
+  const stocked = state.filamentGrams[material.id] ?? 0;
+  const affordable =
+    stocked >= grams || state.resources.money >= (grams - stocked) * material.costPerGram;
+  return deliverable >= owed && affordable;
+}
+
+/** Orders taken on at once: more than this and the bays chase too many targets. */
+const MAX_ACCEPTED_ORDERS = 2;
+
+/**
+ * Answer the board's proposals (the one rule a player learns fast): take on
+ * what the workshop can actually deliver in time, while there is room to
+ * chase it; turn the rest down rather than let them sit.
+ */
+function answerMoves(state: GameState, content: Content): readonly Action[] {
+  if (!phaseAllows(state, content, 'ANSWER_COMMISSION')) {
+    return [];
+  }
+  let accepted = state.commissions.open.filter((offer) => offer.accepted).length;
+  const moves: Action[] = [];
+  for (const offer of state.commissions.open) {
+    if (offer.accepted) {
+      continue;
+    }
+    const template = commissionTemplate(content, offer.templateId);
+    const take =
+      template !== undefined &&
+      accepted < MAX_ACCEPTED_ORDERS &&
+      canDeliver(state, content, offer, template, template.timeLimitDesignSeconds * 1000);
+    if (take) {
+      accepted += 1;
+    }
+    moves.push(answerCommission(offer.serial, take));
+  }
+  return moves;
+}
+
 function commissionTarget(
   state: GameState,
   content: Content,
@@ -650,28 +718,51 @@ function commissionTarget(
     const template = commissionTemplate(content, offer.templateId);
     const material = content.materials.find((def) => def.id === template?.materialId);
     const object = content.objects.find((def) => def.id === template?.objectId);
-    if (template === undefined || material === undefined || object === undefined) {
+    if (
+      !offer.accepted ||
+      template === undefined ||
+      material === undefined ||
+      object === undefined ||
+      !canDeliver(state, content, offer, template, offer.remainingMs)
+    ) {
       continue;
     }
     const owed = Math.max(template.count - offer.delivered, 1);
-    // Only an order the workshop can actually deliver: enough batches before
-    // the deadline with every machine on it, and the filament affordable now.
-    const batchSeconds = object.printDesignSeconds / material.printSpeedMultiplier;
-    const batches = offer.remainingMs / 1000 / batchSeconds;
-    const deliverable = batches * object.partsYield * countPrinters(state);
-    const grams = (owed / object.partsYield) * object.filamentGrams;
-    const stocked = state.filamentGrams[material.id] ?? 0;
-    const affordable =
-      stocked >= grams || state.resources.money >= (grams - stocked) * material.costPerGram;
-    if (deliverable < owed || !affordable) {
-      continue;
-    }
-    const value = commissionReward(content, template, 1) / owed;
+    const value =
+      commissionReward(content, template, 1, state.commissions.loyalty[offer.clientId] ?? 0) / owed;
     if (best === null || value > best.value) {
       best = { material, object, value };
     }
   }
   return best === null ? null : { material: best.material, object: best.object };
+}
+
+/** Parts kept back from the shelf: below this the shop stays shut. */
+const SHOP_RESERVE_PARTS = 50;
+
+/**
+ * Run the shop: open at the bot's price, and shut it while saving Parts for
+ * something — customers would otherwise eat the savings one basket at a time.
+ */
+function shopMove(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  price: string | null,
+): Action | null {
+  if (
+    price === null ||
+    !isShopOpen(state, content) ||
+    !phaseAllows(state, content, 'SET_SHOP_PRICE')
+  ) {
+    return null;
+  }
+  const target = savingTargetParts(state, content, curves);
+  // Shut whenever Parts are being saved for anything: customers would eat
+  // the very Parts the next purchase needs.
+  const saving = target !== null || state.resources.parts < SHOP_RESERVE_PARTS;
+  const wanted = saving ? 'closed' : price;
+  return state.shop.priceLevelId === wanted ? null : setShopPrice(wanted);
 }
 
 export interface PolicyOptions {
@@ -725,6 +816,8 @@ export interface PolicyOptions {
   readonly overclockBelowRisk: number;
   /** Load the bays for the best open commission instead of the best margin. */
   readonly chaseCommissions: boolean;
+  /** The shop price this player runs at; `null` never opens the shop. */
+  readonly shopPrice: string | null;
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -1104,6 +1197,26 @@ function designBayMove(state: GameState, content: Content, curves: CurveRegistry
   return setSlotDesign(target.id, design.id);
 }
 
+/**
+ * Plates to keep back for the last print. Its feedstock is priced in Plates,
+ * and once the presses can drink every Plate a run makes, a player who never
+ * holds any back reaches the blueprint with nothing to feed it — found exactly
+ * that way, when the central bank moved into the Absurd.
+ */
+function feedstockPlateReserve(state: GameState, content: Content): number {
+  if (!blueprintInView(state, content)) {
+    return 0;
+  }
+  const def = fabricatorDef(content);
+  const material = content.materials.find((candidate) => candidate.id === def.materialId);
+  if (material === undefined || material.priceResource !== 'plates') {
+    return 0;
+  }
+  const grams = def.filamentGrams + def.sectionFilamentGrams * def.maxSections;
+  const held = state.filamentGrams[def.materialId] ?? 0;
+  return Math.max(grams - held, 0) * material.costPerGram;
+}
+
 /** Install the next press (spec §5E) — the only thing Plates are spent on. */
 function moneyPrinterMove(
   state: GameState,
@@ -1113,15 +1226,17 @@ function moneyPrinterMove(
   if (!phaseAllows(state, content, 'BUY_MONEY_PRINTER')) {
     return null;
   }
+  const reserve = feedstockPlateReserve(state, content);
   for (const def of content.prestige.moneyPrinters) {
     if (moneyPrinterAvailability(state, content, def.id) !== null) {
       continue;
     }
     const cost = nextMoneyPrinterCost(state, content, curves, def.id);
+    const keep = cost?.resource === 'plates' ? reserve : 0;
     if (
       cost !== null &&
       cost.resource !== 'filament' &&
-      state.resources[cost.resource] >= cost.amount
+      state.resources[cost.resource] - keep >= cost.amount
     ) {
       return buyMoneyPrinter(def.id);
     }
@@ -1401,6 +1516,13 @@ export function createPolicyBot(options: PolicyOptions): Bot {
 
       const moves: Action[] = [];
       const curves = curveRegistryFor(content);
+      if (options.chaseCommissions) {
+        moves.push(...answerMoves(state, content));
+      }
+      const shop = shopMove(state, content, curves, options.shopPrice);
+      if (shop !== null) {
+        moves.push(shop);
+      }
       const canInvest =
         phaseAllows(state, content, 'BUY_PRINTER') || phaseAllows(state, content, 'BUY_UPGRADE');
       const canSell = phaseAllows(state, content, 'SELL_PARTS');
@@ -1434,10 +1556,16 @@ export function createPolicyBot(options: PolicyOptions): Bot {
             slot.materialId !== material.id ||
             slot.objectId !== object.id),
       );
-      if (misconfigured !== undefined) {
-        if (misconfigured.run === null && misconfigured.changeoverMs <= 0) {
-          moves.push(setSlotConfig(misconfigured.id, material.id, object.id));
-        }
+      // Re-load an idle bay and come back next time. A bay still printing is
+      // left to finish its batch — but the rest of the workshop is not put on
+      // hold for it: a bay on auto-restart may never be idle at a check-in,
+      // and waiting for it froze a sloppy player out of the studio forever.
+      if (
+        misconfigured !== undefined &&
+        misconfigured.run === null &&
+        misconfigured.changeoverMs <= 0
+      ) {
+        moves.push(setSlotConfig(misconfigured.id, material.id, object.id));
         return moves;
       }
 
@@ -1635,6 +1763,7 @@ export const greedySpenderBot = createPolicyBot({
   newGamePlusModifierIds: null,
   overclockBelowRisk: 1,
   chaseCommissions: true,
+  shopPrice: 'bargain',
 });
 
 /**
@@ -1655,6 +1784,7 @@ export const balancedBot = createPolicyBot({
   newGamePlusModifierIds: null,
   overclockBelowRisk: 0.5,
   chaseCommissions: true,
+  shopPrice: 'premium',
 });
 
 /**
@@ -1673,6 +1803,7 @@ export const idleHeavyBot = createPolicyBot({
   newGamePlusModifierIds: null,
   overclockBelowRisk: 0.5,
   chaseCommissions: false,
+  shopPrice: 'premium',
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];

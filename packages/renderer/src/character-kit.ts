@@ -44,6 +44,45 @@ export interface CharacterOptions {
   readonly progress: number;
   /** Mk1 only: the assembly pieces attached so far, or everything. */
   readonly parts: ReadonlySet<string> | 'all';
+  /** What is on the bed (`bracket`, `gearset`…): its silhouette is what grows. */
+  readonly object?: string | null;
+  /** The filament it is printed in, which colours it. */
+  readonly material?: string | null;
+}
+
+/** A bracket's foot, in artwork units: printed first, then the leg rises from it. */
+const BRACKET_FOOT = 7;
+/** A gear's teeth along whichever layer is being printed. */
+const GEAR_TOOTH = 3;
+const GEAR_PITCH = 6;
+
+/**
+ * The silhouette of what is being printed, cut off at the current height: the
+ * object grows layer by layer rather than as a block. Unknown objects (a
+ * player's Design) print as a plain block — a Product is gilded anyway.
+ */
+function silhouette(
+  object: string | null | undefined,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): string {
+  const bottom = y + h;
+  if (object === 'bracket' && h > BRACKET_FOOT) {
+    const leg = Math.round(w * 0.35);
+    return `M${x} ${bottom}V${y}h${leg}V${bottom - BRACKET_FOOT}H${x + w}V${bottom}z`;
+  }
+  if (object === 'gearset' && h > GEAR_TOOTH) {
+    let top = `M${x} ${bottom}V${y + GEAR_TOOTH}`;
+    for (let tx = x; tx < x + w; tx += GEAR_PITCH) {
+      const end = Math.min(tx + GEAR_PITCH, x + w);
+      const mid = Math.min(tx + GEAR_PITCH / 2, end);
+      top += `H${tx + 1}V${y}H${mid}V${y + GEAR_TOOTH}H${end}`;
+    }
+    return `${top}V${bottom}z`;
+  }
+  return `M${x} ${y}h${w}v${h}h${-w}z`;
 }
 
 export interface ScreenRect {
@@ -411,7 +450,24 @@ const DRAW: Record<CharacterKind, (o: CharacterOptions) => CharacterDrawing> = {
 
 /** Draw a character. Mk3's glass is appended after its carriage by the renderer. */
 export function drawCharacter(kind: CharacterKind, options: CharacterOptions): CharacterDrawing {
-  const drawing = DRAW[kind](options);
+  const raw = DRAW[kind](options);
+  // The block on the bed becomes the real thing, in the real filament.
+  const sculpt = (shape: Shape): Shape => {
+    if (shape.print === undefined || shape.tag !== 'rect') {
+      return shape;
+    }
+    const { x, y, width, height } = shape.attrs as Record<string, number>;
+    return {
+      ...shape,
+      tag: 'path',
+      attrs: { d: silhouette(options.object, x ?? 0, y ?? 0, width ?? 0, height ?? 0) },
+      className:
+        options.material === undefined || options.material === null
+          ? shape.className
+          : `${O}pc-mat pc-mat-${options.material}`,
+    };
+  };
+  const drawing = { ...raw, shapes: raw.shapes.map(sculpt) };
   if (options.output !== 'products') {
     return drawing;
   }

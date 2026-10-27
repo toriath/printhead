@@ -523,3 +523,55 @@ describe('automation refuses the moves that would be nonsense', () => {
     });
   });
 });
+
+describe('agents', () => {
+  const PITCH = 'agent-pitch';
+  const DEAL = 'agent-deal';
+  const due = (id: string): number => defOf(id).intervalDesignSeconds * MS_PER_SECOND;
+
+  it('Pitch runs the shop by the stock: shut, dear, fair or clearance', () => {
+    const def = defOf(PITCH);
+    if (def.behavior !== 'run-shop') {
+      throw new Error('Pitch should run the shop');
+    }
+    const threshold = def.defaultThreshold;
+    const priceAt = (parts: number): string =>
+      tickAutomation(
+        inBench({
+          phaseId: 'farm',
+          automation: installed(PITCH),
+          resources: { ...base.resources, parts },
+          shop: { ...base.shop, priceLevelId: 'fair' },
+        }),
+        content,
+        due(PITCH),
+        undefined,
+      ).shop.priceLevelId;
+    expect(priceAt(threshold - 1)).toBe(def.shutPrice);
+    expect(priceAt(threshold)).toBe(def.scarcePrice);
+    expect(priceAt(threshold * def.scarceMultiple)).toBe(def.steadyPrice);
+    expect(priceAt(threshold * def.glutMultiple + 1)).toBe(def.glutPrice);
+  });
+
+  it('Deal takes clients on as they knock, up to the orders it will hold', () => {
+    const proposal = (serial: number) => ({
+      serial,
+      templateId: content.commissions.templates[0]?.id ?? '',
+      clientId: content.commissions.clients[0]?.id ?? '',
+      delivered: 0,
+      remainingMs: 30_000,
+      accepted: false,
+    });
+    const state = inBench({
+      phaseId: 'farm',
+      automation: installed(DEAL),
+      commissions: { ...base.commissions, open: [proposal(1), proposal(2), proposal(3)] },
+    });
+    const { result, events } = collectEvents((emit) =>
+      tickAutomation(state, content, due(DEAL), emit),
+    );
+    const limit = defOf(DEAL).defaultThreshold;
+    expect(result.commissions.open.filter((offer) => offer.accepted)).toHaveLength(limit);
+    expect(events.filter((event) => event.type === 'COMMISSION_ANSWERED')).toHaveLength(limit);
+  });
+});

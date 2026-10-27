@@ -19,3 +19,4 @@ export * from './printing.js';
 export * from './economy.js';
 export * from './automation.js';
 export * from './commissions.js';
+export * from './shop.js';

@@ -34,6 +34,57 @@ export interface ReportInput {
   readonly date: string;
   /** Optional sweep output to attach alongside. */
   readonly sweepCsv?: string;
+  /** Runs by human-ish bots (`human.ts`): the crowd, not the rulers. */
+  readonly crowd?: readonly RunLog[];
+}
+
+/**
+ * The crowd: how long the arc took each human-ish player, whether they
+ * finished, and the phase that dragged most against its budget — where a real
+ * player is most likely to stall.
+ */
+/** Phases shorter than this are left out of the crowd's stall column. */
+const CROWD_MIN_PHASE_MINUTES = 5;
+
+function crowdLines(table: BudgetTable, crowd: readonly RunLog[]): readonly string[] {
+  if (crowd.length === 0) {
+    return [];
+  }
+  const rows = crowd.map((log) => {
+    const arc = log.phaseEnteredAt.get(table.terminalPhaseId ?? '');
+    let worst = { phaseId: '—', ratio: 0 };
+    for (const phase of table.phases) {
+      const actual = log.phaseDurations.get(phase.phaseId);
+      // A minute-long intro is all reaction time; it says nothing about stalls.
+      if (
+        actual === undefined ||
+        phase.phaseId === table.terminalPhaseId ||
+        phase.budgetDesignMinutes < CROWD_MIN_PHASE_MINUTES
+      ) {
+        continue;
+      }
+      const ratio = actual / phase.budgetDesignMinutes;
+      if (ratio > worst.ratio) {
+        worst = { phaseId: phase.phaseId, ratio };
+      }
+    }
+    return [
+      log.botId,
+      arc === undefined ? 'did not finish' : `${arc.toFixed(0)} min`,
+      arc === undefined ? '—' : `${((arc / table.totalDesignMinutes - 1) * 100).toFixed(0)} %`,
+      `${worst.phaseId} (×${worst.ratio.toFixed(2)})`,
+    ];
+  });
+  return [
+    '## Human crowd',
+    '',
+    'Policy bots with a person wrapped round them (`tools/balance/src/human.ts`): a',
+    'seeded personality, wandering attention and a few forgotten moves. Where they',
+    'drag is where a real player is likely to stall.',
+    '',
+    markdownTable(['Human', 'Arc', 'vs budget', 'Slowest phase vs its budget'], rows),
+    '',
+  ];
 }
 
 const CURVES = [
@@ -282,6 +333,7 @@ export function buildReport(input: ReportInput): readonly ReportFile[] {
     '',
     ...divergenceLines(logs),
     '',
+    ...crowdLines(table, input.crowd ?? []),
     '## Activity',
     '',
     markdownTable(

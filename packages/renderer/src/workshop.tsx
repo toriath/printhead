@@ -398,6 +398,8 @@ function FloorCrews({
               phaseOffset={(slot.phaseOffset + (member + 1) * 0.137) % 1}
               progress={slot.progress}
               output={slot.output}
+              object={slot.objectId}
+              material={slot.materialId}
               kind={kindFor(slot, false)}
               face={faceFor(slot, flourish)}
               overclocked={slot.overclock.active}

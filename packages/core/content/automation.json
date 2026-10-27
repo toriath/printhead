@@ -62,5 +62,57 @@
     "maxLevel": 1,
     "intervalDesignSeconds": 15,
     "defaultThreshold": 60
+  },
+  {
+    "id": "agent-pitch",
+    "name": "Sales agent",
+    "behavior": "run-shop",
+    "costCurveId": "automation-cost",
+    "costResource": "money",
+    "unlockPhaseId": "farm",
+    "requiresUpgradeIds": [],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 20,
+    "defaultThreshold": 60,
+    "glutMultiple": 6,
+    "scarceMultiple": 2,
+    "shutPrice": "closed",
+    "scarcePrice": "premium",
+    "steadyPrice": "fair",
+    "glutPrice": "bargain",
+    "persona": {
+      "name": "Pitch",
+      "role": "Sales agent",
+      "lines": [
+        "Moved the price. Trust me.",
+        "Shelf's looking healthy, we're open.",
+        "Running low — closing up before we sell the furniture.",
+        "Clearance! Everything must go. Except Gary.",
+        "I have a feeling about premium today."
+      ]
+    }
+  },
+  {
+    "id": "agent-deal",
+    "name": "Account manager",
+    "behavior": "answer-proposals",
+    "costCurveId": "automation-cost",
+    "costResource": "money",
+    "unlockPhaseId": "farm",
+    "requiresUpgradeIds": [],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 10,
+    "defaultThreshold": 2,
+    "persona": {
+      "name": "Deal",
+      "role": "Account manager",
+      "lines": [
+        "Took the job. Said we'd be thrilled.",
+        "Signed. Don't read the small print, I didn't.",
+        "They asked if we do rush jobs. I said we only do rush jobs.",
+        "Another regular! I'm basically family now.",
+        "Shook hands on it. Metaphorically. I have no hands."
+      ]
+    }
   }
 ]

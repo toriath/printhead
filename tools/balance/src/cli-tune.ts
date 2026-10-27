@@ -64,7 +64,9 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   // prices are knobs so the fit can bring them within reach.
   { pointer: 'curves/money-printer-cost-bundles/base', min: 1, max: 40 },
   { pointer: 'curves/money-printer-cost-pallets/base', min: 2, max: 80 },
-  { pointer: 'curves/money-printer-cost-central-bank/base', min: 4, max: 200 },
+  // The central bank is the Absurd's plate decision (tree vs. presses): priced
+  // past a run's plates, the fit would quietly delete it again.
+  { pointer: 'curves/money-printer-cost-central-bank/base', min: 15, max: 40 },
   { pointer: 'endgame/fabricator/designMinutes', min: 20, max: 55 },
   // A section must never take more off the final print than a quarter of
   // the room above the floor, or two of them flatten it (found that way).

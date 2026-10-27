@@ -34,12 +34,14 @@
     {
       "id": "bench",
       "name": "Bench",
-      "budgetDesignMinutes": 30,
+      "budgetDesignMinutes": 26,
       "waitWallBudgetDesignMinutes": 3,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -67,12 +69,14 @@
     {
       "id": "farm",
       "name": "Farm",
-      "budgetDesignMinutes": 84,
+      "budgetDesignMinutes": 98,
       "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -103,12 +107,14 @@
     {
       "id": "studio",
       "name": "Studio",
-      "budgetDesignMinutes": 75,
+      "budgetDesignMinutes": 45,
       "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -143,12 +149,14 @@
     {
       "id": "prestige",
       "name": "The Melt-downs",
-      "budgetDesignMinutes": 90,
+      "budgetDesignMinutes": 120,
       "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -195,6 +203,8 @@
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -225,19 +235,21 @@
         },
         {
           "metric": "moneyEarned",
-          "atLeast": 100000
+          "atLeast": 278512
         }
       ]
     },
     {
       "id": "end",
       "name": "The End",
-      "budgetDesignMinutes": 60,
+      "budgetDesignMinutes": 50,
       "waitWallBudgetDesignMinutes": 8,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -274,6 +286,8 @@
         "SET_SLOT_CONFIG",
         "START_PRINT",
         "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",

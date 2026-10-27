@@ -11,14 +11,14 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 % for the arc, ±35 % 
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
 | Intro | 1 (1–1) | 510.0 | 0.8 | 0.8 | 90.0 |
-| Bench | 30 (20–41) | — | 24.3 | 21.2 | 210.0 |
-| Farm | 84 (55–113) | — | 88.8 | 90.1 | 210.0 |
-| Studio | 75 (49–101) | — | 80.8 | 83.3 | — |
-| The Melt-downs | 90 (59–122) | — | 93.6 | 81.2 | — |
-| The Absurd | 80 (52–108) | — | 69.8 | 69.7 | — |
-| The End | 60 (39–81) | — | 62.7 | 53.0 | — |
-| Ended | sandbox | — | 88.2 | 109.7 | — |
-| **Total (the arc)** | **420** | **510.0** | **420.8** | **399.3** | **510.0** |
+| Bench | 26 (17–35) | — | 17.9 | 18.9 | 140.0 |
+| Farm | 98 (64–132) | — | 88.4 | 89.8 | 280.0 |
+| Studio | 45 (29–61) | — | 34.0 | 36.5 | — |
+| The Melt-downs | 120 (78–162) | — | 120.9 | 129.1 | — |
+| The Absurd | 80 (52–108) | — | 53.3 | 74.4 | — |
+| The End | 50 (33–68) | — | 48.9 | 38.5 | — |
+| Ended | sandbox | — | 144.8 | 120.9 | — |
+| **Total (the arc)** | **420** | **510.0** | **364.3** | **388.1** | **510.0** |
 
 The reference run took 509.0 design-minutes (8.48 wall-hours at targetHours=8) and ended in `ended`.
 
@@ -33,10 +33,10 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Phase | Longest wall | Budget | Walls found |
 |---|---|---|---|
 | Intro | 0.1 | 1 | 2 |
-| Bench | 0.9 | 3 | 14 |
-| Farm | 0.6 | 5 | 26 |
-| Studio | 0.3 | 5 | 5 |
-| The Melt-downs | 0.9 | 6 | 22 |
+| Bench | 0.9 | 3 | 21 |
+| Farm | 0.3 | 5 | 123 |
+| Studio | 0.2 | 5 | 27 |
+| The Melt-downs | 0.9 | 6 | 74 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
 | Ended | 0.0 | 60 | 0 |
@@ -63,23 +63,38 @@ are not players: read these as where to look, not as verdicts.
 
 | Bot | Chores | Most repeated | Intro | Bench | Farm | Studio | The Melt-downs | The Absurd | The End |
 |---|---|---|---|---|---|---|---|---|---|
-| greedy-spender | 47 % | SET_SLOT_CONFIG ×300 | 1 | 13 | 28 | 41 | 24 | 30 | 37 |
-| balanced | 54 % | SET_SLOT_CONFIG ×334 | 1 | 13 | 34 | 41 | 28 | 27 | 29 |
-| idle-heavy | 49 % | RECYCLE_SCRAP ×11 | 60 | 100 | 50 | — | — | — | — |
+| greedy-spender | 38 % | RECYCLE_SCRAP ×343 | 1 | 10 | 40 | 14 | 51 | 27 | 28 |
+| balanced | 39 % | SET_SLOT_CONFIG ×322 | 1 | 10 | 40 | 14 | 59 | 27 | 28 |
+| idle-heavy | 48 % | SELL_PARTS ×11 | 60 | 99 | 53 | — | — | — | — |
 
 Never bought by any bot: `central-bank`.
 
-Build-order divergence, `greedy-spender` vs `balanced`: 0.02 (0 = the same order, ~0.5 = unrelated).
-Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.08 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `balanced`: 0.01 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.21 (0 = the same order, ~0.5 = unrelated).
+
+## Human crowd
+
+Policy bots with a person wrapped round them (`tools/balance/src/human.ts`): a
+seeded personality, wandering attention and a few forgotten moves. Where they
+drag is where a real player is likely to stall.
+
+| Human | Arc | vs budget | Slowest phase vs its budget |
+|---|---|---|---|
+| human-11 | 433 min | 3 % | intro (×4.67) |
+| human-23 | 423 min | 1 % | intro (×2.13) |
+| human-37 | 408 min | -3 % | intro (×2.27) |
+| human-41 | 409 min | -3 % | intro (×1.87) |
+| human-59 | 374 min | -11 % | intro (×6.40) |
+| human-73 | 406 min | -3 % | intro (×3.87) |
 
 ## Activity
 
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
 | idle | 51 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 6108 | 988 | 2627 | 150 | 5.4 % | ended |
-| balanced | 6108 | 904 | 25789 | 2272 | 8.1 % | ended |
-| idle-heavy | 51 | 77 | 1847 | 147 | 7.4 % | farm |
+| greedy-spender | 6108 | 2150 | 48887 | 5855 | 10.7 % | ended |
+| balanced | 6108 | 2028 | 40626 | 4773 | 10.5 % | ended |
+| idle-heavy | 51 | 94 | 2817 | 275 | 8.9 % | farm |
 
 ---
 

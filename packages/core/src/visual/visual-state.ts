@@ -52,6 +52,7 @@ import {
 } from '../systems/printing.js';
 import { countPrinters } from '../systems/requirements.js';
 import { drawScrap } from '../systems/resources.js';
+import { isShopOpen, priceLevel } from '../systems/shop.js';
 import {
   effectiveSlotCapacity,
   hardSlotMaximum,
@@ -434,6 +435,7 @@ function toAutomationVisuals(state: GameState, content: Content): readonly Autom
       affordable: cost !== null && affordable(state, cost.resource, cost.amount),
       cost: cost?.amount ?? NONE,
       costResource: cost?.resource ?? def.costResource,
+      agent: def.persona === undefined ? null : { name: def.persona.name, role: def.persona.role },
     };
   });
 }
@@ -605,7 +607,12 @@ function toCommissionsVisual(
     if (template === undefined || material === undefined || object === undefined) {
       continue;
     }
-    const limitMs = template.timeLimitDesignSeconds * MS_PER_SECOND;
+    // A proposal's clock is its answer window; an order's is its deadline.
+    const limitMs =
+      (offer.accepted
+        ? template.timeLimitDesignSeconds
+        : content.commissions.offerWindowDesignSeconds) * MS_PER_SECOND;
+    const loyalty = state.commissions.loyalty[offer.clientId] ?? NONE;
     offers.push({
       serial: offer.serial,
       templateId: template.id,
@@ -618,13 +625,49 @@ function toCommissionsVisual(
       delivered: Math.min(offer.delivered, template.count),
       timeLeft: clamp(offer.remainingMs / limitMs, NONE, FULL),
       remainingMs: Math.max(offer.remainingMs, NONE),
-      reward: commissionReward(content, template, inflation),
+      reward: commissionReward(content, template, inflation, loyalty),
+      accepted: offer.accepted,
+      loyalty,
     });
   }
   return {
     open: isBoardOpen(state, content),
     offers,
     completed: state.stats.commissionsCompleted,
+  };
+}
+
+/**
+ * What one Part fetches wholesale: the average value banked in the stock, or
+ * — with an empty shelf — what the first thing the workshop ever printed is
+ * worth, so the shop still has a price to show.
+ */
+function wholesalePartPrice(state: GameState, content: Content): number {
+  if (state.resources.parts > NONE) {
+    return state.partsValue / state.resources.parts;
+  }
+  const object = content.objects[NONE];
+  const material = content.materials[NONE];
+  return (object?.basePartValue ?? NONE) * (material?.valueMultiplier ?? NONE);
+}
+
+function toShopVisual(state: GameState, content: Content): VisualState['shop'] {
+  const level = priceLevel(content, state.shop.priceLevelId);
+  const wholesale = wholesalePartPrice(state, content);
+  return {
+    open: isShopOpen(state, content),
+    priceLevelId: state.shop.priceLevelId,
+    levels: content.shop.priceLevels.map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      priceMultiplier: candidate.priceMultiplier,
+      demandMultiplier: candidate.demandMultiplier,
+    })),
+    reputation: clamp(state.shop.reputation, NONE, FULL),
+    unitPrice: wholesale * (level?.priceMultiplier ?? NONE),
+    wholesalePrice: wholesale,
+    served: state.stats.customersServed,
+    missed: state.stats.customersMissed,
   };
 }
 
@@ -674,6 +717,7 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     inflation: toInflationVisual(state, content, curves),
     fabricator: toFabricatorVisual(state, content, curves),
     commissions: toCommissionsVisual(state, content, curveRegistryFor(content.curves)),
+    shop: toShopVisual(state, content),
     ending: toEndingVisual(state, content, machineTier),
   };
 }

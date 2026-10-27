@@ -140,8 +140,8 @@ describe('StudioPanel (spec §5D)', () => {
 
   it('offers the till only when there are Products on the shelf', () => {
     const { store, dispatched } = stubStore();
-    render(<StudioPanel store={store} visual={studio} />);
-    expect(studio.ledger.products).toBe(0);
+    const empty: VisualState = { ...studio, ledger: { ...studio.ledger, products: 0 } };
+    render(<StudioPanel store={store} visual={empty} />);
     expect(screen.queryByTestId('sell-products')).toBeNull();
     cleanup();
 
@@ -215,8 +215,16 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
 
   it('disables a press the Plates cannot cover', () => {
     const { store } = stubStore();
-    const press = prestige.moneyPrinters.find((row) => row.available && !row.affordable);
-    render(<PrestigePanel store={store} visual={prestige} />);
+    // Whatever the fixture holds, make one press out of reach.
+    const target = prestige.moneyPrinters.find((row) => row.available);
+    const broke: VisualState = {
+      ...prestige,
+      moneyPrinters: prestige.moneyPrinters.map((row) =>
+        row === target ? { ...row, affordable: false } : row,
+      ),
+    };
+    const press = broke.moneyPrinters.find((row) => row.available && !row.affordable);
+    render(<PrestigePanel store={store} visual={broke} />);
     expect(press?.affordable).toBe(false);
     expect(
       screen.getByTestId(`press-${press?.moneyPrinterId ?? ''}`).hasAttribute('disabled'),

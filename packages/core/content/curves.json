@@ -3,7 +3,7 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 11.4268,
+    "base": 5.7134,
     "growth": 1.16154
   },
   {
@@ -71,14 +71,14 @@
     "id": "design-cost",
     "name": "Design draft cost",
     "type": "exponential",
-    "base": 232.032,
-    "growth": 2.655
+    "base": 174.024,
+    "growth": 3.9825
   },
   {
     "id": "money-printer-cost",
     "name": "Money printer cost",
     "type": "exponential",
-    "base": 1.5,
+    "base": 1,
     "growth": 4.17657
   },
   {
@@ -99,7 +99,7 @@
     "id": "endgame-node-cost",
     "name": "Endgame tree node cost (plates)",
     "type": "exponential",
-    "base": 12.2271,
+    "base": 13.5476,
     "growth": 2
   },
   {
@@ -127,7 +127,7 @@
     "id": "money-printer-cost-central-bank",
     "name": "Central bank cost",
     "type": "exponential",
-    "base": 60,
+    "base": 25,
     "growth": 3
   },
   {
@@ -135,7 +135,7 @@
     "name": "Money printed per design-second per plate (bundles)",
     "type": "linear",
     "base": 0,
-    "step": 1.83559
+    "step": 1.28491
   },
   {
     "id": "money-print-rate-pallets",

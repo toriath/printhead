@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { RAW_CONTENT, loadContent } from '@printhead/core';
 import { BOTS, REFERENCE_BOT } from './bots.js';
 import { runHeadless } from './harness.js';
+import { HUMAN_LIMIT_DESIGN_MINUTES, HUMAN_SEEDS, createHumanBot } from './human.js';
 import { buildReport } from './report.js';
 
 const REPORTS_DIR = fileURLToPath(new URL('../../../docs/balance-reports/', import.meta.url));
@@ -33,12 +34,19 @@ function main(): void {
     return runHeadless({ content, bot });
   });
 
+  const crowd = HUMAN_SEEDS.map((seed) => {
+    const bot = createHumanBot(seed);
+    console.error(`running ${bot.id}…`);
+    return runHeadless({ content, bot, limitDesignMinutes: HUMAN_LIMIT_DESIGN_MINUTES });
+  });
+
   const sweepPath = flag('sweep');
   const files = buildReport({
     content,
     logs,
     referenceBotId: REFERENCE_BOT.id,
     date,
+    crowd,
     ...(sweepPath === undefined ? {} : { sweepCsv: readFileSync(sweepPath, 'utf8') }),
   });
   const target = join(REPORTS_DIR, date);

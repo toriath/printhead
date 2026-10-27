@@ -82,6 +82,29 @@ export interface CommissionExpiredEvent extends EventBase {
   readonly templateId: string;
 }
 
+/** The player took a proposal on, or turned it down. */
+export interface CommissionAnsweredEvent extends EventBase {
+  readonly type: 'COMMISSION_ANSWERED';
+  readonly serial: number;
+  readonly clientId: string;
+  readonly accepted: boolean;
+}
+
+/** A shop customer bought Parts off the shelf. */
+export interface CustomerServedEvent extends EventBase {
+  readonly type: 'CUSTOMER_SERVED';
+  readonly customerId: string;
+  readonly parts: number;
+  readonly money: number;
+}
+
+/** A shop customer found the shelf empty and left. */
+export interface CustomerLeftEvent extends EventBase {
+  readonly type: 'CUSTOMER_LEFT';
+  readonly customerId: string;
+  readonly wanted: number;
+}
+
 export interface SlotOverclockedEvent extends EventBase {
   readonly type: 'SLOT_OVERCLOCKED';
   readonly slotId: string;
@@ -354,6 +377,9 @@ export type DomainEvent =
   | CommissionOfferedEvent
   | CommissionCompletedEvent
   | CommissionExpiredEvent
+  | CommissionAnsweredEvent
+  | CustomerServedEvent
+  | CustomerLeftEvent
   | ActionRejectedEvent;
 
 export type DomainEventType = DomainEvent['type'];
@@ -396,6 +422,9 @@ export const DOMAIN_EVENT_TYPES = [
   'COMMISSION_COMPLETED',
   'COMMISSION_EXPIRED',
   'ACTION_REJECTED',
+  'COMMISSION_ANSWERED',
+  'CUSTOMER_SERVED',
+  'CUSTOMER_LEFT',
 ] as const satisfies readonly DomainEventType[];
 
 /** The sink the reducer writes to, injected through `ReduceContext`. */

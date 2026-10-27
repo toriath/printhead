@@ -3,6 +3,9 @@
   "boardSize": 3,
   "offerEveryDesignSeconds": 60,
   "firstOfferDesignSeconds": 5,
+  "offerWindowDesignSeconds": 45,
+  "loyaltyBonusPerOrder": 0.15,
+  "loyaltyMaxOrders": 6,
   "clients": [
     { "id": "cafe", "name": "The corner café" },
     { "id": "school", "name": "The robotics club" },

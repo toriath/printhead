@@ -4,12 +4,14 @@ import type { CurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { AutomationSlotState, GameState } from '../state/game-state.js';
+import { answerProposal } from './commissions.js';
 import { type Cost, nextCost } from './cost.js';
 import { payCost, sellPartsFrom } from './economy.js';
 import { recycleScrapInto } from './failure.js';
 import { purchaseFilament, quoteFor, sellFilamentToMarket } from './market.js';
 import { isPhaseReached } from './phases.js';
 import { resolveSlotConfig } from './printing.js';
+import { isShopOpen, setShopPriceLevel } from './shop.js';
 import { computeModifiers, isInstalled } from './upgrades.js';
 
 /**
@@ -332,6 +334,56 @@ function fireRecycleScrap(
   return result.state;
 }
 
+/** The sales agent's rule: shut, dear, fair or clearance, by the stock. */
+function fireRunShop(
+  state: GameState,
+  content: Content,
+  def: Extract<AutomationDef, { behavior: 'run-shop' }>,
+  threshold: number,
+): GameState {
+  if (!isShopOpen(state, content)) {
+    return state;
+  }
+  const parts = state.resources.parts;
+  const wanted =
+    parts < threshold
+      ? def.shutPrice
+      : parts < threshold * def.scarceMultiple
+        ? def.scarcePrice
+        : parts > threshold * def.glutMultiple
+          ? def.glutPrice
+          : def.steadyPrice;
+  if (wanted === state.shop.priceLevelId) {
+    return state;
+  }
+  return setShopPriceLevel(state, content, wanted) ?? state;
+}
+
+/** The account manager's rule: take proposals on while there is room. */
+function fireAnswerProposals(
+  state: GameState,
+  content: Content,
+  limit: number,
+  emit: EventSink | undefined,
+): GameState {
+  let next = state;
+  let open = state.commissions.open.filter((offer) => offer.accepted).length;
+  for (const offer of state.commissions.open) {
+    if (open >= limit) {
+      break;
+    }
+    if (offer.accepted) {
+      continue;
+    }
+    const answered = answerProposal(next, content, offer.serial, true, emit);
+    if (answered !== null) {
+      next = answered;
+      open += ONE;
+    }
+  }
+  return next;
+}
+
 function fire(
   state: GameState,
   content: Content,
@@ -348,6 +400,10 @@ function fire(
       return fireTradeFilament(state, content, def, owned.threshold, emit);
     case 'recycle-scrap':
       return fireRecycleScrap(state, content, owned.threshold, emit);
+    case 'run-shop':
+      return fireRunShop(state, content, def, owned.threshold);
+    case 'answer-proposals':
+      return fireAnswerProposals(state, content, owned.threshold, emit);
     case 'auto-changeover':
       /*
        * The rota is turned by the print loop, not by this timer.

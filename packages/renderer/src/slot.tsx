@@ -299,6 +299,8 @@ export function Slot({
           phaseOffset={slot.phaseOffset}
           progress={slot.progress}
           output={slot.output}
+          object={slot.objectId}
+          material={slot.materialId}
           {...(assembling
             ? {}
             : {
