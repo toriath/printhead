@@ -57,6 +57,7 @@ import {
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  offeredRunModifiers,
   overclockAvailability,
   overclockSlot,
   platesFor,
@@ -849,6 +850,8 @@ export interface PolicyOptions {
   readonly chaseCommissions: boolean;
   /** The shop price this player runs at; `null` never opens the shop. */
   readonly shopPrice: string | null;
+  /** Run modifiers in order of taste; the first on offer is taken. */
+  readonly runModifiers?: readonly string[];
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -1281,7 +1284,22 @@ function moneyPrinterMove(
  * — was in service of this one button, and the bot presses it the moment the
  * arithmetic says yes.
  */
-function prestigeMove(state: GameState, content: Content, curves: CurveRegistry): Action | null {
+/** The player's taste in run modifiers: the first one on offer that they like. */
+function pickRunModifier(
+  state: GameState,
+  content: Content,
+  preference: readonly string[],
+): string | undefined {
+  const offered = offeredRunModifiers(state, content).map((def) => def.id);
+  return preference.find((id) => offered.includes(id)) ?? offered[0];
+}
+
+function prestigeMove(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  preference: readonly string[] = [],
+): Action | null {
   if (!phaseAllows(state, content, 'PRESTIGE')) {
     return null;
   }
@@ -1323,7 +1341,7 @@ function prestigeMove(state: GameState, content: Content, curves: CurveRegistry)
     state.resources.plates * PRESTIGE_GROWTH,
     PRESTIGE_AWARD_PER_RUN * (state.stats.prestigeCount + 1),
   );
-  return award >= worthwhile ? prestige() : null;
+  return award >= worthwhile ? prestige(pickRunModifier(state, content, preference)) : null;
 }
 
 // --- the endgame (spec §5E, §6 phases 5–6, §7.3) -----------------------------
@@ -1661,7 +1679,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (press !== null) {
         moves.push(press);
       }
-      const melt = prestigeMove(state, content, curves);
+      const melt = prestigeMove(state, content, curves, options.runModifiers ?? []);
       if (melt !== null) {
         // Nothing after a melt-down means anything: the workshop it was about
         // to act on no longer exists.
@@ -1804,6 +1822,7 @@ export const greedySpenderBot = createPolicyBot({
   overclockBelowRisk: 1,
   chaseCommissions: true,
   shopPrice: 'bargain',
+  runModifiers: ['overdrive', 'bumper-crop', 'engravers-run'],
 });
 
 /**
@@ -1825,6 +1844,7 @@ export const balancedBot = createPolicyBot({
   overclockBelowRisk: 0.5,
   chaseCommissions: true,
   shopPrice: 'premium',
+  runModifiers: ['engravers-run', 'careful-hands', 'bumper-crop'],
 });
 
 /**

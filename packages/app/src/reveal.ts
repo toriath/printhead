@@ -67,9 +67,10 @@ function conditions(
     sell: stats.partsProduced > 0 || stats.productsProduced > 0,
     filament: stats.filamentPurchasedGrams > 0 || (stats.moneyEarned > 0 && lowStock),
     build: printers > 1 || model.buyPrinter?.enabled === true,
-    machine:
-      pastIntro &&
-      visual.upgrades.some((row) => row.level > 0 || (row.available && row.affordable)),
+    // The machine tree shows as soon as there is something on it to want: its
+    // buttons fill toward their price, which is how a player learns to save
+    // Parts for it instead of selling every one.
+    machine: pastIntro && visual.upgrades.some((row) => row.level > 0 || row.available),
     automation: visual.automation.some((row) => row.installed || (row.available && row.affordable)),
     orders: visual.commissions.offers.length > 0 || visual.commissions.completed > 0,
     log: stats.printsCompleted > 0,

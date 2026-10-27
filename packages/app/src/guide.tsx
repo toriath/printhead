@@ -91,6 +91,46 @@ export function nextStep(
   return { text: 'The workshop is printing. Overclock a bay to speed it up.', target: null };
 }
 
+/** Short names for a gate's metrics, for the hover summary. */
+const METRIC_NAMES: Partial<Record<string, string>> = {
+  printers: 'printers',
+  upgradesInstalled: 'upgrades',
+  automationsInstalled: 'automations',
+  scrapRecycledGrams: 'g recycled',
+  printsCompleted: 'prints',
+  partsSold: 'parts sold',
+  customersServed: 'customers',
+  commissionsCompleted: 'orders',
+  agentsHired: 'staff',
+  designs: 'designs',
+  productsSold: 'products sold',
+  platesEarned: 'plates',
+  moneyPrintersInstalled: 'presses',
+  moneyPrinted: 'money printed',
+  moneyEarned: 'money earned',
+  prestigeCount: 'melt-downs',
+  endgameNodes: 'tree nodes',
+};
+
+/**
+ * The current layer's gate in numbers ("12/45 plates · 2/2 presses"), for a
+ * player who goes looking: the bar never says it, the hover does.
+ */
+export function gateSummary(state: GameState, content: Content): string {
+  const phase = content.pacing.phases.find((candidate) => candidate.id === state.phaseId);
+  if (phase === undefined) {
+    return '';
+  }
+  return requirementProgress(state, content, phase.advanceWhen)
+    .filter((req) => METRIC_NAMES[req.metric] !== undefined)
+    .map((req) => {
+      const shown = (value: number): string =>
+        value >= 1000 ? `${Math.round(value / 100) / 10}k` : `${Math.round(value * 100) / 100}`;
+      return `${shown(Math.min(req.actual, req.atLeast))}/${shown(req.atLeast)} ${METRIC_NAMES[req.metric]}`;
+    })
+    .join(' · ');
+}
+
 /**
  * How close the current layer is to done, 0..1: the mean of its gate's
  * requirements, each capped at met. The top bar fills the layer it is

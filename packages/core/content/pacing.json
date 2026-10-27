@@ -226,7 +226,7 @@
     {
       "id": "prestige",
       "name": "The Melt-downs",
-      "budgetDesignMinutes": 120,
+      "budgetDesignMinutes": 100,
       "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
@@ -255,7 +255,7 @@
       "advanceWhen": [
         {
           "metric": "platesEarned",
-          "atLeast": 45
+          "atLeast": 51
         },
         {
           "metric": "moneyPrintersInstalled",
@@ -263,11 +263,11 @@
         },
         {
           "metric": "moneyPrinted",
-          "atLeast": 93750
+          "atLeast": 140625
         },
         {
           "metric": "prestigeCount",
-          "atLeast": 4
+          "atLeast": 3
         }
       ]
     },
@@ -312,7 +312,7 @@
         },
         {
           "metric": "moneyEarned",
-          "atLeast": 191196
+          "atLeast": 167220
         }
       ]
     },

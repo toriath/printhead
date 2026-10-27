@@ -334,14 +334,21 @@ export const StatsStateV9Schema = StatsStateV8Schema.extend({
 }).strict();
 
 export const GameStateV9Schema = GameStateV8Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  saveVersion: z.literal(9),
   commissions: CommissionBoardStateV9Schema,
   shop: ShopStateSchema,
   stats: StatsStateV9Schema,
 }).strict();
 
+// --- v10 (run modifiers) ------------------------------------------------------
+
+export const GameStateV10Schema = GameStateV9Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  runModifierId: z.string().min(1).nullable(),
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV9Schema;
+export const GameStateSchema = GameStateV10Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -361,3 +368,4 @@ export type GameStateV6 = z.infer<typeof GameStateV6Schema>;
 export type GameStateV7 = z.infer<typeof GameStateV7Schema>;
 export type GameStateV8 = z.infer<typeof GameStateV8Schema>;
 export type GameStateV9 = z.infer<typeof GameStateV9Schema>;
+export type GameStateV10 = z.infer<typeof GameStateV10Schema>;

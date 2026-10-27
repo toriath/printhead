@@ -60,7 +60,7 @@ describe('budget table', () => {
     expect(table.arcTolerance).toBe(0.2);
     // The arc's budget. The terminal `ended` sandbox is outside it: nothing
     // ends that phase, so it has no duration to budget (see `terminalPhaseId`).
-    expect(table.totalDesignMinutes).toBe(485);
+    expect(table.totalDesignMinutes).toBe(465);
     expect(table.terminalPhaseId).toBe('ended');
     const intro = table.phases[0];
     expect(intro?.budgetDesignMinutes).toBe(1);
@@ -76,7 +76,7 @@ describe('budget table', () => {
       ['farm', 400],
       ['studio', 45],
       ['agency', 35],
-      ['prestige', 120],
+      ['prestige', 100],
       ['absurd', 80],
       ['ended', 999],
     ]);

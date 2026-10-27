@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "phaseId": "studio",
   "phaseName": "Studio",
   "simTimeMs": 4620000,
@@ -446,7 +446,29 @@
     "platesHeld": 3,
     "runsCompleted": 1,
     "moneyPerDesignSecond": 12,
-    "blockedReason": "missing-prerequisite"
+    "blockedReason": "missing-prerequisite",
+    "offers": [
+      {
+        "id": "overdrive",
+        "name": "Overdrive",
+        "description": "Every printer runs half again as fast, and fails half again as often."
+      },
+      {
+        "id": "bumper-crop",
+        "name": "Bumper crop",
+        "description": "Each print yields 40% more, but takes a little longer."
+      },
+      {
+        "id": "engravers-run",
+        "name": "Engraver's run",
+        "description": "The next melt-down pays half again as many plates."
+      }
+    ],
+    "current": {
+      "id": "engravers-run",
+      "name": "Engraver's run",
+      "description": "The next melt-down pays half again as many plates."
+    }
   },
   "moneyPrinters": [
     {

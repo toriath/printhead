@@ -30,7 +30,7 @@
     "layers": 140,
     "requiredPrinters": 16,
     "maxSections": 4,
-    "sectionDesignMinutes": 3,
+    "sectionDesignMinutes": 1.2,
     "sectionFilamentGrams": 60,
     "sectionCostCurveId": "fabricator-section-cost",
     "sectionCostResource": "parts"

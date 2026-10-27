@@ -165,7 +165,41 @@ export function AutomationPanel({ store, visual }: PanelProps): ReactElement | n
             <span className="panel__name">
               {row.name}
               {row.installed ? (
-                <span className="panel__note">{` at ${formatAmount(row.threshold)}`}</span>
+                // The threshold is the player's to set: an auto-seller stuck
+                // at a few dozen Parts makes saving for anything impossible.
+                <span className="threshold">
+                  <button
+                    type="button"
+                    className="threshold__step"
+                    aria-label={`Halve the ${row.name} threshold`}
+                    data-testid={`threshold-down-${row.automationId}`}
+                    onClick={() =>
+                      store.dispatch(
+                        setAutomation(row.automationId, {
+                          threshold: Math.max(Math.floor(row.threshold / 2), 1),
+                        }),
+                      )
+                    }
+                  >
+                    −
+                  </button>
+                  <span className="threshold__value">{`at ${formatAmount(row.threshold)}`}</span>
+                  <button
+                    type="button"
+                    className="threshold__step"
+                    aria-label={`Double the ${row.name} threshold`}
+                    data-testid={`threshold-up-${row.automationId}`}
+                    onClick={() =>
+                      store.dispatch(
+                        setAutomation(row.automationId, {
+                          threshold: Math.max(row.threshold * 2, 1),
+                        }),
+                      )
+                    }
+                  >
+                    +
+                  </button>
+                </span>
               ) : null}
               <span className="panel__desc">
                 {describeAutomation(contentOf(store), row.automationId)}

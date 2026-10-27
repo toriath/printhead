@@ -181,8 +181,16 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
     fireEvent.click(screen.getByTestId('melt-down'));
     // It asks first: nothing is thrown away until the dialog is confirmed.
     expect(dispatched).toEqual([]);
+    // A run modifier is picked for the next run; the first offer by default.
+    const offers = studio.prestige.offers;
+    const second = offers[1];
+    if (second !== undefined) {
+      fireEvent.click(screen.getByTestId(`run-modifier-${second.id}`));
+    }
     fireEvent.click(screen.getByTestId('melt-down-confirm'));
-    expect(dispatched).toEqual([{ type: 'PRESTIGE' }]);
+    expect(dispatched).toEqual([
+      second === undefined ? { type: 'PRESTIGE' } : { type: 'PRESTIGE', runModifierId: second.id },
+    ]);
     expect(screen.queryByTestId('melt-down-dialog')).toBeNull();
   });
 

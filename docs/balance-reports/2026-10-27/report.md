@@ -10,19 +10,19 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 % for the arc, ±35 % 
 
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
-| Intro | 1 (1–1) | 590.0 | 0.8 | 0.8 | 90.0 |
-| Bench | 26 (17–35) | — | 21.5 | 23.2 | 180.0 |
-| The Shop | 30 (20–41) | — | 27.6 | 27.3 | 320.0 |
-| Farm | 98 (64–132) | — | 96.9 | 99.3 | — |
+| Intro | 1 (1–1) | 570.0 | 0.8 | 0.8 | 90.0 |
+| Bench | 26 (17–35) | — | 22.2 | 23.6 | 140.0 |
+| The Shop | 30 (20–41) | — | 27.4 | 27.3 | 340.0 |
+| Farm | 98 (64–132) | — | 110.2 | 113.8 | — |
 | Studio | 45 (29–61) | — | 38.2 | 39.8 | — |
-| The Agency | 35 (23–47) | — | 30.5 | 30.5 | — |
-| The Melt-downs | 120 (78–162) | — | 89.4 | 90.6 | — |
-| The Absurd | 80 (52–108) | — | 81.7 | 84.8 | — |
-| The End | 50 (33–68) | — | 50.2 | 50.1 | — |
-| Ended | sandbox | — | 150.2 | 140.6 | — |
-| **Total (the arc)** | **485** | **590.0** | **436.8** | **446.4** | **590.0** |
+| The Agency | 35 (23–47) | — | 29.4 | 29.4 | — |
+| The Melt-downs | 100 (65–135) | — | 89.3 | 97.4 | — |
+| The Absurd | 80 (52–108) | — | 79.8 | 68.4 | — |
+| The End | 50 (33–68) | — | 49.8 | 45.5 | — |
+| Ended | sandbox | — | 116.0 | 117.1 | — |
+| **Total (the arc)** | **465** | **570.0** | **447.0** | **445.9** | **570.0** |
 
-The reference run took 587.0 design-minutes (9.78 wall-hours at targetHours=8) and ended in `ended`.
+The reference run took 563.0 design-minutes (9.38 wall-hours at targetHours=8) and ended in `ended`.
 
 ## Wait walls
 
@@ -35,12 +35,12 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Phase | Longest wall | Budget | Walls found |
 |---|---|---|---|
 | Intro | 0.1 | 1 | 2 |
-| Bench | 0.9 | 3 | 20 |
-| The Shop | 0.2 | 4 | 63 |
-| Farm | 0.3 | 5 | 177 |
-| Studio | 0.2 | 5 | 26 |
+| Bench | 0.9 | 3 | 26 |
+| The Shop | 0.2 | 4 | 57 |
+| Farm | 0.3 | 5 | 218 |
+| Studio | 0.2 | 5 | 27 |
 | The Agency | 0.0 | 5 | 0 |
-| The Melt-downs | 0.3 | 6 | 4 |
+| The Melt-downs | 0.9 | 6 | 14 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
 | Ended | 0.0 | 60 | 0 |
@@ -67,11 +67,11 @@ are not players: read these as where to look, not as verdicts.
 
 | Bot | Chores | Most repeated | Intro | Bench | The Shop | Farm | Studio | The Agency | The Melt-downs | The Absurd | The End |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| greedy-spender | 49 % | RECYCLE_SCRAP ×810 | 1 | 12 | 18 | 40 | 12 | 21 | 48 | 35 | 27 |
-| balanced | 51 % | RECYCLE_SCRAP ×893 | 1 | 13 | 17 | 41 | 12 | 22 | 62 | 37 | 26 |
-| idle-heavy | 73 % | SET_SLOT_CONFIG ×20 | 60 | 120 | 290 | — | — | — | — | — | — |
+| greedy-spender | 47 % | RECYCLE_SCRAP ×712 | 1 | 13 | 17 | 28 | 15 | 28 | 73 | 27 | 30 |
+| balanced | 49 % | RECYCLE_SCRAP ×714 | 1 | 13 | 16 | 28 | 15 | 29 | 47 | 28 | 29 |
+| idle-heavy | 66 % | RECYCLE_SCRAP ×32 | 60 | 99 | 250 | — | — | — | — | — | — |
 
-Never bought by any bot: `pallet-printer`, `central-bank`.
+Never bought by any bot: `central-bank`.
 
 Build-order divergence, `greedy-spender` vs `balanced`: 0.00 (0 = the same order, ~0.5 = unrelated).
 Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.00 (0 = the same order, ~0.5 = unrelated).
@@ -84,21 +84,21 @@ drag is where a real player is likely to stall.
 
 | Human | Arc | vs budget | Slowest phase vs its budget |
 |---|---|---|---|
-| human-11 | 640 min | 32 % | prestige (×1.49) |
-| human-23 | 598 min | 23 % | farm (×1.86) |
-| human-37 | 603 min | 24 % | prestige (×1.58) |
-| human-41 | 608 min | 25 % | absurd (×1.78) |
-| human-59 | 531 min | 9 % | end (×1.22) |
-| human-73 | 632 min | 30 % | farm (×1.81) |
+| human-11 | 452 min | -3 % | prestige (×1.28) |
+| human-23 | 468 min | 1 % | end (×1.28) |
+| human-37 | 470 min | 1 % | prestige (×1.25) |
+| human-41 | 431 min | -7 % | prestige (×1.23) |
+| human-59 | 425 min | -9 % | prestige (×1.14) |
+| human-73 | 492 min | 6 % | farm (×1.27) |
 
 ## Activity
 
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
-| idle | 59 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 7044 | 2813 | 3418 | 409 | 10.7 % | ended |
-| balanced | 7044 | 2785 | 176753 | 20878 | 10.6 % | ended |
-| idle-heavy | 59 | 86 | 3038 | 264 | 8.0 % | shop |
+| idle | 57 | 0 | 0 | 0 | — | intro |
+| greedy-spender | 6756 | 2662 | 39033 | 4684 | 10.7 % | ended |
+| balanced | 6756 | 2517 | 39519 | 4640 | 10.5 % | ended |
+| idle-heavy | 57 | 93 | 3134 | 475 | 13.2 % | shop |
 
 ---
 

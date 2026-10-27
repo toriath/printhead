@@ -12,7 +12,7 @@ import { EndgamePanel, EndingScreen } from './endgame.js';
 import { FleetPanel } from './fleet.js';
 import { useFloor } from './floor.js';
 import { formatGrams, formatMoney } from './format.js';
-import { layerProgress, nextStep } from './guide.js';
+import { gateSummary, layerProgress, nextStep } from './guide.js';
 import { useVisualState } from './hooks.js';
 import { Hud, SpoolShelf } from './hud.js';
 import { Spool } from './icons.js';
@@ -177,7 +177,17 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
             content={content}
             phaseId={visual.phaseId}
             progress={layerProgress(state, content)}
+            gate={gateSummary(state, content)}
           />
+          {visual.prestige.current === null ? null : (
+            <span
+              className="runchip"
+              data-testid="run-modifier"
+              title={visual.prestige.current.description}
+            >
+              {visual.prestige.current.name}
+            </span>
+          )}
           <p className="app__phase">
             {/* The id is the stable handle tests and tooling address; the name is
                 what a player reads. Both are here; only one is visible. */}

@@ -40,6 +40,7 @@ import { getPhase, isActionAllowed, isPhaseReached, nextPhaseId } from '../syste
 import {
   meltDown,
   moneyPrinterAvailability,
+  offeredRunModifiers,
   prestigeAvailability,
   purchaseMoneyPrinter,
   tickMoneyPrinting,
@@ -152,7 +153,7 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
     case 'SELL_PRODUCTS':
       return applySellProducts(state, action.count, ctx);
     case 'PRESTIGE':
-      return applyPrestige(state, ctx);
+      return applyPrestige(state, ctx, action.runModifierId ?? null);
     case 'BUY_MONEY_PRINTER':
       return applyBuyMoneyPrinter(state, action.moneyPrinterId, ctx);
     case 'PRINT_SECTION':
@@ -888,13 +889,24 @@ function applyCreateDesign(state: GameState, designId: string, ctx: ReduceContex
  * and the retained balances cross over untouched, and the next run rebuilds
  * itself because the workshop has now done it once.
  */
-function applyPrestige(state: GameState, ctx: ReduceContext): GameState {
+function applyPrestige(
+  state: GameState,
+  ctx: ReduceContext,
+  runModifierId: string | null,
+): GameState {
   const curves = curveRegistryFor(ctx.content.curves);
   const blocked = prestigeAvailability(state, ctx.content, curves);
   if (blocked !== null) {
     return reject(ctx, state, 'PRESTIGE', blocked);
   }
-  const result = meltDown(state, ctx.content, curves);
+  // Only a modifier from this melt-down's offer can be taken.
+  if (
+    runModifierId !== null &&
+    !offeredRunModifiers(state, ctx.content).some((def) => def.id === runModifierId)
+  ) {
+    return reject(ctx, state, 'PRESTIGE', 'unknown-target');
+  }
+  const result = meltDown(state, ctx.content, curves, runModifierId);
   ctx.emit?.({
     type: 'PRESTIGED',
     simTimeMs: state.simTimeMs,

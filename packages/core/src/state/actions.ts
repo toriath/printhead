@@ -132,6 +132,8 @@ export interface SellProductsAction {
 /** Melt the workshop down for Plates (spec §5D). The run ends; Designs stay. */
 export interface PrestigeAction {
   readonly type: 'PRESTIGE';
+  /** A run modifier from the offer for the run that follows; none if omitted. */
+  readonly runModifierId?: string;
 }
 
 /** Install or upgrade a money printer (spec §5E), paid for in Plates. */
@@ -307,7 +309,8 @@ export const sellProducts = (count: number | null = null): SellProductsAction =>
   type: 'SELL_PRODUCTS',
   count,
 });
-export const prestige = (): PrestigeAction => ({ type: 'PRESTIGE' });
+export const prestige = (runModifierId?: string): PrestigeAction =>
+  runModifierId === undefined ? { type: 'PRESTIGE' } : { type: 'PRESTIGE', runModifierId };
 export const buyMoneyPrinter = (moneyPrinterId: string): BuyMoneyPrinterAction => ({
   type: 'BUY_MONEY_PRINTER',
   moneyPrinterId,

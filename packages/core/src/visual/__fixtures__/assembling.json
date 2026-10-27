@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "phaseId": "intro",
   "phaseName": "Intro",
   "simTimeMs": 0,
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 2614.88,
+      "cost": 2784.32,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 2614.88,
+      "cost": 2784.32,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -176,7 +176,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 379,
+      "cost": 400,
       "costResource": "parts"
     },
     {
@@ -187,7 +187,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 379,
+      "cost": 400,
       "costResource": "parts"
     },
     {
@@ -198,7 +198,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 379,
+      "cost": 400,
       "costResource": "parts"
     },
     {
@@ -209,7 +209,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 379,
+      "cost": 400,
       "costResource": "parts"
     },
     {
@@ -220,7 +220,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 308,
       "costResource": "parts"
     },
     {
@@ -231,7 +231,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 308,
       "costResource": "parts"
     },
     {
@@ -242,7 +242,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 378.167,
+      "cost": 400,
       "costResource": "money"
     },
     {
@@ -264,7 +264,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 307.5,
       "costResource": "money"
     },
     {
@@ -275,7 +275,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 308,
       "costResource": "parts"
     },
     {
@@ -286,7 +286,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 308,
       "costResource": "parts"
     },
     {
@@ -297,7 +297,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 307.5,
       "costResource": "money"
     },
     {
@@ -308,7 +308,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 615,
+      "cost": 308,
       "costResource": "parts"
     },
     {
@@ -367,7 +367,7 @@
       "threshold": 40,
       "available": false,
       "affordable": false,
-      "cost": 919,
+      "cost": 1378,
       "costResource": "parts",
       "agent": null
     },
@@ -381,7 +381,7 @@
       "threshold": 400,
       "available": false,
       "affordable": false,
-      "cost": 919,
+      "cost": 1378,
       "costResource": "parts",
       "agent": null
     },
@@ -395,7 +395,7 @@
       "threshold": 20,
       "available": false,
       "affordable": false,
-      "cost": 919,
+      "cost": 1378,
       "costResource": "parts",
       "agent": null
     },
@@ -409,7 +409,7 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 918.513,
+      "cost": 1377.77,
       "costResource": "money",
       "agent": null
     },
@@ -423,7 +423,7 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 919,
+      "cost": 1378,
       "costResource": "parts",
       "agent": null
     },
@@ -437,7 +437,7 @@
       "threshold": 15,
       "available": false,
       "affordable": false,
-      "cost": 918.513,
+      "cost": 1377.77,
       "costResource": "money",
       "agent": {
         "name": "Pitch",
@@ -454,7 +454,7 @@
       "threshold": 2,
       "available": false,
       "affordable": false,
-      "cost": 918.513,
+      "cost": 1377.77,
       "costResource": "money",
       "agent": {
         "name": "Deal",
@@ -487,7 +487,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 205.348,
+        "cost": 308.022,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -503,7 +503,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 205.348,
+        "cost": 308.022,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -519,7 +519,7 @@
         "capstone": true,
         "available": false,
         "affordable": false,
-        "cost": 205.348,
+        "cost": 308.022,
         "costResource": "money",
         "blockedReason": "locked"
       }
@@ -531,7 +531,25 @@
     "platesHeld": 0,
     "runsCompleted": 0,
     "moneyPerDesignSecond": 0,
-    "blockedReason": "locked"
+    "blockedReason": "locked",
+    "offers": [
+      {
+        "id": "engravers-run",
+        "name": "Engraver's run",
+        "description": "The next melt-down pays half again as many plates."
+      },
+      {
+        "id": "bumper-crop",
+        "name": "Bumper crop",
+        "description": "Each print yields 40% more, but takes a little longer."
+      },
+      {
+        "id": "overdrive",
+        "name": "Overdrive",
+        "description": "Every printer runs half again as fast, and fails half again as often."
+      }
+    ],
+    "current": null
   },
   "moneyPrinters": [
     {

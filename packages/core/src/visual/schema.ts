@@ -52,8 +52,10 @@ import { z } from 'zod';
  *   sells for over the counter, customers served and missed), orders that
  *   start as proposals (`accepted`) with the client's loyalty, and automations
  *   that are agents (`agent`: a name and a job title).
+ * - v11 — **frozen**: run modifiers — what a melt-down offers to pick for the
+ *   next run, and the one in force now.
  */
-export const VISUAL_STATE_VERSION = 10;
+export const VISUAL_STATE_VERSION = 11;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -389,6 +391,10 @@ export const StudioVisualSchema = z
   .strict();
 
 /** The melt-down offer (spec §5D) and what it would pay. */
+export const RunModifierVisualSchema = z
+  .object({ id: NonEmpty, name: NonEmpty, description: NonEmpty })
+  .strict();
+
 export const PrestigeVisualSchema = z
   .object({
     available: z.boolean(),
@@ -400,6 +406,10 @@ export const PrestigeVisualSchema = z
     /** Money printed per design-second by the Plates (spec §5E). */
     moneyPerDesignSecond: NonNegative,
     blockedReason: NonEmpty.nullable(),
+    /** What a melt-down now would let the player pick for the next run. */
+    offers: z.array(RunModifierVisualSchema),
+    /** The modifier in force for this run, if one was picked. */
+    current: RunModifierVisualSchema.nullable(),
   })
   .strict();
 
