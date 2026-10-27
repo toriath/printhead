@@ -22,37 +22,37 @@
     {
       "id": "frame",
       "name": "Frame",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "gantry",
       "name": "Gantry",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "bed",
       "name": "Print bed",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "extruder",
       "name": "Extruder",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "hotend",
       "name": "Hotend",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "spool-holder",
       "name": "Spool holder",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     },
     {
       "id": "controller",
       "name": "Controller board",
-      "attachDesignSeconds": 39
+      "attachDesignSeconds": 0
     }
   ]
 }

@@ -7,6 +7,7 @@ import { clamp } from '../math/scalar.js';
 import type { GameState, SlotState } from '../state/game-state.js';
 import { assemblyPieces, isPieceReady, nextPiece } from '../systems/assembly.js';
 import { automationAvailability, nextAutomationCost } from '../systems/automation.js';
+import { commissionReward, commissionTemplate, isBoardOpen } from '../systems/commissions.js';
 import {
   designAvailability,
   designSlotCount,
@@ -43,9 +44,15 @@ import {
   platesFor,
   prestigeAvailability,
 } from '../systems/prestige.js';
-import { bestPrinterTier, resolveSlotConfig, runProgress } from '../systems/printing.js';
+import {
+  bestPrinterTier,
+  overclockAvailability,
+  resolveSlotConfig,
+  runProgress,
+} from '../systems/printing.js';
 import { countPrinters } from '../systems/requirements.js';
 import { drawScrap } from '../systems/resources.js';
+import { isShopOpen, priceLevel } from '../systems/shop.js';
 import {
   effectiveSlotCapacity,
   hardSlotMaximum,
@@ -135,6 +142,7 @@ function toQueueVisual(slot: SlotState, content: Content): readonly QueueEntryVi
 }
 
 function toSlotVisual(
+  state: GameState,
   slot: SlotState,
   content: Content,
   index: number,
@@ -172,6 +180,22 @@ function toSlotVisual(
         ? clamp((purgeMs - slot.changeoverMs) / purgeMs, NONE, FULL)
         : NONE,
     failureRisk: clamp(slot.failureCharge / content.failure.model.chargeThreshold, NONE, FULL),
+    perfectCharge: clamp(slot.perfectCharge, NONE, FULL),
+    overclock: {
+      active: slot.overclockMs > NONE,
+      remaining: clamp(
+        slot.overclockMs / (content.failure.overclock.durationDesignSeconds * MS_PER_SECOND),
+        NONE,
+        FULL,
+      ),
+      cooldown: clamp(
+        slot.overclockCooldownMs /
+          (content.failure.overclock.cooldownDesignSeconds * MS_PER_SECOND),
+        NONE,
+        FULL,
+      ),
+      ready: overclockAvailability(state, content, slot.id) === null,
+    },
     queue: toQueueVisual(slot, content),
     queueBatches: slot.queueBatches,
   };
@@ -411,6 +435,7 @@ function toAutomationVisuals(state: GameState, content: Content): readonly Autom
       affordable: cost !== null && affordable(state, cost.resource, cost.amount),
       cost: cost?.amount ?? NONE,
       costResource: cost?.resource ?? def.costResource,
+      agent: def.persona === undefined ? null : { name: def.persona.name, role: def.persona.role },
     };
   });
 }
@@ -565,6 +590,87 @@ function toEndingVisual(state: GameState, content: Content, machineTier: number)
   };
 }
 
+function toCommissionsVisual(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): VisualState['commissions'] {
+  const materials = indexById(content.materials);
+  const objects = indexById(content.objects);
+  const clients = indexById(content.commissions.clients);
+  const inflation = inflationMultiplier(state, content, curves);
+  const offers: VisualState['commissions']['offers'][number][] = [];
+  for (const offer of state.commissions.open) {
+    const template = commissionTemplate(content, offer.templateId);
+    const material = template === undefined ? undefined : materials.get(template.materialId);
+    const object = template === undefined ? undefined : objects.get(template.objectId);
+    if (template === undefined || material === undefined || object === undefined) {
+      continue;
+    }
+    // A proposal's clock is its answer window; an order's is its deadline.
+    const limitMs =
+      (offer.accepted
+        ? template.timeLimitDesignSeconds
+        : content.commissions.offerWindowDesignSeconds) * MS_PER_SECOND;
+    const loyalty = state.commissions.loyalty[offer.clientId] ?? NONE;
+    offers.push({
+      serial: offer.serial,
+      templateId: template.id,
+      clientName: clients.get(offer.clientId)?.name ?? offer.clientId,
+      objectId: object.id,
+      objectName: object.name,
+      materialId: material.id,
+      materialName: material.name,
+      count: template.count,
+      delivered: Math.min(offer.delivered, template.count),
+      timeLeft: clamp(offer.remainingMs / limitMs, NONE, FULL),
+      remainingMs: Math.max(offer.remainingMs, NONE),
+      reward: commissionReward(content, template, inflation, loyalty),
+      accepted: offer.accepted,
+      loyalty,
+    });
+  }
+  return {
+    open: isBoardOpen(state, content),
+    offers,
+    completed: state.stats.commissionsCompleted,
+  };
+}
+
+/**
+ * What one Part fetches wholesale: the average value banked in the stock, or
+ * — with an empty shelf — what the first thing the workshop ever printed is
+ * worth, so the shop still has a price to show.
+ */
+function wholesalePartPrice(state: GameState, content: Content): number {
+  if (state.resources.parts > NONE) {
+    return state.partsValue / state.resources.parts;
+  }
+  const object = content.objects[NONE];
+  const material = content.materials[NONE];
+  return (object?.basePartValue ?? NONE) * (material?.valueMultiplier ?? NONE);
+}
+
+function toShopVisual(state: GameState, content: Content): VisualState['shop'] {
+  const level = priceLevel(content, state.shop.priceLevelId);
+  const wholesale = wholesalePartPrice(state, content);
+  return {
+    open: isShopOpen(state, content),
+    priceLevelId: state.shop.priceLevelId,
+    levels: content.shop.priceLevels.map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      priceMultiplier: candidate.priceMultiplier,
+      demandMultiplier: candidate.demandMultiplier,
+    })),
+    reputation: clamp(state.shop.reputation, NONE, FULL),
+    unitPrice: wholesale * (level?.priceMultiplier ?? NONE),
+    wholesalePrice: wholesale,
+    served: state.stats.customersServed,
+    missed: state.stats.customersMissed,
+  };
+}
+
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
   const curves = curveRegistryFor(content.curves);
@@ -593,7 +699,7 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     // Every owned slot is projected, empty ones included: the "empty slot =
     // faint outline" rule is the renderer drawing data, not inventing it.
     slots: shown.map((slot, index) =>
-      toSlotVisual(slot, content, index, shown.length, machineTier, perSlot),
+      toSlotVisual(state, slot, content, index, shown.length, machineTier, perSlot),
     ),
     fleet: toFleetVisual(state, content, active),
     slotUnlock: toSlotUnlockVisual(state, content),
@@ -610,6 +716,8 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     backdrop: currentBackdropId(state, content),
     inflation: toInflationVisual(state, content, curves),
     fabricator: toFabricatorVisual(state, content, curves),
+    commissions: toCommissionsVisual(state, content, curveRegistryFor(content.curves)),
+    shop: toShopVisual(state, content),
     ending: toEndingVisual(state, content, machineTier),
   };
 }

@@ -145,7 +145,7 @@ export function runHeadless(options: RunOptions): RunLog {
     content.pacing.phases.find((phase) => phase.id === table.terminalPhaseId)
       ?.budgetDesignMinutes ?? 0;
   const limit =
-    options.limitDesignMinutes ?? table.totalDesignMinutes * (1 + table.tolerance) + sandbox;
+    options.limitDesignMinutes ?? table.totalDesignMinutes * (1 + table.arcTolerance) + sandbox;
   const stepWallMs = pace.toWallDtMs(bot.checkInDesignSeconds * MS_PER_SECOND);
   const sampleEvery = options.sampleEveryDesignMinutes ?? DEFAULT_SAMPLE_EVERY_DESIGN_MINUTES;
   const bus = createEventBus();

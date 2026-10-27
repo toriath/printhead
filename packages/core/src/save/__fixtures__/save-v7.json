@@ -1,0 +1,147 @@
+{
+  "version": 7,
+  "savedAtMs": 1723420800000,
+  "state": {
+    "saveVersion": 7,
+    "simTimeMs": 23572700,
+    "tickCount": 235727,
+    "phaseId": "end",
+    "phaseEnteredAtMs": 23307100,
+    "rng": {
+      "seed": 7,
+      "count": 0
+    },
+    "resources": {
+      "parts": 54412.8,
+      "scrap": 326,
+      "money": 1554982.8164625808,
+      "designs": 2,
+      "products": 0,
+      "plates": 41.331599999999995
+    },
+    "partsValue": 679.1858789725324,
+    "scrapValue": 16.29999999999997,
+    "productsValue": 0,
+    "filamentGrams": {
+      "pla": 0,
+      "petg": 1500,
+      "resin": 2500,
+      "metal": 577,
+      "composite": 720
+    },
+    "printers": {
+      "bench-mk1": 18
+    },
+    "upgrades": {
+      "exotic-feedstock": 1,
+      "print-a-building": 1,
+      "print-a-factory": 1,
+      "universal-fabricator": 1,
+      "broker-licence": 2,
+      "heated-bed": 1,
+      "enclosure": 1,
+      "sla-unit": 1,
+      "sintering-head": 1
+    },
+    "automation": {
+      "auto-trade": {
+        "level": 1,
+        "enabled": true,
+        "threshold": 250,
+        "cooldownMs": 2300
+      }
+    },
+    "market": {
+      "petg": {
+        "stockGrams": 5235.399999999786,
+        "pressure": -0.25707800480063925
+      },
+      "resin": {
+        "stockGrams": 4995.39999999864,
+        "pressure": -0.28220975346168525
+      },
+      "metal": {
+        "stockGrams": 310.69333333332577,
+        "pressure": -0.04850810348858208
+      }
+    },
+    "slots": [
+      {
+        "id": "slot-1",
+        "materialId": null,
+        "objectId": null,
+        "designId": null,
+        "printerCount": 18,
+        "autoRestart": false,
+        "run": null,
+        "failureCharge": 0.23840000000000638,
+        "changeoverMs": 0,
+        "queue": [],
+        "queueIndex": 0,
+        "queueBatches": 0,
+        "perfectCharge": 0.8999999999999999,
+        "overclockMs": 0,
+        "overclockCooldownMs": 0
+      }
+    ],
+    "forkId": "goliath",
+    "designs": {
+      "money-plate": {
+        "level": 20,
+        "printsOnLevel": 0
+      },
+      "lamp-shade": {
+        "level": 1,
+        "printsOnLevel": 0
+      }
+    },
+    "studio": null,
+    "moneyPrinters": {
+      "bill-printer": 3,
+      "bundle-printer": 1
+    },
+    "selfAssembling": true,
+    "factoryProgress": 0.7566666666666352,
+    "fabricator": {
+      "sections": 2,
+      "sectionRun": null,
+      "run": {
+        "remainingMs": 2836560,
+        "totalMs": 2896560
+      },
+      "completedAtMs": null
+    },
+    "ngPlus": {
+      "run": 0,
+      "modifierIds": []
+    },
+    "assembly": {
+      "attachedPieceIds": [
+        "frame",
+        "gantry",
+        "bed",
+        "extruder",
+        "hotend",
+        "spool-holder",
+        "controller"
+      ],
+      "cooldownMs": 0
+    },
+    "stats": {
+      "printsCompleted": 922,
+      "printsFailed": 163,
+      "partsProduced": 1293.8,
+      "partsSold": 0,
+      "moneyEarned": 572540.1601181651,
+      "filamentPurchasedGrams": 11317,
+      "filamentSoldGrams": 1000,
+      "scrapProducedGrams": 326,
+      "scrapRecycledGrams": 0,
+      "productsProduced": 0,
+      "productsSold": 0,
+      "moneyPrinted": 2257035.6333757583,
+      "prestigeCount": 7,
+      "platesEarned": 85
+    }
+  }
+}

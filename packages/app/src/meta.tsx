@@ -6,8 +6,10 @@ import {
   sellProducts,
   setSlotDesign,
 } from '@printhead/core';
-import type { ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
+import { price } from './afford.js';
 import { formatAmount, formatMoney, formatPercent } from './format.js';
+import { Modal } from './modal.js';
 import type { GameStore } from './store.js';
 
 /**
@@ -107,6 +109,7 @@ export function StudioPanel({ store, visual }: MetaPanelProps): ReactElement | n
                   type="button"
                   data-testid={`draft-${row.designId}`}
                   disabled={!row.affordable}
+                  {...price(visual, row.cost, row.costResource)}
                   onClick={() => store.dispatch(createDesign(row.designId))}
                 >
                   {`${formatAmount(row.cost)} ${row.costResource}`}
@@ -141,6 +144,7 @@ export function StudioPanel({ store, visual }: MetaPanelProps): ReactElement | n
 
 export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement | null {
   const { prestige: melt } = visual;
+  const [confirming, setConfirming] = useState(false);
   // Hidden until the melt-down is a real prospect: the capstone exists, or the
   // workshop has already been through one.
   const known = melt.available || melt.platesHeld > 0 || melt.runsCompleted > 0;
@@ -164,11 +168,52 @@ export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement |
           type="button"
           data-testid="melt-down"
           disabled={!melt.available}
-          onClick={() => store.dispatch(prestige())}
+          onClick={() => setConfirming(true)}
         >
           {melt.available ? 'Melt down' : (PRESTIGE_BLOCKED[melt.blockedReason ?? ''] ?? 'not yet')}
         </button>
       </div>
+      {/* The one button in the game that throws work away asks first. */}
+      <Modal
+        open={confirming}
+        title="Melt the workshop down?"
+        onClose={() => setConfirming(false)}
+        testId="melt-down-dialog"
+      >
+        <div className="modal__columns">
+          <div>
+            <h3 className="modal__label">You keep</h3>
+            <ul className="modal__list">
+              <li>{`${formatAmount(melt.platesHeld + melt.platesOnOffer)} plates (+${formatAmount(melt.platesOnOffer)})`}</li>
+              <li>Every Design and its level</li>
+              <li>Presses and the endgame tree</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="modal__label">You lose</h3>
+            <ul className="modal__list">
+              <li>Money, parts and filament</li>
+              <li>Printers, upgrades and automation</li>
+            </ul>
+          </div>
+        </div>
+        <div className="modal__actions">
+          <button type="button" onClick={() => setConfirming(false)}>
+            Keep printing
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            data-testid="melt-down-confirm"
+            onClick={() => {
+              setConfirming(false);
+              store.dispatch(prestige());
+            }}
+          >
+            Melt it down
+          </button>
+        </div>
+      </Modal>
       <ul className="panel__list">
         {visual.moneyPrinters
           .filter((press) => press.available || press.level > 0)
@@ -183,6 +228,7 @@ export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement |
                   type="button"
                   data-testid={`press-${press.moneyPrinterId}`}
                   disabled={!press.affordable}
+                  {...price(visual, press.cost, press.costResource)}
                   onClick={() => store.dispatch(buyMoneyPrinter(press.moneyPrinterId))}
                 >
                   {`${formatAmount(press.cost)} ${press.costResource}`}

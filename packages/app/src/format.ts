@@ -2,15 +2,31 @@ import { MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from '@printhead/core';
 
 /** Display helpers. Nothing here may influence the simulation. */
 
+/** Suffixes for big numbers, one per factor of a thousand. */
+const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc'];
+/** Below this, numbers are written out in full. */
+const ABBREVIATE_FROM = 10_000;
+
 export function formatAmount(value: number): string {
+  const size = Math.abs(value);
+  if (size >= ABBREVIATE_FROM && Number.isFinite(value)) {
+    let tier = Math.min(Math.floor(Math.log10(size) / 3), SUFFIXES.length - 1);
+    // 999,999 would round to "1000K": that is "1.00M".
+    if (Math.round(size / 1000 ** tier) >= 1000 && tier < SUFFIXES.length - 1) {
+      tier += 1;
+    }
+    const scaled = value / 1000 ** tier;
+    const digits = Math.abs(scaled) < 10 ? 2 : Math.abs(scaled) < 100 ? 1 : 0;
+    return `${scaled.toFixed(digits)}${SUFFIXES[tier] ?? ''}`;
+  }
   if (Number.isInteger(value)) {
     return String(value);
   }
-  return value.toFixed(value < 10 ? 2 : 1);
+  return value.toFixed(size < 10 ? 2 : 1);
 }
 
 export function formatMoney(value: number): string {
-  return `¤${formatAmount(value)}`;
+  return `$${formatAmount(value)}`;
 }
 
 export function formatGrams(value: number): string {

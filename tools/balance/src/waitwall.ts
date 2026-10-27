@@ -25,6 +25,7 @@ import {
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  overclockAvailability,
   prestigeAvailability,
   quoteFor,
   resolveSlotConfig,
@@ -68,6 +69,11 @@ export type MeaningfulOption =
   /** The endgame (spec §5E, §6 phase 6, §7.3). */
   | 'buy-endgame-node'
   | 'print-section'
+  /**
+   * A bay whose overclock is ready (see `failure.overclock`). A real decision:
+   * speed now against failure charge, so a player with one is not waiting.
+   */
+  | 'overclock'
   | 'start-fabricator'
   | 'new-game-plus';
 
@@ -112,6 +118,13 @@ export function meaningfulOptions(
         break;
       }
     }
+  }
+
+  if (
+    allows(content, state.phaseId, 'OVERCLOCK_SLOT') &&
+    state.slots.some((slot) => overclockAvailability(state, content, slot.id) === null)
+  ) {
+    options.push('overclock');
   }
 
   const unlock = nextSlotUnlock(state, content);

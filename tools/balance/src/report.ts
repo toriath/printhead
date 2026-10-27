@@ -1,5 +1,13 @@
 import type { Content } from '@printhead/core';
 import { type BudgetTable, buildBudgetTable, checkPhaseBudgets, gatedPhaseIds } from './budget.js';
+import {
+  buildOrder,
+  choreShare,
+  deadContent,
+  longestDroughtByPhase,
+  orderDivergence,
+  topChore,
+} from './fun.js';
 import type { RunLog } from './harness.js';
 import { type BarRow, barChart, lineChart } from './svg.js';
 import { checkWaitWalls, longestWallByPhase } from './waitwall.js';
@@ -26,6 +34,57 @@ export interface ReportInput {
   readonly date: string;
   /** Optional sweep output to attach alongside. */
   readonly sweepCsv?: string;
+  /** Runs by human-ish bots (`human.ts`): the crowd, not the rulers. */
+  readonly crowd?: readonly RunLog[];
+}
+
+/**
+ * The crowd: how long the arc took each human-ish player, whether they
+ * finished, and the phase that dragged most against its budget — where a real
+ * player is most likely to stall.
+ */
+/** Phases shorter than this are left out of the crowd's stall column. */
+const CROWD_MIN_PHASE_MINUTES = 5;
+
+function crowdLines(table: BudgetTable, crowd: readonly RunLog[]): readonly string[] {
+  if (crowd.length === 0) {
+    return [];
+  }
+  const rows = crowd.map((log) => {
+    const arc = log.phaseEnteredAt.get(table.terminalPhaseId ?? '');
+    let worst = { phaseId: '—', ratio: 0 };
+    for (const phase of table.phases) {
+      const actual = log.phaseDurations.get(phase.phaseId);
+      // A minute-long intro is all reaction time; it says nothing about stalls.
+      if (
+        actual === undefined ||
+        phase.phaseId === table.terminalPhaseId ||
+        phase.budgetDesignMinutes < CROWD_MIN_PHASE_MINUTES
+      ) {
+        continue;
+      }
+      const ratio = actual / phase.budgetDesignMinutes;
+      if (ratio > worst.ratio) {
+        worst = { phaseId: phase.phaseId, ratio };
+      }
+    }
+    return [
+      log.botId,
+      arc === undefined ? 'did not finish' : `${arc.toFixed(0)} min`,
+      arc === undefined ? '—' : `${((arc / table.totalDesignMinutes - 1) * 100).toFixed(0)} %`,
+      `${worst.phaseId} (×${worst.ratio.toFixed(2)})`,
+    ];
+  });
+  return [
+    '## Human crowd',
+    '',
+    'Policy bots with a person wrapped round them (`tools/balance/src/human.ts`): a',
+    'seeded personality, wandering attention and a few forgotten moves. Where they',
+    'drag is where a real player is likely to stall.',
+    '',
+    markdownTable(['Human', 'Arc', 'vs budget', 'Slowest phase vs its budget'], rows),
+    '',
+  ];
 }
 
 const CURVES = [
@@ -143,6 +202,20 @@ function verdict(content: Content, log: RunLog): string {
   return `**FAIL** — ${lines.length} violation(s):\n\n${lines.join('\n')}${note}`;
 }
 
+/** How differently each strategy ordered its purchases from the reference. */
+function divergenceLines(logs: readonly RunLog[]): readonly string[] {
+  const active = logs.filter((log) => log.actions > 0);
+  const [first, ...rest] = active;
+  if (first === undefined || rest.length === 0) {
+    return [];
+  }
+  return rest.map(
+    (log) =>
+      `Build-order divergence, \`${first.botId}\` vs \`${log.botId}\`: ` +
+      `${orderDivergence(buildOrder(first), buildOrder(log)).toFixed(2)} (0 = the same order, ~0.5 = unrelated).`,
+  );
+}
+
 export function buildReport(input: ReportInput): readonly ReportFile[] {
   const { content, logs, date } = input;
   const table = buildBudgetTable(content.pacing);
@@ -180,7 +253,8 @@ export function buildReport(input: ReportInput): readonly ReportFile[] {
     `# Balance report — ${date}`,
     '',
     `Reference bot: \`${reference.botId}\` · target ${content.pacing.targetHours} h ` +
-      `· tolerance ±${(table.tolerance * 100).toFixed(0)} %`,
+      `· tolerance ±${(table.arcTolerance * 100).toFixed(0)} % for the arc, ` +
+      `±${(table.tolerance * 100).toFixed(0)} % per phase`,
     '',
     verdict(content, reference),
     '',
@@ -223,6 +297,43 @@ export function buildReport(input: ReportInput): readonly ReportFile[] {
     '',
     ...CURVES.map((curve) => `![${curve.title}](./curve-${curve.key}.svg)`),
     '',
+    '## Fun signals',
+    '',
+    'The budgets above say whether the game is the right length. These say',
+    'whether the minutes are any good (see `tools/balance/src/fun.ts`). A',
+    '*drought* is the longest stretch in a phase with nothing new: no new',
+    'upgrade, machine, material, design, branch or phase. *Chores* are upkeep',
+    'actions (sell, recycle, restock, reload) as a share of all actions. Bots',
+    'are not players: read these as where to look, not as verdicts.',
+    '',
+    markdownTable(
+      ['Bot', 'Chores', 'Most repeated', ...content.pacing.phases.slice(0, -1).map((p) => p.name)],
+      logs
+        .filter((log) => log.actions > 0)
+        .map((log) => {
+          const droughts = longestDroughtByPhase(log);
+          const chore = topChore(log);
+          return [
+            log.botId,
+            `${(choreShare(log) * 100).toFixed(0)} %`,
+            chore === null ? '—' : `${chore.type} ×${chore.count}`,
+            ...content.pacing.phases.slice(0, -1).map((phase) => {
+              const drought = droughts.get(phase.id);
+              return drought === undefined ? '—' : drought.toFixed(0);
+            }),
+          ];
+        }),
+    ),
+    '',
+    `Never bought by any bot: ${
+      deadContent(logs, content)
+        .map((id) => `\`${id}\``)
+        .join(', ') || 'nothing'
+    }.`,
+    '',
+    ...divergenceLines(logs),
+    '',
+    ...crowdLines(table, input.crowd ?? []),
     '## Activity',
     '',
     markdownTable(

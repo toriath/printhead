@@ -213,8 +213,24 @@ describe('fleet allocation (spec §4)', () => {
 });
 
 describe('the Farm/Goliath fork (spec §5B)', () => {
-  const studio = (over: Partial<GameState> = {}): GameState =>
-    withParts(world({ phaseId: 'studio', ...over }), 5000);
+  // The fork is priced in money since the M7 rebalance; fund both so these
+  // tests are about the fork, not about which currency it happens to cost.
+  // Goliath needs a sintering head and one melt-down behind it since the M7
+  // rebalance; this workshop has both, so the tests are about the fork.
+  const studio = (over: Partial<GameState> = {}): GameState => {
+    const base = world({ phaseId: 'studio', upgrades: { 'sintering-head': 1 }, ...over });
+    const funded = withParts({ ...base, stats: { ...base.stats, prestigeCount: 1 } }, 5000);
+    return { ...funded, resources: { ...funded.resources, money: 1_000_000 } };
+  };
+
+  it('keeps Goliath shut until a melt-down and a sintering head are behind the run', () => {
+    const fresh = world({ phaseId: 'studio' });
+    expect(forkAvailability(fresh, content, GOLIATH)).toBe('missing-prerequisite');
+    expect(forkAvailability(fresh, content, FARM)).toBeNull();
+    const headed = { ...fresh, upgrades: { 'sintering-head': 1 } };
+    expect(forkAvailability(headed, content, GOLIATH)).not.toBeNull();
+    expect(forkAvailability(studio(), content, GOLIATH)).toBeNull();
+  });
 
   it('offers both branches until one is taken, then neither', () => {
     const open = studio();
@@ -232,10 +248,16 @@ describe('the Farm/Goliath fork (spec §5B)', () => {
   });
 
   it('records the commitment and charges for it', () => {
-    const cost = forkCost(content, curves, FARM)?.amount ?? 0;
-    const choice = commitFork(studio(), content, curves, FARM);
+    const cost = forkCost(content, curves, FARM);
+    if (cost === null || cost.resource === 'filament') {
+      throw new Error('expected the fork to cost a resource');
+    }
+    const before = studio();
+    const choice = commitFork(before, content, curves, FARM);
     expect(choice?.state.forkId).toBe(FARM);
-    expect(choice?.state.resources.parts).toBe(5000 - cost);
+    expect(choice?.state.resources[cost.resource]).toBe(
+      before.resources[cost.resource] - cost.amount,
+    );
     expect(chosenFork(choice?.state as GameState, content)?.id).toBe(FARM);
   });
 
@@ -289,12 +311,14 @@ describe('the Farm/Goliath fork (spec §5B)', () => {
    */
   it('honours a prerequisite and rounds a fractional price, on content that has them', () => {
     const raw = JSON.parse(JSON.stringify(RAW_CONTENT)) as RawContent;
-    const forks = raw.forks as { id: string; requiresUpgradeIds: string[] }[];
+    const forks = raw.forks as { id: string; requiresUpgradeIds: string[]; costResource: string }[];
     const first = forks[0];
     if (first === undefined) {
       throw new Error('expected a fork def');
     }
     first.requiresUpgradeIds = ['enclosure'];
+    // Whole units are a Parts rule; money keeps its cents.
+    first.costResource = 'parts';
     const curveList = raw.curves as { id: string; value?: number }[];
     const forkCurve = curveList.find((curve) => curve.id === 'fork-cost');
     if (forkCurve === undefined) {

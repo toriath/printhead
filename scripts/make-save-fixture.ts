@@ -45,6 +45,57 @@ const tickSeconds = (seconds: number): void => {
   }
 };
 
+/**
+ * Commit the run to the fork the final print needs. Since the M7 rebalance that
+ * fork has prerequisites (a machine node, a melt-down behind you) and is paid
+ * for in money, so the workshop is granted what it costs — a *fixture*
+ * concession like the others — and the machine nodes are bought, deepest
+ * first, through the real reducer.
+ */
+const FINAL_FORK_FIXTURE_PARTS = 50_000;
+const FINAL_FORK_FIXTURE_MONEY = 1_000_000;
+function commitFinalFork(): void {
+  const fork = content.forks.find((def) => def.requiredForFinalPrint);
+  if (fork === undefined || state.forkId !== null) {
+    return;
+  }
+  state = {
+    ...state,
+    resources: {
+      ...state.resources,
+      parts: state.resources.parts + FINAL_FORK_FIXTURE_PARTS,
+      money: state.resources.money + FINAL_FORK_FIXTURE_MONEY,
+    },
+  };
+  const buy = (id: string): void => {
+    if ((state.upgrades[id] ?? 0) > 0) {
+      return;
+    }
+    const def = content.upgrades.find((candidate) => candidate.id === id);
+    for (const prerequisite of def?.requiresUpgradeIds ?? []) {
+      buy(prerequisite);
+    }
+    apply({ type: 'BUY_UPGRADE', upgradeId: id });
+  };
+  for (const id of fork.requiresUpgradeIds) {
+    buy(id);
+  }
+  apply({ type: 'CHOOSE_FORK', forkId: fork.id });
+  if (state.forkId !== fork.id) {
+    throw new Error(`could not commit to ${fork.id}: check its requirements`);
+  }
+}
+
+/** Buy printers into a bay until the Fabricator's count is met, or fail loudly. */
+function staffForFabricator(slotId: string, required: number): void {
+  for (let guard = 0; countPrinters(state) < required; guard += 1) {
+    if (guard > required * 4) {
+      throw new Error(`could not staff ${slotId} to ${required} printers`);
+    }
+    apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId });
+  }
+}
+
 const slotId = `${content.start.slotIdPrefix}-1`;
 const materialId = content.materials[0]?.id ?? 'pla';
 const objectId = content.objects[0]?.id ?? 'bracket';
@@ -277,10 +328,7 @@ for (const def of content.upgrades) {
     apply({ type: 'BUY_UPGRADE', upgradeId: def.id });
   }
 }
-const finalFork = content.forks.find((def) => def.requiredForFinalPrint);
-if (finalFork !== undefined && state.forkId === null) {
-  apply({ type: 'CHOOSE_FORK', forkId: finalFork.id });
-}
+commitFinalFork();
 apply({
   type: 'BUY_FILAMENT',
   materialId: fabricator.materialId,
@@ -290,8 +338,8 @@ apply({
 apply({ type: 'PRINT_SECTION' });
 tickSeconds(fabricator.sectionDesignMinutes * 60 + 1);
 const finalBay = state.slots[0];
-while (finalBay !== undefined && countPrinters(state) < fabricator.requiredPrinters) {
-  apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId: finalBay.id });
+if (finalBay !== undefined) {
+  staffForFabricator(finalBay.id, fabricator.requiredPrinters);
 }
 apply({ type: 'START_FABRICATOR' });
 tickSeconds(60);

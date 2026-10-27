@@ -31,7 +31,8 @@ describe('meaningfulOptions', () => {
   });
 
   it('is empty while the bench work for the next piece is still running', () => {
-    expect(meaningfulOptions(base, content, curves)).toEqual([]);
+    const baking = { ...base, assembly: { ...base.assembly, cooldownMs: 30_000 } };
+    expect(meaningfulOptions(baking, content, curves)).toEqual([]);
   });
 
   it('spots an affordable machine, upgrade and automation', () => {
@@ -89,6 +90,9 @@ describe('meaningfulOptions', () => {
           queue: [],
           queueIndex: 0,
           queueBatches: 0,
+          perfectCharge: 0,
+          overclockMs: 0,
+          overclockCooldownMs: 0,
         },
       ],
     });
@@ -122,6 +126,9 @@ describe('meaningfulOptions', () => {
           queue: [],
           queueIndex: 0,
           queueBatches: 0,
+          perfectCharge: 0,
+          overclockMs: 0,
+          overclockCooldownMs: 0,
         },
       ],
     });
@@ -277,6 +284,9 @@ describe('meaningfulOptions and the meta layer', () => {
         queue: [],
         queueIndex: 0,
         queueBatches: 0,
+        perfectCharge: 0,
+        overclockMs: 0,
+        overclockCooldownMs: 0,
       },
     ],
     ...over,
@@ -341,6 +351,9 @@ describe('meaningfulOptions and the meta layer', () => {
           queue: [],
           queueIndex: 0,
           queueBatches: 0,
+          perfectCharge: 0,
+          overclockMs: 0,
+          overclockCooldownMs: 0,
         },
       ],
     });

@@ -4,12 +4,15 @@ import type { CurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { AutomationSlotState, GameState } from '../state/game-state.js';
+import { answerProposal, commissionTemplate } from './commissions.js';
 import { type Cost, nextCost } from './cost.js';
 import { payCost, sellPartsFrom } from './economy.js';
+import { recycleScrapInto } from './failure.js';
 import { purchaseFilament, quoteFor, sellFilamentToMarket } from './market.js';
 import { isPhaseReached } from './phases.js';
 import { resolveSlotConfig } from './printing.js';
-import { isInstalled } from './upgrades.js';
+import { isShopOpen, setShopPriceLevel } from './shop.js';
+import { computeModifiers, isInstalled } from './upgrades.js';
 
 /**
  * Automation (spec §5C). The design brief is "introduce friction, then sell its
@@ -41,6 +44,13 @@ export function isAutomationActive(state: GameState, id: string): boolean {
 }
 
 /** How many automations are installed — a phase-gate metric (spec §6). */
+/** Agents on staff: installed automations that come with a persona. */
+export function countAgents(state: GameState, content: Content): number {
+  return content.automation.filter(
+    (def) => def.persona !== undefined && automationLevel(state, def.id) > NONE,
+  ).length;
+}
+
 export function countAutomations(state: GameState): number {
   let total = NONE;
   for (const owned of Object.values(state.automation)) {
@@ -291,6 +301,118 @@ function fireTradeFilament(
   return next;
 }
 
+/**
+ * Recycle the whole Scrap pile once it reaches the threshold, into whatever the
+ * first bay is loaded with (an empty bay: the first material), which is the
+ * same target the recycler panel quotes. No recycler installed, nothing to do.
+ */
+function fireRecycleScrap(
+  state: GameState,
+  content: Content,
+  threshold: number,
+  emit: EventSink | undefined,
+): GameState {
+  if (state.resources.scrap < threshold || state.resources.scrap <= NONE) {
+    return state;
+  }
+  const slot = state.slots.at(NONE);
+  const config = slot === undefined ? null : resolveSlotConfig(content, slot);
+  const target = config?.material ?? content.materials.at(NONE);
+  if (target === undefined) {
+    return state;
+  }
+  const result = recycleScrapInto(
+    state,
+    content,
+    computeModifiers(state, content),
+    target.id,
+    null,
+  );
+  if (typeof result === 'string') {
+    return state;
+  }
+  emit?.({
+    type: 'SCRAP_RECYCLED',
+    simTimeMs: state.simTimeMs,
+    materialId: result.materialId,
+    scrapGrams: result.scrapGrams,
+    filamentGrams: result.filamentGrams,
+  });
+  return result.state;
+}
+
+/** The sales agent's rule: shut, dear, fair or clearance, by the stock. */
+function fireRunShop(
+  state: GameState,
+  content: Content,
+  def: Extract<AutomationDef, { behavior: 'run-shop' }>,
+  threshold: number,
+): GameState {
+  if (!isShopOpen(state, content)) {
+    return state;
+  }
+  const parts = state.resources.parts;
+  const wanted =
+    parts < threshold
+      ? def.shutPrice
+      : parts < threshold * def.scarceMultiple
+        ? def.scarcePrice
+        : parts > threshold * def.glutMultiple
+          ? def.glutPrice
+          : def.steadyPrice;
+  if (wanted === state.shop.priceLevelId) {
+    return state;
+  }
+  return setShopPriceLevel(state, content, wanted) ?? state;
+}
+
+/**
+ * Whether the workshop is ready for a job: a bay already printing that object
+ * in that material, or enough of the filament in stock to print all of it. The
+ * account manager takes on only these — an agent that signs jobs nobody can
+ * print just fills the board with orders that run out.
+ */
+function readyFor(state: GameState, content: Content, templateId: string): boolean {
+  const template = commissionTemplate(content, templateId);
+  const object = content.objects.find((candidate) => candidate.id === template?.objectId);
+  if (template === undefined || object === undefined) {
+    return false;
+  }
+  const loaded = state.slots.some(
+    (slot) =>
+      slot.printerCount > NONE &&
+      slot.materialId === template.materialId &&
+      slot.objectId === template.objectId,
+  );
+  const grams = (template.count / object.partsYield) * object.filamentGrams;
+  return loaded || (state.filamentGrams[template.materialId] ?? NONE) >= grams;
+}
+
+/** The account manager's rule: take on jobs the workshop is ready for, while there is room. */
+function fireAnswerProposals(
+  state: GameState,
+  content: Content,
+  limit: number,
+  emit: EventSink | undefined,
+): GameState {
+  let next = state;
+  let open = state.commissions.open.filter((offer) => offer.accepted).length;
+  for (const offer of state.commissions.open) {
+    if (open >= limit) {
+      break;
+    }
+    if (offer.accepted || !readyFor(next, content, offer.templateId)) {
+      continue;
+    }
+    const answered = answerProposal(next, content, offer.serial, true, emit);
+    if (answered !== null) {
+      next = answered;
+      open += ONE;
+    }
+  }
+  return next;
+}
+
 function fire(
   state: GameState,
   content: Content,
@@ -305,6 +427,12 @@ function fire(
       return fireBuyFilament(state, content, owned.threshold, def.moneyReserve, emit);
     case 'trade-filament':
       return fireTradeFilament(state, content, def, owned.threshold, emit);
+    case 'recycle-scrap':
+      return fireRecycleScrap(state, content, owned.threshold, emit);
+    case 'run-shop':
+      return fireRunShop(state, content, def, owned.threshold);
+    case 'answer-proposals':
+      return fireAnswerProposals(state, content, owned.threshold, emit);
     case 'auto-changeover':
       /*
        * The rota is turned by the print loop, not by this timer.

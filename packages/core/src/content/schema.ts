@@ -49,6 +49,9 @@ export const GatedActionTypeSchema = z.enum([
   'NEW_GAME_PLUS',
   'SET_SLOT_CONFIG',
   'START_PRINT',
+  'OVERCLOCK_SLOT',
+  'SET_SHOP_PRICE',
+  'ANSWER_COMMISSION',
   'SELL_PARTS',
   'BUY_FILAMENT',
   'SELL_FILAMENT',
@@ -105,7 +108,26 @@ export const MetricSchema = z.enum([
   'prestigeCount',
   /** Money the Plates have printed directly (spec §5E). */
   'moneyPrinted',
+  /**
+   * Money from every source this run: sales, trades and the presses (a
+   * melt-down starts it again from zero). The Absurd gates on this rather than `moneyPrinted` so a run that
+   * spends its Plates on the tree before the presses is slower, not stuck.
+   */
+  'moneyEarned',
+  /**
+   * Plates engraved across the whole game, spent or not (spec §5E). The pile
+   * (`plates`) cannot gate a phase: the presses and the tree spend it.
+   */
+  'platesEarned',
   'moneyPrintersInstalled',
+  /** Shop customers who left with Parts (The Shop layer). */
+  'customersServed',
+  /** Client orders delivered, across the game. */
+  'commissionsCompleted',
+  /** The shop's reputation, 0..1. */
+  'shopReputation',
+  /** Agents on staff: automations with a persona, installed (The Agency layer). */
+  'agentsHired',
   /** Levels installed in the Endgame Tree (spec §5E) — the Plate sink. */
   'endgameNodes',
   /** Fabricator sections pre-printed (spec §7.3). */
@@ -142,8 +164,14 @@ export const PacingFileSchema = z
   .object({
     targetHours: Positive,
     baselineHours: Positive,
-    offlineCapHours: Positive,
+    /**
+     * How far one phase may drift from its budget. Deliberately looser than
+     * the arc's: a phase is a story beat, not a stopwatch, and a tight window
+     * per phase made the tuner trade away real choices to hit it.
+     */
     phaseBudgetTolerance: Fraction,
+    /** How far the whole arc may drift from its budget (spec §6: 8 h ± 20 %). */
+    arcBudgetTolerance: Fraction,
     phases: z.array(PhaseDefSchema).min(1),
   })
   .strict();
@@ -542,6 +570,19 @@ const AutomationBase = {
   maxLevel: z.number().int().positive(),
   /** Design-seconds between firings — the bot inside the machine's check-in. */
   intervalDesignSeconds: Positive,
+  /**
+   * An automation can be an *agent*: a named member of staff with a job title
+   * and a few things they say when they act. Pure presentation — the
+   * behaviour is the same with or without one.
+   */
+  persona: z
+    .object({
+      name: z.string().min(1),
+      role: z.string().min(1),
+      lines: z.array(z.string().min(1)).min(1),
+    })
+    .strict()
+    .optional(),
 };
 
 export const SellPartsAutomationSchema = z
@@ -600,11 +641,67 @@ export const ChangeoverAutomationSchema = z
   })
   .strict();
 
+/**
+ * Auto-recycler: feeds the Scrap pile back through the recycler once it holds
+ * `defaultThreshold` grams, into the material the first bay is loaded with.
+ * Without it the recycler is the single most repeated action in the game — the
+ * balance bots recycled by hand over eight hundred times a run — and the
+ * automation tree exists to sell the removal of exactly that kind of chore.
+ */
+export const RecycleScrapAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('recycle-scrap'),
+    /** Grams of Scrap to wait for before a firing. */
+    defaultThreshold: NonNegative,
+  })
+  .strict();
+
+/**
+ * The sales agent: runs the shop front by the stock on the shelf. Below
+ * `defaultThreshold` Parts it shuts the shop (the workshop needs them); while
+ * stock is scarce it sells dear; with a healthy shelf it sells fair; past
+ * `glutMultiple` × the threshold it clears stock at a bargain.
+ */
+export const RunShopAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('run-shop'),
+    /** Parts the agent will not sell below. */
+    defaultThreshold: NonNegative,
+    /** Stock above this multiple of the threshold is a glut. */
+    glutMultiple: Positive,
+    /** Stock below this multiple of the threshold is scarce. */
+    scarceMultiple: Positive,
+    shutPrice: z.string().min(1),
+    scarcePrice: z.string().min(1),
+    steadyPrice: z.string().min(1),
+    glutPrice: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * The account manager: takes on clients' proposals as they knock, up to
+ * `defaultThreshold` orders open at once. It does not turn anyone down — a
+ * proposal it has no room for simply waits, as it would for the player.
+ */
+export const AnswerProposalsAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('answer-proposals'),
+    /** Orders it will hold open at once. */
+    defaultThreshold: Positive,
+  })
+  .strict();
+
 export const AutomationDefSchema = z.discriminatedUnion('behavior', [
   SellPartsAutomationSchema,
   BuyFilamentAutomationSchema,
   TradeFilamentAutomationSchema,
   ChangeoverAutomationSchema,
+  RecycleScrapAutomationSchema,
+  RunShopAutomationSchema,
+  AnswerProposalsAutomationSchema,
 ]);
 
 export const AutomationFileSchema = z.array(AutomationDefSchema).min(1);
@@ -638,6 +735,34 @@ export const FailureFileSchema = z
         requiresUpgradeId: IdSchema,
         /** Share of the scrap's banked value that survives recycling (< 1). */
         yieldFraction: z.number().finite().positive().max(1),
+      })
+      .strict(),
+    /**
+     * Perfect prints: the pity timer's good twin. Every finished batch adds
+     * `chargePerBatch` to the bay's perfect meter; the batch that fills it is
+     * Perfect and yields `yieldMultiplier` times over. Deterministic like the
+     * failure timer, so the player can watch the next one coming.
+     */
+    perfectPrint: z
+      .object({
+        chargePerBatch: z.number().finite().positive().max(1),
+        yieldMultiplier: z.number().finite().min(1),
+      })
+      .strict(),
+    /**
+     * Overclock: tap a running bay to print faster for a while, at the price
+     * of failure charge (the spec's fast-and-risky end of §5A, made active).
+     * It also fills the perfect meter faster, so the gamble cuts both ways.
+     */
+    overclock: z
+      .object({
+        unlockPhaseId: IdSchema,
+        durationDesignSeconds: Positive,
+        /** Counted from the moment it fires, so it includes the boost itself. */
+        cooldownDesignSeconds: Positive,
+        speedMultiplier: z.number().finite().min(1),
+        failureChargeMultiplier: z.number().finite().min(1),
+        perfectChargeMultiplier: z.number().finite().min(1),
       })
       .strict(),
   })
@@ -870,6 +995,90 @@ export const EndgameFileSchema = z
   })
   .strict();
 
+// --- commissions.json -------------------------------------------------------
+
+/**
+ * Commissions: clients post orders on a board — so many of an object in a
+ * material, before a deadline — and pay a bonus on delivery. Prints count
+ * towards every matching order automatically, so a commission is a *goal*,
+ * not a chore: the decision is which order to chase with which bay. Offers are
+ * drawn from a seeded hash of the board's issue counter, so the board a save
+ * sees is reproducible.
+ */
+export const CommissionTemplateSchema = z
+  .object({
+    id: IdSchema,
+    objectId: IdSchema,
+    materialId: IdSchema,
+    /** Parts to deliver. */
+    count: z.number().int().positive(),
+    timeLimitDesignSeconds: Positive,
+    /** Bonus money on delivery, as a multiple of what the parts sell for. */
+    rewardMultiplier: Positive,
+    unlockPhaseId: IdSchema,
+  })
+  .strict();
+
+export const CommissionsFileSchema = z
+  .object({
+    unlockPhaseId: IdSchema,
+    boardSize: z.number().int().positive(),
+    offerEveryDesignSeconds: Positive,
+    /** The first offer after the board opens, so it does not open empty. */
+    firstOfferDesignSeconds: Positive,
+    /** How long a proposal waits for an answer before the client walks off. */
+    offerWindowDesignSeconds: Positive,
+    /**
+     * Repeat business: each order a client has had delivered raises what
+     * their next one pays by this fraction, up to `loyaltyMaxOrders` orders.
+     */
+    loyaltyBonusPerOrder: NonNegative,
+    loyaltyMaxOrders: z.number().int().nonnegative(),
+    clients: z.array(z.object({ id: IdSchema, name: z.string().min(1) }).strict()).min(1),
+    templates: z.array(CommissionTemplateSchema).min(1),
+  })
+  .strict();
+
+// --- shop.json --------------------------------------------------------------
+
+/**
+ * The shop front. From its unlock phase customers walk in and buy Parts off
+ * the shelf at the price level the player sets: a higher price earns more per
+ * Part and brings fewer customers; a customer who finds the shelf empty leaves
+ * and costs reputation, and reputation is what brings customers in. Selling
+ * Parts outright (wholesale) stays available — the shop pays better, slower,
+ * and only while there is stock to sell.
+ */
+export const ShopPriceLevelSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    /** Retail price as a multiple of what a Part fetches wholesale. */
+    priceMultiplier: NonNegative,
+    /** Customer arrivals relative to the fair price (0 = the shop is shut). */
+    demandMultiplier: NonNegative,
+  })
+  .strict();
+
+export const ShopFileSchema = z
+  .object({
+    unlockPhaseId: IdSchema,
+    priceLevels: z.array(ShopPriceLevelSchema).min(1),
+    openingPriceLevel: IdSchema,
+    /** Seconds between customers at the fair price and middling reputation. */
+    customerEveryDesignSeconds: Positive,
+    partsPerCustomerMin: z.number().int().positive(),
+    partsPerCustomerMax: z.number().int().positive(),
+    reputationStart: Fraction,
+    reputationGainPerSale: Fraction,
+    reputationLossPerMiss: Fraction,
+    /** Demand at reputation 0 and at reputation 1, as multipliers. */
+    reputationDemandMin: Positive,
+    reputationDemandMax: Positive,
+    customers: z.array(z.object({ id: IdSchema, name: z.string().min(1) }).strict()).min(1),
+  })
+  .strict();
+
 // --- the whole content set --------------------------------------------------
 
 export const ContentSchema = z
@@ -889,6 +1098,8 @@ export const ContentSchema = z
     failure: FailureFileSchema,
     prestige: PrestigeFileSchema,
     endgame: EndgameFileSchema,
+    commissions: CommissionsFileSchema,
+    shop: ShopFileSchema,
   })
   .strict();
 
@@ -909,6 +1120,8 @@ export const CONTENT_FILE_SCHEMAS = {
   failure: FailureFileSchema,
   prestige: PrestigeFileSchema,
   endgame: EndgameFileSchema,
+  commissions: CommissionsFileSchema,
+  shop: ShopFileSchema,
 } as const;
 
 export type ContentFileName = keyof typeof CONTENT_FILE_SCHEMAS;

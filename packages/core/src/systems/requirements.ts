@@ -1,7 +1,7 @@
 import type { Content, Metric, Requirement } from '../content/schema.js';
 import { MS_PER_MINUTE } from '../engine/constants.js';
 import type { GameState } from '../state/game-state.js';
-import { countAutomations } from './automation.js';
+import { countAgents, countAutomations } from './automation.js';
 import { countDesignLevels, countDesigns, hasCapstoneDesign } from './designs.js';
 import { isEndingComplete } from './ending.js';
 import { countMoneyPrinters } from './prestige.js';
@@ -90,8 +90,20 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.stats.prestigeCount;
     case 'moneyPrinted':
       return state.stats.moneyPrinted;
+    case 'moneyEarned':
+      return state.stats.moneyEarned;
+    case 'platesEarned':
+      return state.stats.platesEarned;
     case 'moneyPrintersInstalled':
       return countMoneyPrinters(state);
+    case 'customersServed':
+      return state.stats.customersServed;
+    case 'commissionsCompleted':
+      return state.stats.commissionsCompleted;
+    case 'shopReputation':
+      return state.shop.reputation;
+    case 'agentsHired':
+      return countAgents(state, content);
     case 'endgameNodes':
       return countEndgameNodes(state, content);
     case 'fabricatorSections':

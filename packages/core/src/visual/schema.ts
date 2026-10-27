@@ -42,8 +42,18 @@ import { z } from 'zod';
  *   synced, layer-by-layer build (spec §6 phase 6) with the sections
  *   pre-printed for it (spec §7.3), and the ending sequence — stage, progress
  *   and the credits themselves — followed by the New Game Plus offer.
+ * - v8 (M7 balance overhaul) — **frozen**: active play. Every bay carries its
+ *   perfect meter and its overclock (boost remaining, cooldown remaining,
+ *   whether it can fire now), so the renderer can show both promises the bay
+ *   is making: the failure coming and the Perfect print coming.
+ * - v9 — **frozen**: the commission board — every open order with its client,
+ *   what it wants, how much is delivered, the time left and what it pays.
+ * - v10 — **frozen**: the shop front (price levels, reputation, what a Part
+ *   sells for over the counter, customers served and missed), orders that
+ *   start as proposals (`accepted`) with the client's loyalty, and automations
+ *   that are agents (`agent`: a name and a job title).
  */
-export const VISUAL_STATE_VERSION = 7;
+export const VISUAL_STATE_VERSION = 10;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -61,6 +71,64 @@ export const QueueEntryVisualSchema = z
     batches: z.number().int().positive(),
     /** The entry the bay is printing right now. */
     current: z.boolean(),
+  })
+  .strict();
+
+/** One order on the commission board. */
+export const CommissionVisualSchema = z
+  .object({
+    serial: z.number().int().positive(),
+    templateId: NonEmpty,
+    clientName: NonEmpty,
+    objectId: NonEmpty,
+    objectName: NonEmpty,
+    materialId: NonEmpty,
+    materialName: NonEmpty,
+    count: z.number().int().positive(),
+    delivered: NonNegative,
+    /** 0..1 of the time left before the client gives up. */
+    timeLeft: Unit,
+    remainingMs: NonNegative,
+    reward: NonNegative,
+    /** False while it is still a proposal waiting for an answer. */
+    accepted: z.boolean(),
+    /** Orders this client has had delivered before: a regular pays more. */
+    loyalty: NonNegativeInt,
+  })
+  .strict();
+
+/** One price the shop can be set to. */
+export const ShopPriceVisualSchema = z
+  .object({
+    id: NonEmpty,
+    name: NonEmpty,
+    priceMultiplier: NonNegative,
+    demandMultiplier: NonNegative,
+  })
+  .strict();
+
+export const ShopVisualSchema = z
+  .object({
+    /** The shop has opened this run. */
+    open: z.boolean(),
+    priceLevelId: NonEmpty,
+    levels: z.array(ShopPriceVisualSchema),
+    reputation: Unit,
+    /** What one Part fetches over the counter at the current price. */
+    unitPrice: NonNegative,
+    /** What one Part fetches wholesale, for comparison. */
+    wholesalePrice: NonNegative,
+    served: NonNegativeInt,
+    missed: NonNegativeInt,
+  })
+  .strict();
+
+export const CommissionsVisualSchema = z
+  .object({
+    /** The board has opened this run. */
+    open: z.boolean(),
+    offers: z.array(CommissionVisualSchema),
+    completed: NonNegativeInt,
   })
   .strict();
 
@@ -105,6 +173,21 @@ export const SlotVisualSchema = z
      * deterministic, so this is a promise to the player, not a probability.
      */
     failureRisk: Unit,
+    /** 0..1 towards the next Perfect print — the good twin of `failureRisk`. */
+    perfectCharge: Unit,
+    /** The bay's overclock (see `failure.overclock`). */
+    overclock: z
+      .object({
+        /** Boosted right now. */
+        active: z.boolean(),
+        /** 0..1 of the boost still to run; 0 when not boosted. */
+        remaining: Unit,
+        /** 0..1 of the cooldown still to run; 0 when ready. */
+        cooldown: Unit,
+        /** Unlocked, out of cooldown and printing: the button is live. */
+        ready: z.boolean(),
+      })
+      .strict(),
     /** The rota this bay works through; empty when it prints one config. */
     queue: z.array(QueueEntryVisualSchema),
     /** Batches finished on the current rota entry. */
@@ -215,6 +298,8 @@ export const AutomationVisualSchema = z
     affordable: z.boolean(),
     cost: NonNegative,
     costResource: NonEmpty,
+    /** A member of staff rather than a machine: who they are and their job. */
+    agent: z.object({ name: NonEmpty, role: NonEmpty }).strict().nullable(),
   })
   .strict();
 
@@ -462,6 +547,8 @@ export const VisualStateSchema = z
     inflation: InflationVisualSchema,
     fabricator: FabricatorVisualSchema,
     ending: EndingVisualSchema,
+    commissions: CommissionsVisualSchema,
+    shop: ShopVisualSchema,
   })
   .strict();
 

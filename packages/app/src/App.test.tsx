@@ -1,10 +1,5 @@
 import 'fake-indexeddb/auto';
-import {
-  MS_PER_HOUR,
-  MS_PER_SECOND,
-  RAW_CONTENT,
-  createStaticContentSource,
-} from '@printhead/core';
+import { MS_PER_HOUR, MS_PER_SECOND } from '@printhead/core';
 import { type ManualClock, type ManualLifecycle, createMemoryPlatform } from '@printhead/platform';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -49,29 +44,189 @@ function attachAll(harness: Harness, store: GameStore): void {
   }
 }
 
-describe('App shell', () => {
-  it('renders the phase, the HUD and the workshop', async () => {
-    const { game } = await boot();
-    render(<App store={game.store} />);
-    expect(screen.getByTestId('phase').textContent).toBe('intro');
-    expect(screen.getByTestId('phase-name').textContent).toBe('Intro');
-    expect(screen.getByRole('img')).toBeDefined();
-    expect(screen.getByTestId('money').textContent).toBe('¤0');
-    expect(screen.getByTestId('print-status').textContent).toBe('no printer');
-  });
+describe('the assembly bench', () => {
+  // jsdom has no PointerEvent; a MouseEvent carries the coordinates a drag needs.
+  if (window.PointerEvent === undefined) {
+    class PointerEventShim extends MouseEvent {
+      readonly pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerId = init.pointerId ?? 0;
+      }
+    }
+    window.PointerEvent = PointerEventShim as unknown as typeof PointerEvent;
+  }
 
-  it('keeps the attach button disabled until the bench work is done', async () => {
+  it('seats a piece dropped on the printer, and attaches it once its screws are turned', async () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
     const first = store.getContent().start.assemblyPieces[0];
-    const attach = screen.getByTestId('attach');
-    expect(attach).toHaveProperty('disabled', true);
-    expect(attach.textContent).toContain('s');
-
     harness.warp((first?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
+    const card = document.querySelector<HTMLButtonElement>(`[data-piece="${first?.id}"]`);
+    const target = document.querySelector<HTMLElement>('.bench__printer');
+    if (card === null || target === null) {
+      throw new Error('expected the bench');
+    }
+    // jsdom lays nothing out: give the printer a box to aim at.
+    target.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }) as DOMRect;
+
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerMove(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    // Seated, not fastened: the reducer has not heard about it yet.
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+    fireEvent.click(screen.getByTestId('screw-0'));
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+    fireEvent.click(screen.getByTestId('screw-1'));
+    expect(store.getState().assembly.attachedPieceIds).toEqual([first?.id]);
+    expect(screen.queryByTestId('screw-0')).toBeNull();
+  });
+
+  it('switches the controller on with its power button rather than screws', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const pieces = store.getContent().start.assemblyPieces;
+    for (const piece of pieces.slice(0, -1)) {
+      harness.warp(piece.attachDesignSeconds * MS_PER_SECOND);
+      fireEvent.click(screen.getByTestId('attach'));
+    }
+    const last = pieces.at(-1);
+    expect(last?.id).toBe('controller');
+    const card = document.querySelector<HTMLButtonElement>(`[data-piece="${last?.id}"]`);
+    const target = document.querySelector<HTMLElement>('.bench__printer');
+    if (card === null || target === null) {
+      throw new Error('expected the bench');
+    }
+    target.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }) as DOMRect;
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerMove(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    expect(screen.queryByTestId('screw-0')).toBeNull();
+    fireEvent.click(screen.getByTestId('power-on'));
+    expect(store.getState().assembly.attachedPieceIds).toHaveLength(pieces.length);
+  });
+});
+
+describe('progressive disclosure', () => {
+  const shown = (testId: string): boolean =>
+    screen.getByTestId(testId).closest('[hidden]') === null;
+
+  it('brings in each piece of the interface when its idea first matters', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    // A working machine and nothing else: no ledger lines, nothing to sell.
+    expect(shown('money')).toBe(false);
+    expect(shown('parts')).toBe(false);
+    expect(shown('sell')).toBe(false);
+    expect(shown('log')).toBe(false);
+
+    fireEvent.click(screen.getByTestId('configure'));
+    const object = store.getContent().objects[0];
+    harness.warp((object?.printDesignSeconds ?? 0) * MS_PER_SECOND);
+    // The first Part: now there is something to count and something to sell.
+    expect(shown('parts')).toBe(true);
+    expect(shown('sell')).toBe(true);
+    expect(shown('log')).toBe(true);
+    expect(shown('money')).toBe(false);
+
+    fireEvent.click(screen.getByTestId('sell'));
+    expect(shown('money')).toBe(true);
+  });
+});
+
+describe("the printer's diary", () => {
+  it('opens with the machine itself, waits to be read, and never insists', async () => {
+    globalThis.localStorage.removeItem('printhead:diary');
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    // One page, unread: a badge on the book, nothing more.
+    const open = screen.getByTestId('diary-open');
+    expect(open.textContent).toContain('1');
+    expect(screen.queryByTestId('diary')).toBeNull();
+
+    fireEvent.click(open);
+    expect(screen.getByTestId('diary')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('diary')).toBeNull();
+    // Read now: the badge is gone.
+    expect(screen.getByTestId('diary-open').textContent).not.toContain('1');
+  });
+});
+
+describe('keyboard shortcuts', () => {
+  it('press the button the screen offers, and nothing the screen withholds', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const first = store.getContent().start.assemblyPieces[0];
+    fireEvent.keyDown(window, { key: 'a' });
+    expect(store.getState().assembly.attachedPieceIds).toEqual([first?.id]);
+    for (const _piece of store.getContent().start.assemblyPieces.slice(1)) {
+      fireEvent.keyDown(window, { key: 'a' });
+    }
+    expect(store.getState().assembly.attachedPieceIds).toHaveLength(
+      store.getContent().start.assemblyPieces.length,
+    );
+    // Sell is on screen but disabled with nothing to sell: the key does nothing.
+    fireEvent.keyDown(window, { key: 's' });
+    expect(store.getState().stats.partsSold).toBe(0);
+  });
+
+  it('stays out of the way while a field has focus or a key is modified', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const first = store.getContent().start.assemblyPieces[0];
+    harness.warp((first?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
+    fireEvent.keyDown(window, { key: 'a', metaKey: true });
+    const field = document.createElement('input');
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: 'a' });
+    field.remove();
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+  });
+});
+
+describe('App shell', () => {
+  it('opens on the bench and nothing else: no ledger, no panels', async () => {
+    const { game } = await boot();
+    render(<App store={game.store} />);
+    expect(screen.getByTestId('phase').textContent).toBe('intro');
+    expect(screen.getByTestId('assembly-bench')).toBeDefined();
+    expect(screen.queryByTestId('money')).toBeNull();
+    expect(screen.queryByTestId('ledger')).toBeNull();
+    expect(screen.queryByTestId('phase-name')).toBeNull();
+  });
+
+  it('lets the first piece on straight away: there is nothing to wait for', async () => {
+    const { game } = await boot();
+    render(<App store={game.store} />);
+    const first = game.store.getContent().start.assemblyPieces[0];
     expect(screen.getByTestId('attach')).toHaveProperty('disabled', false);
     expect(screen.getByTestId('attach').textContent).toBe(`Attach ${first?.name}`);
+  });
+
+  it('reveals the workshop once the machine is built', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    expect(screen.queryByTestId('assembly-bench')).toBeNull();
+    expect(screen.getByTestId('phase-name').textContent).toBe('Intro');
+    expect(screen.getByTestId('money').textContent).toBe('$0');
+    expect(screen.getByTestId('print-status').textContent).not.toBe('no printer');
   });
 
   it('walks the whole intro through the UI and lands in bench', async () => {
@@ -90,17 +245,17 @@ describe('App shell', () => {
     expect(Number(screen.getByTestId('parts').textContent)).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByTestId('sell'));
-    expect(screen.getByTestId('money').textContent).not.toBe('¤0');
+    expect(screen.getByTestId('money').textContent).not.toBe('$0');
     harness.warp(MS_PER_SECOND);
     expect(screen.getByTestId('phase').textContent).toBe('bench');
   });
 
-  it('draws each attached piece onto the printer as it is clicked on', async () => {
+  it('draws each attached piece onto the printer on the bench as it is clicked on', async () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
     const pieces = store.getContent().start.assemblyPieces;
-    const workshop = screen.getByRole('img');
+    const workshop = screen.getByTestId('bench-printer');
     expect(workshop.querySelectorAll('[data-part]')).toHaveLength(0);
 
     harness.warp((pieces[0]?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
@@ -112,8 +267,8 @@ describe('App shell', () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
-    const before = screen.getByTestId('filament').textContent;
     attachAll(harness, store);
+    const before = screen.getByTestId('filament').textContent;
     fireEvent.click(screen.getByTestId('configure'));
     fireEvent.click(screen.getByTestId('print'));
     expect(screen.getByTestId('filament').textContent).not.toBe(before);
@@ -134,13 +289,11 @@ describe('App shell', () => {
   });
 });
 
-describe('the offline summary screen (spec §7.4)', () => {
-  it('shows what the workshop did while the player was away, then dismisses', async () => {
+describe('time away (spec §7.4: no offline progress)', () => {
+  it('resumes a save exactly where it was left, however long ago', async () => {
     const platform = createMemoryPlatform(1_000_000);
     const clock = platform.clock as ManualClock;
     const first = await bootGame({ platform, autoStart: false });
-
-    // Get a printer running, then save and come back two hours later.
     const store = first.store;
     const content = store.getContent();
     for (const piece of content.start.assemblyPieces) {
@@ -152,52 +305,28 @@ describe('the offline summary screen (spec §7.4)', () => {
     store.dispatch({ type: 'SET_SLOT_CONFIG', slotId, materialId: 'pla', objectId: 'bracket' });
     store.dispatch({ type: 'START_PRINT', slotId });
     await first.autosave.saveNow();
+    const before = first.store.getState();
     first.loop.stop();
 
     clock.advance(2 * MS_PER_HOUR);
     const second = await bootGame({ platform, autoStart: false });
-    expect(second.offline).not.toBeNull();
-
-    render(<App store={second.store} initialOffline={second.offline} />);
-    expect(screen.getByTestId('offline-summary')).toBeDefined();
-    expect(screen.getByTestId('offline-away').textContent).toContain('2 h');
-    expect(Number(screen.getByTestId('offline-prints').textContent)).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByTestId('offline-dismiss'));
-    expect(screen.queryByTestId('offline-summary')).toBeNull();
+    expect(second.store.getState()).toEqual(before);
   });
 
-  it('says so when the offline cap swallowed part of the absence', async () => {
-    const platform = createMemoryPlatform(1_000_000);
-    const clock = platform.clock as ManualClock;
-    const content = createStaticContentSource(RAW_CONTENT).get();
-    const seed = await bootGame({ platform, autoStart: false });
-    await seed.autosave.saveNow();
-    clock.advance((content.pacing.offlineCapHours + 5) * MS_PER_HOUR);
-
-    const back = await bootGame({ platform, autoStart: false });
-    render(<App store={back.store} initialOffline={back.offline} />);
-    expect(screen.getByTestId('offline-capped').textContent).toContain('5 h');
-  });
-
-  it('appears when the tab comes back after a long spell in the background', async () => {
+  it('drops a long spell in the background instead of replaying it', async () => {
     const harness = await boot();
     const { game } = harness;
-    render(
-      <App
-        store={game.store}
-        initialOffline={game.offline}
-        subscribeOffline={game.subscribeOffline}
-      />,
-    );
-    expect(screen.queryByTestId('offline-summary')).toBeNull();
-
-    // The loop's first frame establishes "now"; the next one arrives late.
+    render(<App store={game.store} />);
     act(() => {
       game.loop.frame();
     });
-    harness.warp(3 * MS_PER_HOUR);
-    expect(screen.getByTestId('offline-summary')).toBeDefined();
+    const before = game.store.getState().simTimeMs;
+    const clock = game.platform.clock as ManualClock;
+    clock.advance(3 * MS_PER_HOUR);
+    act(() => {
+      game.loop.frame();
+    });
+    expect(game.store.getState().simTimeMs).toBe(before);
   });
 });
 
@@ -212,10 +341,8 @@ describe('save and reload', () => {
     await first.autosave.saveNow();
     const before = first.store.getState();
 
-    // No wall time passes, so there is nothing to catch up on.
     const second = await bootGame({ platform, autoStart: false });
     expect(second.load.kind).toBe('loaded');
-    expect(second.offline).toBeNull();
     expect(second.store.getState()).toEqual(before);
   });
 
@@ -232,7 +359,7 @@ describe('save and reload', () => {
     const game = await bootGame({ platform, autoStart: false });
     await writeSave({ storage: platform.storage }, game.store.getState(), 9_000_000);
     const back = await bootGame({ platform, autoStart: false });
-    expect(back.offline).toBeNull();
+    expect(back.store.getState().simTimeMs).toBe(game.store.getState().simTimeMs);
   });
 });
 

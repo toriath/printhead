@@ -29,7 +29,7 @@ import {
 } from './format.js';
 import { useGameSelector, useVisualState } from './hooks.js';
 import { Hud, printStatus } from './hud.js';
-import { OFFLINE_THRESHOLD_MS, createGameLoop } from './loop.js';
+import { AWAY_THRESHOLD_MS, createGameLoop } from './loop.js';
 import { readSave, writeSave } from './persistence.js';
 import { createGameStore } from './store.js';
 
@@ -43,8 +43,18 @@ describe('display formatting', () => {
     expect(formatAmount(12)).toBe('12');
     expect(formatAmount(1.234)).toBe('1.23');
     expect(formatAmount(123.456)).toBe('123.5');
-    expect(formatMoney(3)).toBe('¤3');
+    expect(formatMoney(3)).toBe('$3');
     expect(formatGrams(40)).toBe('40 g');
+  });
+
+  it('abbreviates big numbers, as an idle game must', () => {
+    expect(formatAmount(9_999)).toBe('9999');
+    expect(formatAmount(16_436)).toBe('16.4K');
+    expect(formatMoney(1_826_032.3)).toBe('$1.83M');
+    expect(formatAmount(443_154)).toBe('443K');
+    expect(formatAmount(-25_000)).toBe('-25.0K');
+    expect(formatAmount(2.5e12)).toBe('2.50T');
+    expect(formatAmount(999_999)).toBe('1.00M');
   });
 
   it('clamps percentages to the 0..1 the projection promises', () => {
@@ -107,14 +117,16 @@ describe('the control model', () => {
     expect(model.buyFilament).toBeNull();
   });
 
-  it('keeps the attach button off until the bench work is done', () => {
+  it('keeps the attach button off while a piece is still on the bench', () => {
+    // Shipped content has no bench timers (waiting is not play); the model
+    // still honours one if the data asks for it.
     expect(buildControlModel(freshState, content, freshVisual).attach).toMatchObject({
       pieceId: content.start.assemblyPieces[0]?.id,
-      enabled: false,
+      enabled: true,
     });
-    const ready = { ...freshState, assembly: { ...freshState.assembly, cooldownMs: 0 } };
-    expect(buildControlModel(ready, content, toVisualState(ready, content)).attach?.enabled).toBe(
-      true,
+    const busy = { ...freshState, assembly: { ...freshState.assembly, cooldownMs: 5000 } };
+    expect(buildControlModel(busy, content, toVisualState(busy, content)).attach?.enabled).toBe(
+      false,
     );
   });
 
@@ -317,20 +329,18 @@ describe('the selector hook', () => {
 });
 
 describe('the engine loop', () => {
-  it('turns wall-clock gaps into ticks, and long gaps into offline catch-up', () => {
+  it('turns wall-clock gaps into ticks, and drops long gaps as time away', () => {
     const clock = createManualClock(1000);
     const store = createGameStore({ clock });
-    const onOffline = vi.fn();
-    const loop = createGameLoop({ store, clock, onOffline });
+    const loop = createGameLoop({ store, clock });
 
     clock.advance(MS_PER_SECOND);
     loop.frame();
     expect(store.getState().simTimeMs).toBe(MS_PER_SECOND);
-    expect(onOffline).not.toHaveBeenCalled();
 
-    clock.advance(OFFLINE_THRESHOLD_MS);
-    loop.frame();
-    expect(onOffline).toHaveBeenCalledTimes(1);
+    clock.advance(AWAY_THRESHOLD_MS);
+    expect(loop.frame()).toBe(0);
+    expect(store.getState().simTimeMs).toBe(MS_PER_SECOND);
   });
 
   it('never runs time backwards if the host clock does', () => {
@@ -551,5 +561,87 @@ describe('the store bridge', () => {
     expect(store.getState()).toBe(fresh);
     expect(store.getVisualState().simTimeMs).toBe(0);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the casino layer', () => {
+  it('throws more coins for more money, but never floods the screen', async () => {
+    const { coinsFor } = await import('./casino.js');
+    expect(coinsFor(0)).toBe(3);
+    expect(coinsFor(10)).toBeGreaterThan(coinsFor(1));
+    expect(coinsFor(1e6)).toBeGreaterThan(coinsFor(1e3));
+    expect(coinsFor(1e30)).toBe(24);
+  });
+});
+
+describe('starved bays', () => {
+  it('flags a loaded, stopped bay whose spool cannot feed one print — and only that', async () => {
+    const { starvedSlots } = await import('./starve.js');
+    const base = createInitialState(content, { seed: 1 });
+    const first = base.slots[0];
+    if (first === undefined) {
+      throw new Error('expected a first bay');
+    }
+    const loaded = {
+      ...base,
+      slots: [{ ...first, printerCount: 1, materialId: 'pla', objectId: 'bracket' }],
+    };
+    const dry = { ...loaded, filamentGrams: { pla: 0 } };
+    expect(starvedSlots(dry, content)).toEqual([first.id]);
+    expect(starvedSlots({ ...loaded, filamentGrams: { pla: 10_000 } }, content)).toEqual([]);
+    // Purging, or with nothing loaded, is not "out of filament".
+    const purging = { ...dry, slots: [{ ...dry.slots[0], changeoverMs: 500 }] } as typeof dry;
+    expect(starvedSlots(purging, content)).toEqual([]);
+    expect(starvedSlots({ ...base, filamentGrams: { pla: 0 } }, content)).toEqual([]);
+  });
+});
+
+describe('price buttons', () => {
+  it('fill with the share of the price the ledger holds, and light up when full', async () => {
+    const { price } = await import('./afford.js');
+    const visual = toVisualState(createInitialState(content, { seed: 1 }), content);
+    const half = { ...visual, ledger: { ...visual.ledger, money: 50 } };
+    expect(price(half, 100, 'money').style).toEqual({ '--afford': 0.5 });
+    expect(price(half, 100, 'money').className).toBe('price');
+    expect(price(half, 20, 'money').style).toEqual({ '--afford': 1 });
+    expect(price(half, 20, 'money').className).toBe('price is-ready');
+    expect(price(half, 10, 'plates').style).toEqual({ '--afford': 0 });
+  });
+});
+
+describe('discovery', () => {
+  it('marks a thing new until the player touches it, and remembers that', async () => {
+    const { renderHook, act } = await import('@testing-library/react');
+    const { markSeen, useNew } = await import('./seen.js');
+    const { result } = renderHook(() => useNew(['tab:test-a', 'tab:test-b']));
+    expect([...result.current].sort()).toEqual(['tab:test-a', 'tab:test-b']);
+    act(() => markSeen('tab:test-a'));
+    expect([...result.current]).toEqual(['tab:test-b']);
+    expect(globalThis.localStorage.getItem('printhead:seen')).toContain('tab:test-a');
+  });
+});
+
+describe('the diary pages', () => {
+  it('each page has its own id and some words, and the first is the hello', async () => {
+    const { DIARY } = await import('./story.js');
+    expect(new Set(DIARY.map((entry) => entry.id)).size).toBe(DIARY.length);
+    expect(DIARY.every((entry) => entry.text.length > 20)).toBe(true);
+    expect(DIARY[0]?.text.startsWith('Oh. Hello.')).toBe(true);
+  });
+
+  it('writes nothing before the machine is built, and the hello once it is', async () => {
+    const { DIARY } = await import('./story.js');
+    const fresh = createInitialState(content, { seed: 1 });
+    expect(DIARY.filter((entry) => entry.unlocked(fresh, content))).toEqual([]);
+    const built = {
+      ...fresh,
+      assembly: {
+        ...fresh.assembly,
+        attachedPieceIds: content.start.assemblyPieces.map((piece) => piece.id),
+      },
+    };
+    expect(DIARY.filter((entry) => entry.unlocked(built, content)).map((e) => e.id)).toEqual([
+      'hello',
+    ]);
   });
 });

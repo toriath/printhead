@@ -16,6 +16,7 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from './automation.js';
+import { addScrap } from './resources.js';
 
 const content = TEST_CONTENT;
 const curves = createCurveRegistry(content.curves);
@@ -23,6 +24,7 @@ const base = createInitialState(content, { seed: 1 });
 const AUTO_SELL = 'auto-sell';
 const AUTO_BUY = 'auto-buy-filament';
 const AUTO_TRADE = 'auto-trade';
+const AUTO_RECYCLE = 'auto-recycler';
 
 const defOf = (id: string): AutomationDef => {
   const def = content.automation.find((candidate) => candidate.id === id);
@@ -249,6 +251,38 @@ describe('tickAutomation', () => {
 
       const empty: GameState = { ...stocked(100, 0), slots: [testSlot()] };
       expect(tickAutomation(empty, content, interval, undefined).resources.money).toBe(100);
+    });
+  });
+
+  describe('auto-recycler', () => {
+    const due = (over: Partial<GameState>): GameState =>
+      inBench({
+        upgrades: { recycler: 1 },
+        automation: installed(AUTO_RECYCLE, { cooldownMs: 0 }),
+        slots: [testSlot({ materialId: 'pla', objectId: 'bracket', printerCount: 1 })],
+        ...over,
+      });
+    const withScrap = (state: GameState, grams: number): GameState =>
+      addScrap(state, grams, grams * 0.02);
+
+    it('feeds the whole pile into the loaded material once it reaches the threshold', () => {
+      const threshold = defOf(AUTO_RECYCLE).defaultThreshold;
+      const before = withScrap(due({}), threshold);
+      const { result, events } = collectEvents((emit) => tickAutomation(before, content, 1, emit));
+      expect(result.resources.scrap).toBe(0);
+      expect(result.filamentGrams.pla ?? 0).toBeGreaterThan(before.filamentGrams.pla ?? 0);
+      expect(events.map((event) => event.type)).toEqual(['SCRAP_RECYCLED', 'AUTOMATION_FIRED']);
+    });
+
+    it('waits while the pile is under the threshold', () => {
+      const threshold = defOf(AUTO_RECYCLE).defaultThreshold;
+      const before = withScrap(due({}), threshold - 1);
+      expect(tickAutomation(before, content, 1, undefined).resources.scrap).toBe(threshold - 1);
+    });
+
+    it('does nothing without a recycler to feed', () => {
+      const before = withScrap(due({ upgrades: {} }), 500);
+      expect(tickAutomation(before, content, 1, undefined).resources.scrap).toBe(500);
     });
   });
 
@@ -487,5 +521,85 @@ describe('automation refuses the moves that would be nonsense', () => {
       });
       expect(fire(state, AUTO_TRADE, cheapMarket(1.8)).stats.filamentSoldGrams).toBe(0);
     });
+  });
+});
+
+describe('agents', () => {
+  const PITCH = 'agent-pitch';
+  const DEAL = 'agent-deal';
+  const due = (id: string): number => defOf(id).intervalDesignSeconds * MS_PER_SECOND;
+
+  it('Pitch runs the shop by the stock: shut, dear, fair or clearance', () => {
+    const def = defOf(PITCH);
+    if (def.behavior !== 'run-shop') {
+      throw new Error('Pitch should run the shop');
+    }
+    const threshold = def.defaultThreshold;
+    const priceAt = (parts: number): string =>
+      tickAutomation(
+        inBench({
+          phaseId: 'farm',
+          automation: installed(PITCH),
+          resources: { ...base.resources, parts },
+          shop: { ...base.shop, priceLevelId: 'fair' },
+        }),
+        content,
+        due(PITCH),
+        undefined,
+      ).shop.priceLevelId;
+    expect(priceAt(threshold - 1)).toBe(def.shutPrice);
+    expect(priceAt(threshold)).toBe(def.scarcePrice);
+    expect(priceAt(threshold * def.scarceMultiple)).toBe(def.steadyPrice);
+    expect(priceAt(threshold * def.glutMultiple + 1)).toBe(def.glutPrice);
+  });
+
+  it('Deal takes clients on as they knock, up to the orders it will hold', () => {
+    const proposal = (serial: number) => ({
+      serial,
+      templateId: content.commissions.templates[0]?.id ?? '',
+      clientId: content.commissions.clients[0]?.id ?? '',
+      delivered: 0,
+      remainingMs: 30_000,
+      accepted: false,
+    });
+    const template = content.commissions.templates[0];
+    // Ready for the job: the filament for the whole order is on the shelf.
+    const state = inBench({
+      phaseId: 'farm',
+      automation: installed(DEAL),
+      filamentGrams: { ...base.filamentGrams, [template?.materialId ?? '']: 100_000 },
+      commissions: { ...base.commissions, open: [proposal(1), proposal(2), proposal(3)] },
+    });
+    const { result, events } = collectEvents((emit) =>
+      tickAutomation(state, content, due(DEAL), emit),
+    );
+    const limit = defOf(DEAL).defaultThreshold;
+    expect(result.commissions.open.filter((offer) => offer.accepted)).toHaveLength(limit);
+    expect(events.filter((event) => event.type === 'COMMISSION_ANSWERED')).toHaveLength(limit);
+  });
+
+  it('Deal passes over a job the workshop is not set up for', () => {
+    const template = content.commissions.templates[0];
+    const state = inBench({
+      phaseId: 'farm',
+      automation: installed(DEAL),
+      filamentGrams: { ...base.filamentGrams, [template?.materialId ?? '']: 0 },
+      slots: [],
+      commissions: {
+        ...base.commissions,
+        open: [
+          {
+            serial: 1,
+            templateId: template?.id ?? '',
+            clientId: content.commissions.clients[0]?.id ?? '',
+            delivered: 0,
+            remainingMs: 30_000,
+            accepted: false,
+          },
+        ],
+      },
+    });
+    const after = tickAutomation(state, content, due(DEAL), undefined);
+    expect(after.commissions.open[0]?.accepted).toBe(false);
   });
 });

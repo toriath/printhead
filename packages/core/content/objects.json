@@ -13,7 +13,7 @@
     "name": "Gear set",
     "printDesignSeconds": 45,
     "filamentGrams": 18,
-    "partsYield": 4,
+    "partsYield": 3,
     "basePartValue": 1.1,
     "unlockPhaseId": "bench"
   }

@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Mutation testing runs nightly rather than on every push (see the job).
+  schedule:
+    - cron: '17 3 * * *'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -13,6 +16,7 @@ concurrency:
 jobs:
   check:
     name: pnpm check (devcontainer)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -42,13 +46,16 @@ jobs:
   # Stryker cannot attribute them per test and replays the whole suite for each
   # one, and that suite now includes the fast-check properties. Left in the main
   # job it would hold the fast feedback — lint, types, tests, E2E — hostage to
-  # it. Green here is still required before a merge; it simply arrives later.
+  # it. It runs nightly (and on demand) rather than per change.
   #
   # If this starts timing out, the lever is the static mutants: most of them
   # come from test files computing their fixtures at module scope. Making those
   # lazy would cut the run substantially.
   mutation:
     name: stryker (core systems + curves + projection)
+    # Nightly, and on demand: at over an hour a run, gating every change on it
+    # cost more iteration than it caught. The 80 % break threshold still holds.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:

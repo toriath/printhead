@@ -22,7 +22,10 @@ export interface PhaseBudget {
 }
 
 export interface BudgetTable {
+  /** Per phase (loose: a phase is a story beat, not a stopwatch). */
   readonly tolerance: number;
+  /** For the whole arc (tight: spec §6's 8 h ± 20 %). */
+  readonly arcTolerance: number;
   /** Spec §6's arc budget — the sandbox at the end is not part of it. */
   readonly totalDesignMinutes: number;
   readonly terminalPhaseId: string | undefined;
@@ -47,6 +50,7 @@ export function buildBudgetTable(pacing: PacingContent): BudgetTable {
   const terminal = terminalPhaseId(pacing);
   return {
     tolerance,
+    arcTolerance: pacing.arcBudgetTolerance,
     terminalPhaseId: terminal,
     /** The arc's budget: everything up to, but not including, the sandbox. */
     totalDesignMinutes: totalBudgetDesignMinutes(

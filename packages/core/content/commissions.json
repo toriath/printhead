@@ -1,0 +1,93 @@
+{
+  "unlockPhaseId": "shop",
+  "boardSize": 3,
+  "offerEveryDesignSeconds": 60,
+  "firstOfferDesignSeconds": 5,
+  "offerWindowDesignSeconds": 45,
+  "loyaltyBonusPerOrder": 0.15,
+  "loyaltyMaxOrders": 6,
+  "clients": [
+    { "id": "cafe", "name": "The corner café" },
+    { "id": "school", "name": "The robotics club" },
+    { "id": "theatre", "name": "The little theatre" },
+    { "id": "garage", "name": "Dmitri's garage" },
+    { "id": "museum", "name": "The museum shop" },
+    { "id": "lab", "name": "A university lab" },
+    { "id": "studio", "name": "An animation studio" },
+    { "id": "ministry", "name": "The Ministry of Printing" }
+  ],
+  "templates": [
+    {
+      "id": "pla-brackets",
+      "objectId": "bracket",
+      "materialId": "pla",
+      "count": 12,
+      "timeLimitDesignSeconds": 150,
+      "rewardMultiplier": 3,
+      "unlockPhaseId": "shop"
+    },
+    {
+      "id": "pla-gears",
+      "objectId": "gearset",
+      "materialId": "pla",
+      "count": 24,
+      "timeLimitDesignSeconds": 240,
+      "rewardMultiplier": 3,
+      "unlockPhaseId": "shop"
+    },
+    {
+      "id": "petg-brackets",
+      "objectId": "bracket",
+      "materialId": "petg",
+      "count": 30,
+      "timeLimitDesignSeconds": 240,
+      "rewardMultiplier": 3.5,
+      "unlockPhaseId": "shop"
+    },
+    {
+      "id": "petg-gears",
+      "objectId": "gearset",
+      "materialId": "petg",
+      "count": 80,
+      "timeLimitDesignSeconds": 360,
+      "rewardMultiplier": 4,
+      "unlockPhaseId": "farm"
+    },
+    {
+      "id": "resin-brackets",
+      "objectId": "bracket",
+      "materialId": "resin",
+      "count": 40,
+      "timeLimitDesignSeconds": 360,
+      "rewardMultiplier": 4,
+      "unlockPhaseId": "farm"
+    },
+    {
+      "id": "resin-gears",
+      "objectId": "gearset",
+      "materialId": "resin",
+      "count": 120,
+      "timeLimitDesignSeconds": 480,
+      "rewardMultiplier": 5,
+      "unlockPhaseId": "studio"
+    },
+    {
+      "id": "metal-brackets",
+      "objectId": "bracket",
+      "materialId": "metal",
+      "count": 60,
+      "timeLimitDesignSeconds": 480,
+      "rewardMultiplier": 5,
+      "unlockPhaseId": "prestige"
+    },
+    {
+      "id": "metal-gears",
+      "objectId": "gearset",
+      "materialId": "metal",
+      "count": 200,
+      "timeLimitDesignSeconds": 600,
+      "rewardMultiplier": 6,
+      "unlockPhaseId": "prestige"
+    }
+  ]
+}

@@ -20,8 +20,11 @@ describe('phase FSM', () => {
     expect(phases.map((phase) => phase.id)).toEqual([
       'intro',
       'bench',
+      // Layers grown since the arc was first cut: the shop front and the staff.
+      'shop',
       'farm',
       'studio',
+      'agency',
       'prestige',
       'absurd',
       'end',
@@ -34,7 +37,7 @@ describe('phase FSM', () => {
   it('finds first, last and index', () => {
     expect(firstPhaseId(phases)).toBe('intro');
     expect(lastPhaseId(phases)).toBe('ended');
-    expect(phaseIndex(phases, 'farm')).toBe(2);
+    expect(phaseIndex(phases, 'farm')).toBe(3);
     expect(isKnownPhase(phases, 'farm')).toBe(true);
     expect(isKnownPhase(phases, 'nope')).toBe(false);
   });
@@ -68,11 +71,12 @@ describe('phase FSM', () => {
   });
 
   it('accumulates the spec §6 design-minute budgets', () => {
-    expect(budgetThroughPhase(phases, 'intro')).toBe(5);
-    expect(budgetThroughPhase(phases, 'bench')).toBe(35);
-    expect(budgetThroughPhase(phases, 'end')).toBe(420);
-    // The terminal sandbox is outside the arc's 420-minute budget (spec §6);
-    // its nominal five minutes are what the harness uses as a run-out.
-    expect(totalBudgetDesignMinutes(phases)).toBe(425);
+    expect(budgetThroughPhase(phases, 'intro')).toBe(1);
+    expect(budgetThroughPhase(phases, 'bench')).toBe(27);
+    expect(budgetThroughPhase(phases, 'shop')).toBe(57);
+    expect(budgetThroughPhase(phases, 'end')).toBe(485);
+    // The terminal sandbox is outside the arc's budget (spec §6); its
+    // nominal five minutes are what the harness uses as a run-out.
+    expect(totalBudgetDesignMinutes(phases)).toBe(490);
   });
 });

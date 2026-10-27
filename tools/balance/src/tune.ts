@@ -1,7 +1,9 @@
 import { type RawContent, loadContent, validateContent } from '@printhead/core';
 import { REFERENCE_BOT } from './bots.js';
 import { designMinutesOf } from './budget.js';
+import { deadContent, longestDroughtByPhase } from './fun.js';
 import type { Bot } from './harness.js';
+import type { RunLog } from './harness.js';
 import { runHeadless } from './harness.js';
 import { readPointer, writePointer } from './pointer.js';
 import { longestWallByPhase } from './waitwall.js';
@@ -32,6 +34,15 @@ export interface TuneTarget {
 export interface TuneOptions {
   readonly raw: RawContent;
   readonly bot?: Bot;
+  /**
+   * Score every bot here and add the scores up. A fit against one strategy
+   * overfits to it: the shipped M6 numbers held the reference player to every
+   * budget while the greedy one finished prestige in a third of its window and
+   * never finished the game. Takes precedence over `bot`.
+   */
+  readonly bots?: readonly Bot[];
+  /** Add the drought and dead-content penalties to the score. */
+  readonly fun?: boolean;
   readonly seed?: number;
 }
 
@@ -147,6 +158,10 @@ export interface ClimbOptions {
   /** Phases whose budgets the fit is scored against. */
   readonly phaseIds: readonly string[];
   readonly bot?: Bot;
+  /** Score the whole roster rather than one bot (see `TuneOptions.bots`). */
+  readonly bots?: readonly Bot[];
+  /** Score the fun penalties too (see `TuneOptions.fun`). */
+  readonly fun?: boolean;
   readonly seed?: number;
   readonly iterations?: number;
   /** Starting step as a fraction of each knob's current value. */
@@ -167,6 +182,23 @@ export interface ClimbResult {
  * lively and forty minutes out.
  */
 const WALL_WEIGHT = 0.5;
+
+/**
+ * Fun penalties (see `fun.ts`). A drought is a stretch with nothing new; past
+ * this many design minutes it costs score, quadratically, like a budget miss.
+ * Content no bot ever buys costs a flat amount per item: the optimiser should
+ * prefer numbers that put every node within reach.
+ */
+const DROUGHT_LIMIT_DESIGN_MINUTES = 20;
+/** …or this share of the phase's budget, whichever is longer. */
+const DROUGHT_LIMIT_BUDGET_SHARE = 1 / 3;
+/**
+ * Small on purpose. A heavier drought penalty "solved" a dull phase by making
+ * it short, and the whole game came in at 343 minutes against a 420 budget
+ * (found that way). Length is the hard constraint; droughts break ties.
+ */
+const DROUGHT_WEIGHT = 0.05;
+const DEAD_CONTENT_WEIGHT = 0.1;
 
 const DEFAULT_CLIMB_ITERATIONS = 12;
 const DEFAULT_STEP_FRACTION = 0.5;
@@ -199,35 +231,61 @@ export function scoreRun(
     return { score: Number.POSITIVE_INFINITY, durations: {} };
   }
   const content = validation.content;
-  const bot = options.bot ?? REFERENCE_BOT;
-  const log = runHeadless({
-    content,
-    bot,
-    ...(options.seed === undefined ? {} : { seed: options.seed }),
-  });
+  const bots = options.bots ?? [options.bot ?? REFERENCE_BOT];
   const durations: Record<string, number> = {};
+  const logs: RunLog[] = [];
   let score = 0;
-  for (const phaseId of phaseIds) {
-    const phase = content.pacing.phases.find((candidate) => candidate.id === phaseId);
-    if (phase === undefined) {
-      continue;
+  bots.forEach((bot, index) => {
+    const log = runHeadless({
+      content,
+      bot,
+      ...(options.seed === undefined ? {} : { seed: options.seed }),
+    });
+    for (const phaseId of phaseIds) {
+      const phase = content.pacing.phases.find((candidate) => candidate.id === phaseId);
+      if (phase === undefined) {
+        continue;
+      }
+      const actual = log.phaseDurations.get(phaseId) ?? log.designMinutes;
+      // The first bot's numbers are the plain `phaseId` keys callers print;
+      // every bot's are also kept under `botId/phaseId`.
+      if (index === 0) {
+        durations[phaseId] = actual;
+      }
+      durations[`${bot.id}/${phaseId}`] = actual;
+      const relative = (actual - phase.budgetDesignMinutes) / phase.budgetDesignMinutes;
+      score += relative * relative;
     }
-    const actual = log.phaseDurations.get(phaseId) ?? log.designMinutes;
-    durations[phaseId] = actual;
-    const relative = (actual - phase.budgetDesignMinutes) / phase.budgetDesignMinutes;
-    score += relative * relative;
-  }
-  const worst = longestWallByPhase(log.waitWalls);
-  for (const phaseId of phaseIds) {
-    const phase = content.pacing.phases.find((candidate) => candidate.id === phaseId);
-    if (phase === undefined || phase.waitWallBudgetDesignMinutes <= 0) {
-      continue;
+    logs.push(log);
+    if (options.fun === true) {
+      const droughts = longestDroughtByPhase(log);
+      for (const phaseId of phaseIds) {
+        const budget =
+          content.pacing.phases.find((candidate) => candidate.id === phaseId)
+            ?.budgetDesignMinutes ?? 0;
+        const limit = Math.max(DROUGHT_LIMIT_DESIGN_MINUTES, budget * DROUGHT_LIMIT_BUDGET_SHARE);
+        const over = (droughts.get(phaseId) ?? 0) - limit;
+        if (over > 0) {
+          const relative = over / limit;
+          score += DROUGHT_WEIGHT * relative * relative;
+        }
+      }
     }
-    const overrun = (worst.get(phaseId) ?? 0) - phase.waitWallBudgetDesignMinutes;
-    if (overrun > 0) {
-      const relative = overrun / phase.waitWallBudgetDesignMinutes;
-      score += WALL_WEIGHT * relative * relative;
+    const worst = longestWallByPhase(log.waitWalls);
+    for (const phaseId of phaseIds) {
+      const phase = content.pacing.phases.find((candidate) => candidate.id === phaseId);
+      if (phase === undefined || phase.waitWallBudgetDesignMinutes <= 0) {
+        continue;
+      }
+      const overrun = (worst.get(phaseId) ?? 0) - phase.waitWallBudgetDesignMinutes;
+      if (overrun > 0) {
+        const relative = overrun / phase.waitWallBudgetDesignMinutes;
+        score += WALL_WEIGHT * relative * relative;
+      }
     }
+  });
+  if (options.fun === true) {
+    score += DEAD_CONTENT_WEIGHT * deadContent(logs, content).length;
   }
   return { score, durations };
 }
@@ -244,6 +302,8 @@ export function hillClimb(options: ClimbOptions): ClimbResult {
   const iterations = options.iterations ?? DEFAULT_CLIMB_ITERATIONS;
   const scoreOptions = {
     ...(options.bot === undefined ? {} : { bot: options.bot }),
+    ...(options.bots === undefined ? {} : { bots: options.bots }),
+    ...(options.fun === undefined ? {} : { fun: options.fun }),
     ...(options.seed === undefined ? {} : { seed: options.seed }),
   };
 

@@ -56,6 +56,59 @@ export interface PrintCompletedEvent extends EventBase {
   /** How many of the batch the pity timer failed (spec §7.1). */
   readonly failed: number;
   readonly scrapGrams: number;
+  /** The perfect meter filled on this batch: it yielded several times over. */
+  readonly perfect: boolean;
+}
+
+export interface CommissionOfferedEvent extends EventBase {
+  readonly type: 'COMMISSION_OFFERED';
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+}
+
+export interface CommissionCompletedEvent extends EventBase {
+  readonly type: 'COMMISSION_COMPLETED';
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+  /** Money paid on delivery. */
+  readonly reward: number;
+}
+
+export interface CommissionExpiredEvent extends EventBase {
+  readonly type: 'COMMISSION_EXPIRED';
+  readonly serial: number;
+  readonly templateId: string;
+}
+
+/** The player took a proposal on, or turned it down. */
+export interface CommissionAnsweredEvent extends EventBase {
+  readonly type: 'COMMISSION_ANSWERED';
+  readonly serial: number;
+  readonly clientId: string;
+  readonly accepted: boolean;
+}
+
+/** A shop customer bought Parts off the shelf. */
+export interface CustomerServedEvent extends EventBase {
+  readonly type: 'CUSTOMER_SERVED';
+  readonly customerId: string;
+  readonly parts: number;
+  readonly money: number;
+}
+
+/** A shop customer found the shelf empty and left. */
+export interface CustomerLeftEvent extends EventBase {
+  readonly type: 'CUSTOMER_LEFT';
+  readonly customerId: string;
+  readonly wanted: number;
+}
+
+export interface SlotOverclockedEvent extends EventBase {
+  readonly type: 'SLOT_OVERCLOCKED';
+  readonly slotId: string;
+  readonly durationMs: number;
 }
 
 /** Emitted alongside PRINT_COMPLETED when the pity timer bit — for flourishes. */
@@ -320,6 +373,13 @@ export type DomainEvent =
   | SlotQueueSetEvent
   | ForkChosenEvent
   | PhaseAdvancedEvent
+  | SlotOverclockedEvent
+  | CommissionOfferedEvent
+  | CommissionCompletedEvent
+  | CommissionExpiredEvent
+  | CommissionAnsweredEvent
+  | CustomerServedEvent
+  | CustomerLeftEvent
   | ActionRejectedEvent;
 
 export type DomainEventType = DomainEvent['type'];
@@ -357,7 +417,14 @@ export const DOMAIN_EVENT_TYPES = [
   'SLOT_QUEUE_SET',
   'FORK_CHOSEN',
   'PHASE_ADVANCED',
+  'SLOT_OVERCLOCKED',
+  'COMMISSION_OFFERED',
+  'COMMISSION_COMPLETED',
+  'COMMISSION_EXPIRED',
   'ACTION_REJECTED',
+  'COMMISSION_ANSWERED',
+  'CUSTOMER_SERVED',
+  'CUSTOMER_LEFT',
 ] as const satisfies readonly DomainEventType[];
 
 /** The sink the reducer writes to, injected through `ReduceContext`. */

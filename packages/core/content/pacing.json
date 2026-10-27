@@ -1,15 +1,21 @@
 {
   "targetHours": 8,
   "baselineHours": 8,
-  "offlineCapHours": 24,
-  "phaseBudgetTolerance": 0.2,
+  "phaseBudgetTolerance": 0.35,
+  "arcBudgetTolerance": 0.2,
   "phases": [
     {
       "id": "intro",
       "name": "Intro",
-      "budgetDesignMinutes": 5,
-      "waitWallBudgetDesignMinutes": 1.0,
-      "allowedActions": ["ATTACH_PIECE", "SET_SLOT_CONFIG", "START_PRINT", "SELL_PARTS"],
+      "budgetDesignMinutes": 1,
+      "waitWallBudgetDesignMinutes": 1,
+      "allowedActions": [
+        "ATTACH_PIECE",
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "SELL_PARTS"
+      ],
       "advanceWhen": [
         {
           "metric": "assemblyProgress",
@@ -28,11 +34,14 @@
     {
       "id": "bench",
       "name": "Bench",
-      "budgetDesignMinutes": 30,
+      "budgetDesignMinutes": 26,
       "waitWallBudgetDesignMinutes": 3,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -58,13 +67,51 @@
       ]
     },
     {
+      "id": "shop",
+      "name": "The Shop",
+      "budgetDesignMinutes": 30,
+      "waitWallBudgetDesignMinutes": 4,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
+      ],
+      "advanceWhen": [
+        {
+          "metric": "customersServed",
+          "atLeast": 180
+        },
+        {
+          "metric": "commissionsCompleted",
+          "atLeast": 3
+        },
+        {
+          "metric": "shopReputation",
+          "atLeast": 0.8
+        }
+      ]
+    },
+    {
       "id": "farm",
       "name": "Farm",
-      "budgetDesignMinutes": 80,
+      "budgetDesignMinutes": 98,
       "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -80,7 +127,7 @@
       "advanceWhen": [
         {
           "metric": "printers",
-          "atLeast": 14
+          "atLeast": 16
         },
         {
           "metric": "upgradesInstalled",
@@ -95,11 +142,14 @@
     {
       "id": "studio",
       "name": "Studio",
-      "budgetDesignMinutes": 75,
+      "budgetDesignMinutes": 45,
       "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -127,18 +177,63 @@
         },
         {
           "metric": "productsSold",
-          "atLeast": 40
+          "atLeast": 98
+        }
+      ]
+    },
+    {
+      "id": "agency",
+      "name": "The Agency",
+      "budgetDesignMinutes": 35,
+      "waitWallBudgetDesignMinutes": 5,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP",
+        "BUY_SLOT",
+        "ASSIGN_PRINTER",
+        "SET_SLOT_QUEUE",
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS"
+      ],
+      "advanceWhen": [
+        {
+          "metric": "agentsHired",
+          "atLeast": 2
+        },
+        {
+          "metric": "commissionsCompleted",
+          "atLeast": 10
+        },
+        {
+          "metric": "customersServed",
+          "atLeast": 520
         }
       ]
     },
     {
       "id": "prestige",
-      "name": "Prestige runs 1-2",
-      "budgetDesignMinutes": 90,
+      "name": "The Melt-downs",
+      "budgetDesignMinutes": 120,
       "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -159,8 +254,8 @@
       ],
       "advanceWhen": [
         {
-          "metric": "prestigeCount",
-          "atLeast": 2
+          "metric": "platesEarned",
+          "atLeast": 45
         },
         {
           "metric": "moneyPrintersInstalled",
@@ -168,7 +263,11 @@
         },
         {
           "metric": "moneyPrinted",
-          "atLeast": 250000
+          "atLeast": 93750
+        },
+        {
+          "metric": "prestigeCount",
+          "atLeast": 4
         }
       ]
     },
@@ -180,6 +279,9 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -209,19 +311,22 @@
           "atLeast": 8
         },
         {
-          "metric": "moneyPrinted",
-          "atLeast": 3000000
+          "metric": "moneyEarned",
+          "atLeast": 191196
         }
       ]
     },
     {
       "id": "end",
       "name": "The End",
-      "budgetDesignMinutes": 60,
+      "budgetDesignMinutes": 50,
       "waitWallBudgetDesignMinutes": 8,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -257,6 +362,9 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",

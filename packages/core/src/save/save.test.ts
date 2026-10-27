@@ -8,6 +8,9 @@ import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
 import fixtureV4 from './__fixtures__/save-v4.json' with { type: 'json' };
 import fixtureV5 from './__fixtures__/save-v5.json' with { type: 'json' };
 import fixtureV6 from './__fixtures__/save-v6.json' with { type: 'json' };
+import fixtureV7 from './__fixtures__/save-v7.json' with { type: 'json' };
+import fixtureV8 from './__fixtures__/save-v8.json' with { type: 'json' };
+import fixtureV9 from './__fixtures__/save-v9.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -53,13 +56,16 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
     expect(fixtureV4.version).toBe(4);
     expect(fixtureV5.version).toBe(5);
     expect(fixtureV6.version).toBe(6);
+    expect(fixtureV7.version).toBe(7);
+    expect(fixtureV8.version).toBe(8);
+    expect(fixtureV9.version).toBe(9);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -154,9 +160,29 @@ describe('save fixture corpus', () => {
     expect(loaded.ngPlus).toEqual({ run: 0, modifierIds: [] });
   });
 
-  it('loads the released v6 fixture untouched', () => {
+  it('loads the released v6 fixture, giving every bay a cold perfect meter and overclock', () => {
     const loaded = fromSaveFile(fixtureV6);
-    expect(loaded).toEqual(fixtureV6.state);
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    for (const slot of loaded.slots) {
+      expect(slot.perfectCharge).toBe(0);
+      expect(slot.overclockMs).toBe(0);
+      expect(slot.overclockCooldownMs).toBe(0);
+    }
+    const { commissions: _board, shop: _shop, ...rest } = loaded;
+    expect({
+      ...rest,
+      saveVersion: 6,
+      slots: fixtureV6.state.slots,
+      stats: {
+        ...rest.stats,
+        commissionsCompleted: undefined,
+        customersServed: undefined,
+        customersMissed: undefined,
+      },
+    }).toEqual({
+      ...fixtureV6.state,
+      stats: { ...fixtureV6.state.stats, commissionsCompleted: undefined },
+    });
     // The M6 shape the fixture exists to pin: an Endgame Tree bought with
     // Plates, a printed factory turning over, sections pre-printed for the
     // Fabricator and the final print itself in flight (spec §5E, §7.3).
@@ -165,6 +191,26 @@ describe('save fixture corpus', () => {
     expect(loaded.fabricator.sections).toBeGreaterThan(0);
     expect(loaded.fabricator.run).not.toBeNull();
     expect(loaded.phaseId).toBe('end');
+  });
+
+  it('migrates the released v7 fixture to an empty commission board', () => {
+    const loaded = fromSaveFile(fixtureV7);
+    expect(loaded.slots).toEqual(fixtureV7.state.slots);
+    expect(loaded.commissions.open).toEqual([]);
+    expect(loaded.stats.commissionsCompleted).toBe(0);
+  });
+
+  it('migrates the released v8 fixture to a shut shop and a board of taken-on orders', () => {
+    const loaded = fromSaveFile(fixtureV8);
+    expect(loaded.slots).toEqual(fixtureV8.state.slots);
+    expect(loaded.shop.priceLevelId).toBe('closed');
+    expect(loaded.commissions.loyalty).toEqual({});
+    expect(loaded.commissions.open.every((offer) => offer.accepted)).toBe(true);
+    expect(loaded.stats.customersServed).toBe(0);
+  });
+
+  it('loads the released v9 fixture untouched', () => {
+    expect(fromSaveFile(fixtureV9)).toEqual(fixtureV9.state);
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

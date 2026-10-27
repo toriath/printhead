@@ -52,20 +52,24 @@ export const SPOOL_CY = 20;
 export const SPOOL_R = 13;
 export const SPOOL_HUB_R = 4;
 
+/** The printer character (design system: Cast), drawn from 200 units into the bay. */
+export const CHARACTER_SIZE = 168;
+export const CHARACTER_Y = 4;
+
 export const CONTROLLER_X = 96;
 export const CONTROLLER_Y = 156;
 export const CONTROLLER_WIDTH = 42;
 export const CONTROLLER_HEIGHT = 14;
 
-export const PROGRESS_Y = BAY_HEIGHT - 26;
+export const PROGRESS_Y = BAY_HEIGHT - 38;
 export const PROGRESS_HEIGHT = 5;
-export const LABEL_Y = BAY_HEIGHT - 12;
+export const LABEL_Y = BAY_HEIGHT - 7;
 export const BADGE_R = 13;
 export const BADGE_CX = BAY_WIDTH - 22;
 export const BADGE_CY = 22;
 
 /** The pity meter: a hairline under the progress bar (spec §7.1). */
-export const RISK_Y = BAY_HEIGHT - 19;
+export const RISK_Y = BAY_HEIGHT - 30;
 export const RISK_HEIGHT = 2;
 
 export const CORNER_RADIUS = 4;
@@ -137,3 +141,50 @@ export function workshopWidth(capacity: number): number {
 export function bayX(index: number): number {
   return index * (BAY_WIDTH + BAY_GAP);
 }
+
+/**
+ * The free-standing floor (`layout="floor"`): printers stand where the player
+ * put them instead of in a rack of bays. Positions are fractions of the floor,
+ * measured at the printer's feet; nearer the front (larger y) draws bigger.
+ */
+export const FLOOR_WIDTH = 640;
+export const FLOOR_HEIGHT = 460;
+/** Scale of a printer at the back of the floor (y = 0) and at the front (y = 1). */
+export const FLOOR_SCALE_BACK = 0.72;
+export const FLOOR_SCALE_FRONT = 1.12;
+/**
+ * A bay's crew on the floor: every printer the bay owns is drawn, the lead at
+ * the bay's spot and the rest in formation behind it (offsets in floor
+ * fractions, back is negative y). Past this many, a "+n" keeps a fleet on
+ * screen.
+ */
+export const FLOOR_CREW_OFFSETS: readonly { readonly x: number; readonly y: number }[] = [
+  { x: -0.12, y: -0.09 },
+  { x: 0.12, y: -0.09 },
+  { x: 0, y: -0.17 },
+  { x: -0.24, y: -0.16 },
+  { x: 0.24, y: -0.16 },
+  { x: -0.12, y: -0.25 },
+  { x: 0.12, y: -0.25 },
+];
+/** Crew members stand a little smaller than their lead, so a bay reads as one team. */
+export const FLOOR_CREW_SCALE = 0.78;
+
+/**
+ * The pile of finished stock on the floor's front-left: one drawn item per
+ * step of a log scale, so the first part is a moment and the ten-thousandth
+ * still fits. Items stack as a pyramid, `PILE_ROW` wide at the bottom.
+ */
+export const PILE_ITEM = 15;
+export const PILE_ROW = 7;
+export const PILE_MAX = 28;
+export const PILE_PER_DOUBLING = 3;
+export const PILE_X = 10;
+
+/** Where bays stand until the player moves them. */
+export const FLOOR_SPOTS: readonly { readonly x: number; readonly y: number }[] = [
+  { x: 0.28, y: 0.95 },
+  { x: 0.74, y: 0.93 },
+  { x: 0.26, y: 0.6 },
+  { x: 0.72, y: 0.58 },
+];

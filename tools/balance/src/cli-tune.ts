@@ -6,6 +6,7 @@
  *   pnpm balance:tune                      # fit the default knobs, dry run
  *   pnpm balance:tune --write              # ...and apply the patch
  *   pnpm balance:tune --phases intro,bench --knobs curves/printer-cost-tier1/base
+ *   pnpm balance:tune --length-only        # phase budgets only, no fun penalties
  *
  * The write-back edits the JSON in place: it re-serialises the same object the
  * loader reads, so a tune is reviewable as `git diff packages/core/content`.
@@ -14,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RAW_CONTENT, loadContent } from '@printhead/core';
-import { findBot } from './bots.js';
+import { PACING_BOTS, findBot } from './bots.js';
 import { readPointer, writePointer } from './pointer.js';
 import { type ClimbKnob, hillClimb, roundSignificant, scoreRun, withOverrides } from './tune.js';
 
@@ -26,7 +27,8 @@ const CONTENT_DIR = fileURLToPath(new URL('../../../packages/core/content/', imp
  * optimiser handed the whole file will happily make PLA free to hit a budget.
  */
 const DEFAULT_KNOBS: readonly ClimbKnob[] = [
-  { pointer: 'start/assemblyPieces/*/attachDesignSeconds', min: 5, max: 120 },
+  // Not the intro's attach timers: they are zero by design, because waiting
+  // to be allowed to click is not play (spec §7.6, the assembly bench).
   { pointer: 'curves/printer-cost-tier1/base', min: 5, max: 400 },
   { pointer: 'curves/printer-cost-tier1/growth', min: 1.02, max: 1.6 },
   { pointer: 'curves/upgrade-cost-machine/base', min: 5, max: 400 },
@@ -39,7 +41,9 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   // a numerical one, and it stops the optimiser from buying a green timeline by
   // making the third bay a rounding error on the second.
   { pointer: 'curves/slot-cost/growth', min: 2.5, max: 12 },
-  { pointer: 'curves/fork-cost/value', min: 100, max: 20000 },
+  // The Farm/Goliath fork is run one's big decision: priced above what a
+  // Studio run holds (~$4.5k), the fit "solves" pacing by deleting the choice.
+  { pointer: 'curves/fork-cost/value', min: 2000, max: 4000 },
   // M5's meta layer. The studio is gated on drafting the capstone, so what a
   // commission costs owns most of that phase; prestige is gated on the presses,
   // so the Plate reward, the press price and the print rate own that one.
@@ -56,18 +60,39 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   // phase 6 is paced almost entirely by the length of the final print.
   { pointer: 'curves/money-print-rate-bundles/step', min: 1, max: 4000 },
   { pointer: 'curves/endgame-node-cost/base', min: 1, max: 40 },
-  { pointer: 'endgame/fabricator/designMinutes', min: 10, max: 40 },
-  { pointer: 'endgame/fabricator/sectionDesignMinutes', min: 1, max: 10 },
+  // The upper press tiers were dead content (no bot ever bought one): their
+  // prices are knobs so the fit can bring them within reach.
+  { pointer: 'curves/money-printer-cost-bundles/base', min: 1, max: 40 },
+  { pointer: 'curves/money-printer-cost-pallets/base', min: 2, max: 80 },
+  // The central bank is the Absurd's plate decision (tree vs. presses): priced
+  // past a run's plates, the fit would quietly delete it again.
+  { pointer: 'curves/money-printer-cost-central-bank/base', min: 15, max: 40 },
+  { pointer: 'endgame/fabricator/designMinutes', min: 20, max: 55 },
+  // A section must never take more off the final print than a quarter of
+  // the room above the floor, or two of them flatten it (found that way).
+  { pointer: 'endgame/fabricator/sectionDesignMinutes', min: 1, max: 5 },
   { pointer: 'pacing/phases/prestige/advanceWhen/2/atLeast', min: 10_000, max: 5_000_000 },
-  { pointer: 'pacing/phases/absurd/advanceWhen/3/atLeast', min: 100_000, max: 50_000_000 },
+  // The prestige phase ends on Plates engraved, not melt-downs counted: a
+  // player who melts early for a handful of Plates stays here until the pile is
+  // big enough to buy the Absurd, instead of arriving there broke.
+  { pointer: 'pacing/phases/prestige/advanceWhen/0/atLeast', min: 10, max: 160, integer: true },
+  // The studio ends on Products sold; the knob is how long the design loop runs.
+  { pointer: 'pacing/phases/studio/advanceWhen/2/atLeast', min: 20, max: 600, integer: true },
+  // The Absurd ends on money earned this run from any source, so the knob is
+  // the inflation the player has to live through (spec §6 phase 5).
+  { pointer: 'pacing/phases/absurd/advanceWhen/2/atLeast', min: 100_000, max: 200_000_000 },
 ];
 
 /**
- * Phases with real gates — since M6 that is every phase of the arc. The
- * terminal `ended` sandbox is not one of them: nothing ends it, so its
- * "duration" is however long the player stays and there is nothing to fit.
+ * Phases with real gates: every phase of the arc, read from content so a layer
+ * grown in later is fitted with the rest. The terminal sandbox is not one of
+ * them: nothing ends it, so its "duration" is however long the player stays
+ * and there is nothing to fit.
  */
-const DEFAULT_PHASES = ['intro', 'bench', 'farm', 'studio', 'prestige', 'absurd', 'end'] as const;
+function defaultPhases(): readonly string[] {
+  const phases = loadContent(RAW_CONTENT).pacing.phases;
+  return phases.slice(0, -1).map((phase) => phase.id);
+}
 
 function parseList(argv: readonly string[], flag: string): readonly string[] | undefined {
   const index = argv.indexOf(`--${flag}`);
@@ -113,7 +138,7 @@ function main(): void {
   const argv = process.argv.slice(2);
   const write = argv.includes('--write');
   const botId = parseList(argv, 'bot')?.[0];
-  const phaseIds = parseList(argv, 'phases') ?? [...DEFAULT_PHASES];
+  const phaseIds = parseList(argv, 'phases') ?? defaultPhases();
   const knobPointers = parseList(argv, 'knobs');
   const knobs =
     knobPointers === undefined
@@ -127,28 +152,39 @@ function main(): void {
           return { pointer, min: current / 10, max: current * 10 };
         });
 
-  const bot = botId === undefined ? undefined : findBot(botId);
-  const before = scoreRun(RAW_CONTENT, phaseIds, { ...(bot === undefined ? {} : { bot }) });
+  // One named bot fits that bot; otherwise the fit is scored across the whole
+  // pacing roster, the same set the CI gate holds to the budget.
+  const bots = botId === undefined ? PACING_BOTS : [findBot(botId)];
+  // Fun penalties are on unless asked off: a fit that only hits the clock is the
+  // failure mode this tool exists to avoid.
+  const fun = !argv.includes('--length-only');
+  const before = scoreRun(RAW_CONTENT, phaseIds, { bots, fun });
 
-  console.log(`tuning ${knobs.length} knob(s) against ${phaseIds.join(', ')}`);
+  console.log(
+    `tuning ${knobs.length} knob(s) against ${phaseIds.join(', ')} ` +
+      `for ${bots.map((b) => b.id).join(' + ')}`,
+  );
   console.log(`start score ${before.score.toFixed(4)}`);
 
   const result = hillClimb({
     raw: RAW_CONTENT,
     knobs,
     phaseIds,
-    ...(bot === undefined ? {} : { bot }),
+    bots,
+    fun,
   });
 
   const budgets = loadContent(RAW_CONTENT).pacing.phases;
   console.log(`\nafter ${result.evaluations} evaluation(s): score ${result.score.toFixed(4)}\n`);
-  console.log('phase           actual   budget');
+  console.log(`phase          ${bots.map((b) => b.id.padStart(16)).join('')}   budget`);
   for (const phaseId of phaseIds) {
     const budget = budgets.find((phase) => phase.id === phaseId)?.budgetDesignMinutes ?? 0;
-    const actual = result.phaseDurations[phaseId] ?? Number.NaN;
-    console.log(
-      `${phaseId.padEnd(15)}${actual.toFixed(1).padStart(6)}${budget.toFixed(1).padStart(9)}`,
-    );
+    const actuals = bots
+      .map((b) =>
+        (result.phaseDurations[`${b.id}/${phaseId}`] ?? Number.NaN).toFixed(1).padStart(16),
+      )
+      .join('');
+    console.log(`${phaseId.padEnd(15)}${actuals}${budget.toFixed(1).padStart(9)}`);
   }
 
   console.log('\nfield                                              from        to');

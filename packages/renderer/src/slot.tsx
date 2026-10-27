@@ -1,12 +1,17 @@
 import type { SlotVisual } from '@printhead/core';
-import type { ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
+import type { FaceId } from './character-kit.js';
+import { faceFor, kindFor } from './character.js';
 import {
   BADGE_CX,
   BADGE_CY,
   BADGE_R,
+  BASE_HEIGHT,
+  BASE_Y,
   BAY_HEIGHT,
   BAY_PADDING,
   BAY_WIDTH,
+  CHARACTER_Y,
   CORNER_RADIUS,
   LABEL_Y,
   PROGRESS_HEIGHT,
@@ -36,6 +41,17 @@ export interface SlotProps {
    * the intro caption says so instead of inviting a click that never comes.
    */
   readonly selfAssembling?: boolean;
+  /** Draw the Goliath instead of the bay's own printer (spec §5B). */
+  readonly goliath?: boolean;
+  /** A short-lived face reaction derived from events by the shell. */
+  readonly flourish?: FaceId;
+  /** Tap the printer to overclock it, when the bay says it can. */
+  readonly onPress?: (slotId: string) => void;
+  /**
+   * Drawn in its bay's box (the rack) or standing free on the floor, where
+   * the box is only an invisible hit area and a shadow grounds the machine.
+   */
+  readonly framed?: boolean;
 }
 
 const SINGLE = 1;
@@ -115,6 +131,55 @@ function RiskMeter({ risk }: { risk: number }): ReactElement | null {
 }
 
 /**
+ * The perfect meter: the pity timer's good twin, drawn in gold just under the
+ * failure meter. A bay is always making two promises; the player sees both.
+ */
+function PerfectMeter({ charge }: { charge: number }): ReactElement | null {
+  if (charge <= 0) {
+    return null;
+  }
+  const width = (BAY_WIDTH - BAY_PADDING * 2) * Math.min(charge, 1);
+  return (
+    <g data-testid="perfect-meter" data-perfect={charge.toFixed(2)}>
+      <rect
+        className="ph-perfect-fill"
+        x={BAY_PADDING}
+        y={RISK_Y + RISK_HEIGHT + 1}
+        width={width}
+        height={RISK_HEIGHT}
+      />
+    </g>
+  );
+}
+
+/** The overclock state as a ring in the bay's corner: full while boosted, refilling on cooldown. */
+function OverclockRing({ slot }: { slot: SlotVisual }): ReactElement | null {
+  if (!slot.occupied) {
+    return null;
+  }
+  const r = 9;
+  const circumference = 2 * Math.PI * r;
+  const filled = slot.overclock.active ? slot.overclock.remaining : 1 - slot.overclock.cooldown;
+  const state = slot.overclock.active ? 'active' : slot.overclock.ready ? 'ready' : 'cooling';
+  return (
+    <g
+      data-testid={`overclock-${slot.slotId}`}
+      data-overclock={state}
+      transform="translate(20, 22)"
+    >
+      <circle className="ph-oc-track" r={r} />
+      <circle
+        className={`ph-oc-fill ph-oc-fill--${state}`}
+        r={r}
+        strokeDasharray={`${circumference * Math.min(Math.max(filled, 0), 1)} ${circumference}`}
+        transform="rotate(-90)"
+      />
+      <path className="ph-oc-bolt" d="M1 -6 -3 1h3l-1 5 4 -7h-3z" />
+    </g>
+  );
+}
+
+/**
  * The print rota (spec §5B) as a row of pips, the loaded entry filled in. A
  * queue is a promise about what the bay will do next, so it belongs on the bay
  * rather than in a panel somewhere else.
@@ -158,26 +223,74 @@ export function slotLabel(slot: SlotVisual): string {
   return slot.printerCount > 0 ? 'no config loaded' : 'empty bay';
 }
 
-export function Slot({ slot, assemblyParts, selfAssembling = false }: SlotProps): ReactElement {
+export function Slot({
+  slot,
+  assemblyParts,
+  selfAssembling = false,
+  goliath = false,
+  flourish,
+  onPress,
+  framed = true,
+}: SlotProps): ReactElement {
   const assembling = assemblyParts !== undefined;
   // A machine the player owns is always on screen, configured or not.
   const drawMachine = slot.printerCount > 0 || assembling;
+  const pressable = onPress !== undefined && slot.overclock.ready;
+  const press = (): void => {
+    if (pressable) {
+      onPress?.(slot.slotId);
+    }
+  };
+  const onKey = (event: KeyboardEvent<SVGGElement>): void => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      press();
+    }
+  };
   return (
     <g
       data-testid={`slot-${slot.slotId}`}
       data-occupied={slot.occupied}
       data-slot-index={slot.index}
       data-output={slot.output}
+      data-overclocked={slot.overclock.active}
+      className={[
+        'ph-slot',
+        pressable ? 'ph-slot--pressable' : '',
+        // A good print makes the machine hop; the shell says when via its face.
+        flourish === 'happy' || flourish === 'wow' ? 'ph-slot--celebrate' : '',
+      ].join(' ')}
+      {...(onPress === undefined
+        ? {}
+        : {
+            role: 'button',
+            tabIndex: pressable ? 0 : -1,
+            'aria-label': `Overclock bay ${slot.index + 1}`,
+            'aria-disabled': !pressable,
+            onClick: press,
+            onKeyDown: onKey,
+          })}
     >
       <rect
         data-testid={`bay-${slot.slotId}`}
-        className={drawMachine ? 'ph-bay' : 'ph-bay ph-bay--empty'}
+        className={
+          framed ? (drawMachine ? 'ph-bay' : 'ph-bay ph-bay--empty') : 'ph-bay ph-bay--floor'
+        }
         x={0}
         y={0}
         width={BAY_WIDTH}
         height={BAY_HEIGHT}
         rx={CORNER_RADIUS * 2}
       />
+      {framed ? null : (
+        <ellipse
+          className="ph-floor-shadow"
+          cx={BAY_WIDTH / 2}
+          cy={BASE_Y + BASE_HEIGHT + CHARACTER_Y * 2}
+          rx={BAY_WIDTH * 0.42}
+          ry={BAY_WIDTH * 0.07}
+        />
+      )}
       {drawMachine ? (
         <Printer
           machineTier={slot.machineTier}
@@ -186,6 +299,15 @@ export function Slot({ slot, assemblyParts, selfAssembling = false }: SlotProps)
           phaseOffset={slot.phaseOffset}
           progress={slot.progress}
           output={slot.output}
+          object={slot.objectId}
+          material={slot.materialId}
+          {...(assembling
+            ? {}
+            : {
+                kind: kindFor(slot, goliath),
+                face: faceFor(slot, flourish),
+                overclocked: slot.overclock.active,
+              })}
         />
       ) : null}
       {slot.occupied ? (
@@ -197,7 +319,10 @@ export function Slot({ slot, assemblyParts, selfAssembling = false }: SlotProps)
         />
       ) : null}
       {slot.occupied ? <RiskMeter risk={slot.failureRisk} /> : null}
-      <CountBadge count={slot.printerCount} />
+      {slot.occupied ? <PerfectMeter charge={slot.perfectCharge} /> : null}
+      <OverclockRing slot={slot} />
+      {/* On the floor the crew stands there in person; the badge is the rack's. */}
+      {framed ? <CountBadge count={slot.printerCount} /> : null}
       <text
         data-testid={`label-${slot.slotId}`}
         className={slot.occupied ? 'ph-label' : 'ph-label ph-label--dim'}

@@ -1,12 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  assemblePrinter,
-  bootGame,
-  replaceState,
-  snapshot,
-  warp,
-  warpPastOffline,
-} from './harness.js';
+import { assemblePrinter, bootGame, replaceState, snapshot, warp } from './harness.js';
 
 const MS_PER_SECOND = 1000;
 
@@ -74,7 +67,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     await warp(page, MS_PER_SECOND);
     await expect(page.getByTestId('studio-drafting')).toContainText('Money plate');
 
-    await warpPastOffline(page, 30 * 60 * MS_PER_SECOND);
+    await warp(page, 30 * 60 * MS_PER_SECOND);
     await expect(page.getByTestId('studio-drafting')).toHaveCount(0);
     await expect(page.getByTestId('design-money-plate')).toContainText('lv 1');
 
@@ -82,9 +75,9 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     // Switching to resin is a real changeover (spec §3), so the bay purges
     // before it will take a print.
     await page.getByTestId('load-money-plate-slot-1').click();
-    await warpPastOffline(page, 5 * 60 * MS_PER_SECOND);
+    await warp(page, 5 * 60 * MS_PER_SECOND);
     await page.getByTestId('print').click();
-    await warpPastOffline(page, 20 * 60 * MS_PER_SECOND);
+    await warp(page, 20 * 60 * MS_PER_SECOND);
     await expect(page.getByRole('img').locator('[data-output="products"]')).not.toHaveCount(0);
 
     const printed = (await snapshot(page)) as StateShape;
@@ -111,6 +104,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     const melt = page.getByTestId('melt-down');
     await expect(melt).toBeEnabled();
     await melt.click();
+    await page.getByTestId('melt-down-confirm').click();
     await warp(page, MS_PER_SECOND);
 
     const after = (await snapshot(page)) as StateShape;
@@ -125,7 +119,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     // And the intro replays itself: no clicks, the pieces clip on by themselves
     // (spec §6 phase 4).
     await expect(page.getByRole('img')).toHaveAttribute('data-self-assembling', 'true');
-    await warpPastOffline(page, 10 * 60 * MS_PER_SECOND);
+    await warp(page, 10 * 60 * MS_PER_SECOND);
     const rebuilt = (await snapshot(page)) as StateShape;
     expect(
       (rebuilt as unknown as { assembly: { attachedPieceIds: string[] } }).assembly.attachedPieceIds
@@ -156,7 +150,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
 
     // The mint appears in the workshop, and the money starts arriving.
     await expect(page.getByRole('img').locator('[data-testid="mint"]')).toBeVisible();
-    await warpPastOffline(page, 60 * MS_PER_SECOND);
+    await warp(page, 60 * MS_PER_SECOND);
     expect(((await snapshot(page)) as StateShape).stats.moneyPrinted).toBeGreaterThan(0);
   });
 });

@@ -14,6 +14,7 @@ import {
   type UpgradeDef,
   affordableBatch,
   affordableFilamentGrams,
+  answerCommission,
   assignPrinter,
   attachPiece,
   automationAvailability,
@@ -24,7 +25,10 @@ import {
   buySlot,
   buyUpgrade,
   chooseFork,
+  commissionReward,
+  commissionTemplate,
   computeModifiers,
+  countPrinters,
   createCurveRegistry,
   createDesign,
   designAvailability,
@@ -35,10 +39,12 @@ import {
   forkCost,
   hasBlueprint,
   hasRecycler,
+  isAutomationActive,
   isForkChosen,
   isMaterialAvailable,
   isPhaseReached,
   isPieceReady,
+  isShopOpen,
   maxBuyableGrams,
   moneyPrinterAvailability,
   newGamePlus,
@@ -51,6 +57,8 @@ import {
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  overclockAvailability,
+  overclockSlot,
   platesFor,
   prestige,
   prestigeAvailability,
@@ -59,11 +67,13 @@ import {
   productValueOf,
   quoteFor,
   recycleScrap,
+  requirementProgress,
   resolveSlotConfig,
   sectionAvailability,
   sellParts,
   sellProducts,
   setAutomation,
+  setShopPrice,
   setSlotConfig,
   setSlotDesign,
   setSlotQueue,
@@ -332,6 +342,8 @@ function affordableUpgrade(
  * buy first: it is the one automation that keeps the workshop *varying* what it
  * makes while nobody is looking.
  */
+const AGENT_BEHAVIORS: readonly AutomationDef['behavior'][] = ['run-shop', 'answer-proposals'];
+
 function affordableAutomation(
   state: GameState,
   content: Content,
@@ -345,7 +357,13 @@ function affordableAutomation(
       })
     : content.automation;
   for (const def of ordered) {
-    if (automationAvailability(state, content, def.id) !== null) {
+    // The bots run the shop and answer clients themselves; they take on
+    // staff only when the layer they are in asks for it (The Agency).
+    const agent = AGENT_BEHAVIORS.includes(def.behavior);
+    if (
+      (agent && !gateWants(state, content, 'agentsHired')) ||
+      automationAvailability(state, content, def.id) !== null
+    ) {
       continue;
     }
     const cost = nextAutomationCost(state, content, curves, def.id);
@@ -440,6 +458,15 @@ function savingTargetParts(
   content: Content,
   curves: CurveRegistry,
 ): number | null {
+  // Saving for the final fork's prerequisites outranks everything else.
+  const required = content.forks.find((def) => def.requiredForFinalPrint);
+  if (required !== undefined && state.forkId === null && blueprintInView(state, content)) {
+    const next = firstBuildable(state, content, required.requiresUpgradeIds, new Set());
+    const cost = next === null ? null : nextUpgradeCost(state, content, curves, next);
+    if (cost !== null && cost.resource === 'parts') {
+      return cost.amount;
+    }
+  }
   const printer = unlocked(content.printers, content, state.phaseId)[0];
   const printerCost =
     printer === undefined ? null : nextPrinterCost(state, content, curves, printer.id);
@@ -593,6 +620,11 @@ function recycleMoves(state: GameState, content: Content): readonly Action[] {
   if (!hasRecycler(state, content)) {
     return [];
   }
+  // Once the auto-recycler is running, recycling is not the player's job.
+  const auto = content.automation.find((def) => def.behavior === 'recycle-scrap');
+  if (auto !== undefined && isAutomationActive(state, auto.id)) {
+    return [];
+  }
   const slot = state.slots[0];
   const config = slot === undefined ? null : resolveSlotConfig(content, slot);
   const target = config?.material ?? cheapestMaterial(state, content);
@@ -600,6 +632,168 @@ function recycleMoves(state: GameState, content: Content): readonly Action[] {
     return [];
   }
   return [recycleScrap(target.id, null)];
+}
+
+/** Tap every bay whose overclock is ready and whose failure meter allows it. */
+function overclockMoves(state: GameState, content: Content, belowRisk: number): readonly Action[] {
+  if (belowRisk <= 0 || !phaseAllows(state, content, 'OVERCLOCK_SLOT')) {
+    return [];
+  }
+  const threshold = content.failure.model.chargeThreshold;
+  return activeSlots(state, content)
+    .filter(
+      (slot) =>
+        overclockAvailability(state, content, slot.id) === null &&
+        slot.failureCharge < threshold * belowRisk,
+    )
+    .map((slot) => overclockSlot(slot.id));
+}
+
+/**
+ * The open commission most worth chasing: the biggest reward per part still
+ * owed, among those the workshop can stock today.
+ */
+/**
+ * Whether this order can be delivered in `remainingMs`: enough batches before
+ * the deadline with every machine on it, and the filament affordable now.
+ */
+function canDeliver(
+  state: GameState,
+  content: Content,
+  offer: { readonly delivered: number },
+  template: NonNullable<ReturnType<typeof commissionTemplate>>,
+  remainingMs: number,
+): boolean {
+  const material = content.materials.find((def) => def.id === template.materialId);
+  const object = content.objects.find((def) => def.id === template.objectId);
+  if (material === undefined || object === undefined) {
+    return false;
+  }
+  const owed = Math.max(template.count - offer.delivered, 1);
+  const batchSeconds = object.printDesignSeconds / material.printSpeedMultiplier;
+  const batches = remainingMs / 1000 / batchSeconds;
+  const deliverable = batches * object.partsYield * countPrinters(state);
+  const grams = (owed / object.partsYield) * object.filamentGrams;
+  const stocked = state.filamentGrams[material.id] ?? 0;
+  const affordable =
+    stocked >= grams || state.resources.money >= (grams - stocked) * material.costPerGram;
+  return deliverable >= owed && affordable;
+}
+
+/** Orders taken on at once: more than this and the bays chase too many targets. */
+const MAX_ACCEPTED_ORDERS = 2;
+
+/**
+ * Answer the board's proposals (the one rule a player learns fast): take on
+ * what the workshop can actually deliver in time, while there is room to
+ * chase it; turn the rest down rather than let them sit.
+ */
+function answerMoves(state: GameState, content: Content): readonly Action[] {
+  if (!phaseAllows(state, content, 'ANSWER_COMMISSION')) {
+    return [];
+  }
+  let accepted = state.commissions.open.filter((offer) => offer.accepted).length;
+  const moves: Action[] = [];
+  for (const offer of state.commissions.open) {
+    if (offer.accepted) {
+      continue;
+    }
+    const template = commissionTemplate(content, offer.templateId);
+    const take =
+      template !== undefined &&
+      accepted < MAX_ACCEPTED_ORDERS &&
+      canDeliver(state, content, offer, template, template.timeLimitDesignSeconds * 1000);
+    if (take) {
+      accepted += 1;
+    }
+    moves.push(answerCommission(offer.serial, take));
+  }
+  return moves;
+}
+
+function commissionTarget(
+  state: GameState,
+  content: Content,
+): { readonly material: MaterialDef; readonly object: ObjectDef } | null {
+  let best: { material: MaterialDef; object: ObjectDef; value: number } | null = null;
+  for (const offer of state.commissions.open) {
+    const template = commissionTemplate(content, offer.templateId);
+    const material = content.materials.find((def) => def.id === template?.materialId);
+    const object = content.objects.find((def) => def.id === template?.objectId);
+    if (
+      !offer.accepted ||
+      template === undefined ||
+      material === undefined ||
+      object === undefined ||
+      !canDeliver(state, content, offer, template, offer.remainingMs)
+    ) {
+      continue;
+    }
+    const owed = Math.max(template.count - offer.delivered, 1);
+    const value =
+      commissionReward(content, template, 1, state.commissions.loyalty[offer.clientId] ?? 0) / owed;
+    if (best === null || value > best.value) {
+      best = { material, object, value };
+    }
+  }
+  return best === null ? null : { material: best.material, object: best.object };
+}
+
+/** Parts kept back from the shelf: below this the shop stays shut. */
+const SHOP_RESERVE_PARTS = 50;
+/** While a layer's gate wants customers: the price, and the Parts kept back. */
+const SHOP_GATE_PRICE = 'fair';
+const SHOP_GATE_RESERVE_PARTS = 5;
+
+/** The current layer still asks for more of `metric` before it opens the next. */
+function gateWants(state: GameState, content: Content, metric: string): boolean {
+  const phase = content.pacing.phases.find((candidate) => candidate.id === state.phaseId);
+  const wanted = phase?.advanceWhen.filter((requirement) => requirement.metric === metric) ?? [];
+  return wanted.length > 0 && requirementProgress(state, content, wanted).some((req) => !req.met);
+}
+
+/** Agents on staff doing a given job. */
+function countAgentsOf(state: GameState, content: Content, behavior: string): number {
+  return content.automation.filter(
+    (def) =>
+      def.persona !== undefined &&
+      def.behavior === behavior &&
+      (state.automation[def.id]?.level ?? 0) > 0,
+  ).length;
+}
+
+/**
+ * Run the shop: open at the bot's price, and shut it while saving Parts for
+ * something — customers would otherwise eat the savings one basket at a time.
+ */
+function shopMove(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+  price: string | null,
+): Action | null {
+  if (!isShopOpen(state, content) || !phaseAllows(state, content, 'SET_SHOP_PRICE')) {
+    return null;
+  }
+  // Once a sales agent is on staff, the shop is theirs to run.
+  if (countAgentsOf(state, content, 'run-shop') > 0) {
+    return null;
+  }
+  // The Shop layer asks for a shop that is actually open: serve its customers
+  // at a fair price, keeping a handful of Parts back for the bays.
+  if (gateWants(state, content, 'customersServed') || gateWants(state, content, 'shopReputation')) {
+    const open = state.resources.parts < SHOP_GATE_RESERVE_PARTS ? 'closed' : SHOP_GATE_PRICE;
+    return state.shop.priceLevelId === open ? null : setShopPrice(open);
+  }
+  if (price === null) {
+    return state.shop.priceLevelId === 'closed' ? null : setShopPrice('closed');
+  }
+  const target = savingTargetParts(state, content, curves);
+  // Shut whenever Parts are being saved for anything: customers would eat
+  // the very Parts the next purchase needs.
+  const saving = target !== null || state.resources.parts < SHOP_RESERVE_PARTS;
+  const wanted = saving ? 'closed' : price;
+  return state.shop.priceLevelId === wanted ? null : setShopPrice(wanted);
 }
 
 export interface PolicyOptions {
@@ -644,6 +838,17 @@ export interface PolicyOptions {
    * measuring.
    */
   readonly newGamePlusModifierIds: readonly string[] | null;
+  /**
+   * Overclock a bay when its failure meter is below this share of the
+   * threshold (see `failure.overclock`). 1 overclocks whenever it can; 0
+   * never does. It is the active player's lever, so the ten-minute player
+   * mostly misses it by construction.
+   */
+  readonly overclockBelowRisk: number;
+  /** Load the bays for the best open commission instead of the best margin. */
+  readonly chaseCommissions: boolean;
+  /** The shop price this player runs at; `null` never opens the shop. */
+  readonly shopPrice: string | null;
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -1023,6 +1228,26 @@ function designBayMove(state: GameState, content: Content, curves: CurveRegistry
   return setSlotDesign(target.id, design.id);
 }
 
+/**
+ * Plates to keep back for the last print. Its feedstock is priced in Plates,
+ * and once the presses can drink every Plate a run makes, a player who never
+ * holds any back reaches the blueprint with nothing to feed it — found exactly
+ * that way, when the central bank moved into the Absurd.
+ */
+function feedstockPlateReserve(state: GameState, content: Content): number {
+  if (!blueprintInView(state, content)) {
+    return 0;
+  }
+  const def = fabricatorDef(content);
+  const material = content.materials.find((candidate) => candidate.id === def.materialId);
+  if (material === undefined || material.priceResource !== 'plates') {
+    return 0;
+  }
+  const grams = def.filamentGrams + def.sectionFilamentGrams * def.maxSections;
+  const held = state.filamentGrams[def.materialId] ?? 0;
+  return Math.max(grams - held, 0) * material.costPerGram;
+}
+
 /** Install the next press (spec §5E) — the only thing Plates are spent on. */
 function moneyPrinterMove(
   state: GameState,
@@ -1032,15 +1257,17 @@ function moneyPrinterMove(
   if (!phaseAllows(state, content, 'BUY_MONEY_PRINTER')) {
     return null;
   }
+  const reserve = feedstockPlateReserve(state, content);
   for (const def of content.prestige.moneyPrinters) {
     if (moneyPrinterAvailability(state, content, def.id) !== null) {
       continue;
     }
     const cost = nextMoneyPrinterCost(state, content, curves, def.id);
+    const keep = cost?.resource === 'plates' ? reserve : 0;
     if (
       cost !== null &&
       cost.resource !== 'filament' &&
-      state.resources[cost.resource] >= cost.amount
+      state.resources[cost.resource] - keep >= cost.amount
     ) {
       return buyMoneyPrinter(def.id);
     }
@@ -1187,6 +1414,68 @@ function feedstockMoves(state: GameState, content: Content): readonly Action[] {
 }
 
 /**
+ * The branch the final print needs can carry its own prerequisites (Goliath
+ * needs a sintering head since the M7 rebalance). A player who has seen the
+ * blueprint reads that off the fork card and saves for it; the bot does the
+ * same. Returns the upgrade to buy now, `'save'` while it cannot be afforded
+ * yet, or `null` when nothing stands in the way.
+ */
+/** Machines a run should field before it starts saving for the final fork. */
+const SAVE_FOR_FORK_MIN_PRINTERS = 8;
+
+function finalForkPrerequisite(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): Action | 'save' | null {
+  if (!blueprintInView(state, content) || state.forkId !== null) {
+    return null;
+  }
+  const required = content.forks.find((def) => def.requiredForFinalPrint);
+  if (required === undefined) {
+    return null;
+  }
+  // Walk the machine tree down to the first missing node that can be bought
+  // today: the sintering head needs the SLA unit, which needs the enclosure,
+  // and a melt-down took all of them away.
+  const next = firstBuildable(state, content, required.requiresUpgradeIds, new Set());
+  if (next === null) {
+    return null;
+  }
+  const cost = nextUpgradeCost(state, content, curves, next);
+  if (cost === null || cost.resource === 'filament') {
+    return null;
+  }
+  return state.resources[cost.resource] >= cost.amount ? buyUpgrade(next) : 'save';
+}
+
+function firstBuildable(
+  state: GameState,
+  content: Content,
+  ids: readonly string[],
+  seen: Set<string>,
+): string | null {
+  for (const id of ids) {
+    if ((state.upgrades[id] ?? 0) > 0 || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const verdict = upgradeAvailability(state, content, id);
+    if (verdict === null) {
+      return id;
+    }
+    if (verdict === 'missing-prerequisite') {
+      const def = content.upgrades.find((candidate) => candidate.id === id);
+      const deeper = firstBuildable(state, content, def?.requiresUpgradeIds ?? [], seen);
+      if (deeper !== null) {
+        return deeper;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * The last print (spec §6 phase 6). Start it the moment the workshop qualifies;
  * otherwise pre-print a section, which is never wasted — it shortens the build
  * and it survives the melt-down (spec §7.3).
@@ -1239,20 +1528,34 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (first === undefined) {
         return [];
       }
-      const object = bestObject(content, state.phaseId);
+      // An open commission sets the target when there is one worth chasing:
+      // that is what the board is for, and it replaces chasing the margin.
+      // Every player chases orders when the layer they are in asks for them.
+      const chase = options.chaseCommissions || gateWants(state, content, 'commissionsCompleted');
+      const order = chase ? commissionTarget(state, content) : null;
+      const object = order?.object ?? bestObject(content, state.phaseId);
       if (object === undefined) {
         return [];
       }
-      const material = options.chaseMargin
-        ? (bestMaterial(state, content, object, first.materialId) ??
-          cheapestMaterial(state, content))
-        : cheapestMaterial(state, content);
+      const material =
+        order?.material ??
+        (options.chaseMargin
+          ? (bestMaterial(state, content, object, first.materialId) ??
+            cheapestMaterial(state, content))
+          : cheapestMaterial(state, content));
       if (material === undefined) {
         return [];
       }
 
       const moves: Action[] = [];
       const curves = curveRegistryFor(content);
+      if (chase) {
+        moves.push(...answerMoves(state, content));
+      }
+      const shop = shopMove(state, content, curves, options.shopPrice);
+      if (shop !== null) {
+        moves.push(shop);
+      }
       const canInvest =
         phaseAllows(state, content, 'BUY_PRINTER') || phaseAllows(state, content, 'BUY_UPGRADE');
       const canSell = phaseAllows(state, content, 'SELL_PARTS');
@@ -1275,20 +1578,39 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       // A bay the studio has claimed is *not* misconfigured: it is printing
       // Products on purpose, and re-loading it with a stock object would throw
       // away the whole reason the Design Studio exists (spec §5D).
+      // …unless the run is saving Parts for the final fork's prerequisites:
+      // Products pay in money, so a studio bay would never get it there.
+      // …or the layer asks for orders delivered and one is there to chase:
+      // an order is Parts of a kind, and a bay printing Products never makes them.
+      const needParts =
+        finalForkPrerequisite(state, content, curveRegistryFor(content)) === 'save' ||
+        (order !== null && gateWants(state, content, 'commissionsCompleted'));
       const misconfigured = bays.find(
         (slot) =>
           slot.queue.length === 0 &&
-          slot.designId === null &&
-          (slot.materialId !== material.id || slot.objectId !== object.id),
+          (slot.designId === null || needParts) &&
+          (slot.designId !== null ||
+            slot.materialId !== material.id ||
+            slot.objectId !== object.id),
       );
-      if (misconfigured !== undefined) {
-        if (misconfigured.run === null && misconfigured.changeoverMs <= 0) {
-          moves.push(setSlotConfig(misconfigured.id, material.id, object.id));
-        }
+      // Re-load an idle bay and come back next time. A bay still printing is
+      // left to finish its batch — but the rest of the workshop is not put on
+      // hold for it: a bay on auto-restart may never be idle at a check-in,
+      // and waiting for it froze a sloppy player out of the studio forever.
+      // With an order to fill for the layer's gate, a player re-loads the bay
+      // mid-print rather than wait for an idle moment that may never come.
+      const urgent = order !== null && gateWants(state, content, 'commissionsCompleted');
+      if (
+        misconfigured !== undefined &&
+        (misconfigured.run === null || urgent) &&
+        misconfigured.changeoverMs <= 0
+      ) {
+        moves.push(setSlotConfig(misconfigured.id, material.id, object.id));
         return moves;
       }
 
       moves.push(...recycleMoves(state, content));
+      moves.push(...overclockMoves(state, content, options.overclockBelowRisk));
       moves.push(...retuneAutoSell(state, content, curves));
       moves.push(...retuneAutoBuy(state, content));
       moves.push(...fundMoneyGoal(state, content, studioMoneyGoal(state, content, curves)));
@@ -1318,6 +1640,15 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         moves.push(...finalPrint);
         return moves;
       }
+      const prerequisite = finalForkPrerequisite(state, content, curves);
+      if (prerequisite !== null && prerequisite !== 'save') {
+        moves.push(prerequisite);
+        return moves;
+      }
+      // Saving up for it postpones capacity and tree purchases only, and only
+      // once there is a fleet to earn the Parts with: a freshly melted-down
+      // workshop that saves before rebuilding saves forever.
+      const saving = prerequisite === 'save' && countPrinters(state) >= SAVE_FOR_FORK_MIN_PRINTERS;
       if (
         options.newGamePlusModifierIds !== null &&
         newGamePlusAvailability(state, content) === null &&
@@ -1341,7 +1672,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (draft !== null) {
         moves.push(draft);
       }
-      const studioBay = designBayMove(state, content, curves);
+      const studioBay = needParts ? null : designBayMove(state, content, curves);
       if (studioBay !== null) {
         moves.push(studioBay);
         return moves;
@@ -1423,9 +1754,11 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       const investments: readonly Action[] =
         forkBuy !== null
           ? [forkBuy]
-          : options.capacityFirst
-            ? [...capacityMoves, ...treeMoves]
-            : [...treeMoves, ...capacityMoves];
+          : saving
+            ? []
+            : options.capacityFirst
+              ? [...capacityMoves, ...treeMoves]
+              : [...treeMoves, ...capacityMoves];
       const investment = investments[0];
       if (investment !== undefined) {
         moves.push(investment);
@@ -1468,6 +1801,9 @@ export const greedySpenderBot = createPolicyBot({
   preferFork: 'throughput',
   useQueues: false,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 1,
+  chaseCommissions: true,
+  shopPrice: 'bargain',
 });
 
 /**
@@ -1486,6 +1822,9 @@ export const balancedBot = createPolicyBot({
   preferFork: 'flexibility',
   useQueues: false,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 0.5,
+  chaseCommissions: true,
+  shopPrice: 'premium',
 });
 
 /**
@@ -1502,12 +1841,24 @@ export const idleHeavyBot = createPolicyBot({
   preferFork: 'flexibility',
   useQueues: true,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 0.5,
+  chaseCommissions: false,
+  shopPrice: 'premium',
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];
 
-/** The bot the CI budget gate measures (spec §12.6). */
+/** The bot the report leads with and single-bot tools default to (spec §12.6). */
 export const REFERENCE_BOT = balancedBot;
+
+/**
+ * The bots the CI budget gate holds to the phase windows. Two strategies that
+ * bracket an attentive player: one who keeps a reserve and one who spends on
+ * sight. Content that only paces one of them is overfit, not balanced.
+ * `idle-heavy` is measured in the report but not gated: it checks in every ten
+ * minutes, so it cannot be held to a five-minute intro.
+ */
+export const PACING_BOTS: readonly Bot[] = [balancedBot, greedySpenderBot];
 
 export function findBot(id: string): Bot {
   const bot = BOTS.find((candidate) => candidate.id === id);

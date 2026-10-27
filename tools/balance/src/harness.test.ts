@@ -7,6 +7,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   BOTS,
+  PACING_BOTS,
   REFERENCE_BOT,
   balancedBot,
   createPolicyBot,
@@ -23,6 +24,7 @@ import {
   placeholderPhaseIds,
 } from './budget.js';
 import { type Bot, type RunLog, runHeadless } from './harness.js';
+import { HUMAN_LIMIT_DESIGN_MINUTES, HUMAN_SEEDS, createHumanBot } from './human.js';
 import { checkWaitWalls } from './waitwall.js';
 
 const content = loadContent(RAW_CONTENT);
@@ -53,25 +55,28 @@ function playthrough(bot: Bot, stopAtPhaseId?: string): RunLog {
 }
 
 describe('budget table', () => {
-  it('mirrors the spec §6 budgets with a ±20 % window', () => {
-    expect(table.tolerance).toBe(0.2);
+  it('mirrors the spec §6 budgets: ±35 % per phase, ±20 % for the arc', () => {
+    expect(table.tolerance).toBe(0.35);
+    expect(table.arcTolerance).toBe(0.2);
     // The arc's budget. The terminal `ended` sandbox is outside it: nothing
     // ends that phase, so it has no duration to budget (see `terminalPhaseId`).
-    expect(table.totalDesignMinutes).toBe(420);
+    expect(table.totalDesignMinutes).toBe(485);
     expect(table.terminalPhaseId).toBe('ended');
     const intro = table.phases[0];
-    expect(intro?.budgetDesignMinutes).toBe(5);
-    expect(intro?.minDesignMinutes).toBeCloseTo(4, 9);
-    expect(intro?.maxDesignMinutes).toBeCloseTo(6, 9);
+    expect(intro?.budgetDesignMinutes).toBe(1);
+    expect(intro?.minDesignMinutes).toBeCloseTo(0.65, 9);
+    expect(intro?.maxDesignMinutes).toBeCloseTo(1.35, 9);
   });
 
   it('flags phases that are too fast, too slow or never reached', () => {
     const durations = new Map<string, number>([
-      ['intro', 5],
+      ['intro', 1],
       ['bench', 1],
+      ['shop', 30],
       ['farm', 400],
-      ['studio', 75],
-      ['prestige', 90],
+      ['studio', 45],
+      ['agency', 35],
+      ['prestige', 120],
       ['absurd', 80],
       ['ended', 999],
     ]);
@@ -173,7 +178,7 @@ describe('headless harness', () => {
     expect(log.phaseEnteredAt.has('intro')).toBe(true);
     expect(log.phaseEnteredAt.has('bench')).toBe(true);
     expect(log.phaseDurations.has('bench')).toBe(true);
-    expect(log.finalPhaseId).toBe('farm');
+    expect(log.finalPhaseId).toBe('shop');
   });
 
   it('an idle bot never leaves the first phase', () => {
@@ -205,81 +210,93 @@ describe('headless harness', () => {
 /** Read from content, not listed here: see `isPlaceholderPhase`. */
 const GATED_PHASES = gatedPhaseIds(content);
 
-describe('CI balance gate: the balanced bot vs the spec §6 budgets', () => {
-  const log = playthrough(REFERENCE_BOT);
+/**
+ * Every bot in `PACING_BOTS` is held to the same windows. The gate used to
+ * measure the reference player alone, and the shipped numbers were overfit to
+ * it: the greedy player finished prestige in a third of its window and could
+ * not finish the game at all.
+ */
+describe.each(PACING_BOTS.map((bot) => [bot.id, bot] as const))(
+  'CI balance gate: %s vs the spec §6 budgets',
+  (_id, bot) => {
+    const log = playthrough(bot);
 
-  it('finishes the whole game — every phase, through to the post-game', () => {
-    expect(log.finalPhaseId).toBe('ended');
-    expect(log.eventCounts.FABRICATOR_COMPLETED).toBe(1);
-    expect(log.eventCounts.GAME_ENDED).toBe(1);
-  });
+    it('finishes the whole game — every phase, through to the post-game', () => {
+      expect(log.finalPhaseId).toBe('ended');
+      expect(log.eventCounts.FABRICATOR_COMPLETED).toBe(1);
+      expect(log.eventCounts.GAME_ENDED).toBe(1);
+    });
 
-  /**
-   * Spec §12.6 and the M6 brief: the whole arc inside ±20 % of the eight-hour
-   * budget, measured in design time at `targetHours = 8`. The arc ends when the
-   * FSM reaches the sandbox, not when the harness runs out of patience.
-   */
-  it('lands the whole arc inside ±20 % of the total budget', () => {
-    const arc = log.phaseEnteredAt.get('ended');
-    expect(arc).toBeDefined();
-    expect(arc ?? 0).toBeGreaterThanOrEqual(table.totalDesignMinutes * (1 - table.tolerance));
-    expect(arc ?? 0).toBeLessThanOrEqual(table.totalDesignMinutes * (1 + table.tolerance));
-  });
+    /**
+     * Spec §12.6 and the M6 brief: the whole arc inside ±20 % of the eight-hour
+     * budget, measured in design time at `targetHours = 8`. The arc ends when the
+     * FSM reaches the sandbox, not when the harness runs out of patience.
+     */
+    it('lands the whole arc inside ±20 % of the total budget', () => {
+      const arc = log.phaseEnteredAt.get('ended');
+      expect(arc).toBeDefined();
+      expect(arc ?? 0).toBeGreaterThanOrEqual(table.totalDesignMinutes * (1 - table.arcTolerance));
+      expect(arc ?? 0).toBeLessThanOrEqual(table.totalDesignMinutes * (1 + table.arcTolerance));
+    });
 
-  it('lands every phase inside its ±20 % window', () => {
-    expect(checkPhaseBudgets(table, log.phaseDurations)).toEqual([]);
-  });
+    // Looser than the arc on purpose: a phase is a story beat, not a stopwatch.
+    it('lands every phase inside its ±35 % window', () => {
+      expect(checkPhaseBudgets(table, log.phaseDurations)).toEqual([]);
+    });
 
-  it('keeps every wait wall in a phase with mechanics under budget (spec §12.2)', () => {
-    const violations = checkWaitWalls(content, log.waitWalls).filter((violation) =>
-      GATED_PHASES.includes(violation.phaseId),
-    );
-    expect(violations).toEqual([]);
-  });
+    it('keeps every wait wall in a phase with mechanics under budget (spec §12.2)', () => {
+      const violations = checkWaitWalls(content, log.waitWalls).filter((violation) =>
+        GATED_PHASES.includes(violation.phaseId),
+      );
+      expect(violations).toEqual([]);
+    });
 
-  /**
-   * The other half of that gate, stated rather than hidden.
-   *
-   * At M4 this test asserted the *opposite*: once the reference player had
-   * bought everything the game sold, the placeholder phases had nothing left to
-   * offer and the detector correctly reported dead zones in them. The meta
-   * layer closed those — a melt-down to take, a press to install, a commission
-   * to put on the bench are meaningful actions wherever the player is — so the
-   * whole timeline is now live and the assertion is inverted rather than
-   * deleted.
-   *
-   * What is *still* a placeholder is the gate: `absurd` and `end` advance on
-   * elapsed design minutes alone, so they sit on budget by construction and M6
-   * is what makes their green light mean anything.
-   */
-  it('leaves no dead zone anywhere, and has no placeholder gates left', () => {
-    expect(checkWaitWalls(content, log.waitWalls)).toEqual([]);
-    // Every phase of the arc now gates on something the player *did*. M5 moved
-    // `studio` and `prestige` across this line; M6 moved the last two, which
-    // is what makes the green light on phases 5–6 mean anything at all.
-    expect([...GATED_PHASES]).toEqual([
-      'intro',
-      'bench',
-      'farm',
-      'studio',
-      'prestige',
-      'absurd',
-      'end',
-      'ended',
-    ]);
-    expect(placeholderPhaseIds(content)).toEqual([]);
-  });
+    /**
+     * The other half of that gate, stated rather than hidden.
+     *
+     * At M4 this test asserted the *opposite*: once the reference player had
+     * bought everything the game sold, the placeholder phases had nothing left to
+     * offer and the detector correctly reported dead zones in them. The meta
+     * layer closed those — a melt-down to take, a press to install, a commission
+     * to put on the bench are meaningful actions wherever the player is — so the
+     * whole timeline is now live and the assertion is inverted rather than
+     * deleted.
+     *
+     * What is *still* a placeholder is the gate: `absurd` and `end` advance on
+     * elapsed design minutes alone, so they sit on budget by construction and M6
+     * is what makes their green light mean anything.
+     */
+    it('leaves no dead zone anywhere, and has no placeholder gates left', () => {
+      expect(checkWaitWalls(content, log.waitWalls)).toEqual([]);
+      // Every phase of the arc now gates on something the player *did*. M5 moved
+      // `studio` and `prestige` across this line; M6 moved the last two, which
+      // is what makes the green light on phases 5–6 mean anything at all.
+      expect([...GATED_PHASES]).toEqual([
+        'intro',
+        'bench',
+        'shop',
+        'farm',
+        'studio',
+        'agency',
+        'prestige',
+        'absurd',
+        'end',
+        'ended',
+      ]);
+      expect(placeholderPhaseIds(content)).toEqual([]);
+    });
 
-  it('keeps every gated phase of the arc on budget', () => {
-    for (const phaseId of GATED_PHASES.filter((id) => id !== table.terminalPhaseId)) {
-      const phase = table.phases.find((candidate) => candidate.phaseId === phaseId);
-      const actual = log.phaseDurations.get(phaseId);
-      expect(actual, phaseId).toBeDefined();
-      expect(actual, phaseId).toBeGreaterThanOrEqual(phase?.minDesignMinutes ?? 0);
-      expect(actual, phaseId).toBeLessThanOrEqual(phase?.maxDesignMinutes ?? 0);
-    }
-  });
-});
+    it('keeps every gated phase of the arc on budget', () => {
+      for (const phaseId of GATED_PHASES.filter((id) => id !== table.terminalPhaseId)) {
+        const phase = table.phases.find((candidate) => candidate.phaseId === phaseId);
+        const actual = log.phaseDurations.get(phaseId);
+        expect(actual, phaseId).toBeDefined();
+        expect(actual, phaseId).toBeGreaterThanOrEqual(phase?.minDesignMinutes ?? 0);
+        expect(actual, phaseId).toBeLessThanOrEqual(phase?.maxDesignMinutes ?? 0);
+      }
+    });
+  },
+);
 
 /**
  * The end-to-end proof the milestone exists for: the M3 loop — print, fail,
@@ -359,16 +376,15 @@ describe('the strategies are genuinely different players', () => {
   const greedyRunOne = playthrough(greedySpenderBot, 'prestige');
 
   /**
-   * The reference player finishes the game. `greedy-spender` reaches the last
-   * phase and starts the final print but does not see the credits inside the
-   * run limit: it takes Goliath early, so it spends phase 5 rebuilding one
-   * enormous bay rather than banking Plates, and arrives at the Fabricator
-   * later than the player the budget is written for. That is a real difference
-   * between the strategies, so it is asserted rather than papered over.
+   * Both attentive players finish. This used to assert that `greedy-spender`
+   * never saw the credits, and the reason was a soft lock, not a strategy: the
+   * Goliath fork the final print requires was priced in Parts, and a player who
+   * spends Parts on sight never held enough of them late in the game. The fork
+   * is priced in money now, so finishing is down to pace, not to a trap.
    */
-  it('the reference player finishes; the impatient one is still printing', () => {
+  it('both attentive players finish; the ten-minute player does not', () => {
     expect(balanced.finalPhaseId).toBe('ended');
-    expect(greedy.finalPhaseId).toBe('end');
+    expect(greedy.finalPhaseId).toBe('ended');
     expect(idleHeavy.finalPhaseId).not.toBe('ended');
   });
 
@@ -379,18 +395,20 @@ describe('the strategies are genuinely different players', () => {
    * while fielding more machines and banking several times the money. It is
    * still the impatient player; it is no longer the busier one.
    */
-  it('greedy fields more machines and banks more money, and rushes the bench', () => {
-    const machinesOf = (state: { printers: Readonly<Record<string, number>> }): number =>
-      Object.values(state.printers).reduce((total, count) => total + count, 0);
-    expect(machinesOf(greedyRunOne.finalState)).toBeGreaterThan(
-      machinesOf(balancedRunOne.finalState),
-    );
-    expect(greedyRunOne.finalState.stats.moneyEarned).toBeGreaterThan(
-      balancedRunOne.finalState.stats.moneyEarned,
-    );
-    expect(greedy.phaseDurations.get('bench') ?? 0).toBeLessThan(
-      balanced.phaseDurations.get('bench') ?? 0,
-    );
+  /**
+   * Since the M7 rebalance the two attentive players finish the arc within a
+   * few minutes of each other — the gate holds both to the same windows — so
+   * what separates them is how they get there: greedy rushes the bench and
+   * the farm, buying capacity before the machine tree.
+   */
+  /*
+   * Measured on the Farm, the expansion phase: since the intro lost its bench
+   * timers, the Bench is a few minutes of manual loop for everyone, and a
+   * player who buys on sight there is slower, not faster.
+   */
+  it('greedy rushes the expansion', () => {
+    const farm = (log: RunLog): number => log.phaseDurations.get('farm') ?? 0;
+    expect(farm(greedy)).toBeLessThan(farm(balanced));
   });
 
   it('idle-heavy pays for its inattention in the intro alone', () => {
@@ -401,30 +419,33 @@ describe('the strategies are genuinely different players', () => {
   });
 
   /**
-   * The print rota is the mechanic for the player who is not watching, so the
-   * player who is not watching is the one that exercises it (spec §19: a new
-   * mechanic means bot support). `idle-heavy` buys the auto-changeover unit
-   * ahead of the others and writes a rota onto its bay; the attentive bots
-   * deliberately do not, because a bot that re-loads a slot the moment the
-   * margin moves would only be paying for purges it did not need.
+   * The print rota is the mechanic for the player who is not watching; the
+   * attentive bots deliberately never use it, because a bot that re-loads a
+   * slot the moment the margin moves would only be paying for purges it did not
+   * need. (Since there is no offline progress, the ten-minute player no longer
+   * reaches the farm phase where the rota is sold — it is measured in the
+   * report rather than asserted here.)
    */
-  it('lets the ten-minute player put a bay on a rota', () => {
-    expect(idleHeavy.eventCounts.SLOT_QUEUE_SET ?? 0).toBeGreaterThan(0);
+  it('keeps the attentive players off the rota', () => {
     expect(balanced.eventCounts.SLOT_QUEUE_SET ?? 0).toBe(0);
+    expect(greedy.eventCounts.SLOT_QUEUE_SET ?? 0).toBe(0);
   });
 
   /**
-   * Both sides of the per-run fork (spec §5B) get played. `greedy-spender`
-   * takes whichever branch multiplies output hardest and `balanced` keeps its
-   * rack, so neither branch is dead content that only a unit test ever visits.
+   * Both sides of the per-run fork (spec §5B) get played. Goliath needs a
+   * melt-down behind it since the M7 rebalance, so every first run is a Farm
+   * run, and the run that finishes the game is a Goliath run.
    */
-  it('takes opposite sides of the Farm/Goliath fork', () => {
-    const greedyFork = content.forks.find((def) => def.id === greedyRunOne.finalState.forkId);
-    const balancedFork = content.forks.find((def) => def.id === balancedRunOne.finalState.forkId);
-    expect(greedyFork?.visual).toBe('goliath');
-    expect(balancedFork?.visual).toBe('rack');
-    expect(greedyRunOne.finalState.slots).toHaveLength(2);
-    expect(balancedRunOne.finalState.slots.length).toBeGreaterThan(1);
+  it('runs the Farm first and finishes on Goliath', () => {
+    for (const runOne of [greedyRunOne, balancedRunOne]) {
+      const fork = content.forks.find((def) => def.id === runOne.finalState.forkId);
+      expect(fork?.visual).toBe('rack');
+    }
+    for (const arc of [greedy, balanced]) {
+      const chosen = arc.events.filter((event) => event.type === 'FORK_CHOSEN');
+      const last = chosen.at(-1);
+      expect(last !== undefined && 'forkId' in last ? last.forkId : null).toBe('goliath');
+    }
   });
 });
 
@@ -527,6 +548,9 @@ describe('the balanced bot plays the M6 endgame end to end', () => {
       preferFork: 'flexibility',
       useQueues: false,
       newGamePlusModifierIds: [modifier.id],
+      overclockBelowRisk: 0.5,
+      chaseCommissions: true,
+      shopPrice: 'fair',
     });
     const replay = runHeadless({ content, bot: restarting });
     expect(replay.eventCounts.NEW_GAME_PLUS_STARTED ?? 0).toBeGreaterThan(0);
@@ -561,5 +585,38 @@ describe('placeholder phases (spec §18)', () => {
     expect(
       isPlaceholderPhase({ ...absurd, advanceWhen: [{ metric: 'designs', atLeast: 1 } as never] }),
     ).toBe(false);
+  });
+});
+
+/**
+ * The crowd (`human.ts`). The policy bots are the rulers the windows are cut
+ * to; these are the witnesses. Every one of them must finish the game, and
+ * none may take more than the arc's budget plus its per-phase slack — a
+ * balance that only a perfect player can finish in time is not balanced.
+ */
+describe('a crowd of human-ish players', () => {
+  const crowd = HUMAN_SEEDS.slice(0, 4).map((seed) =>
+    runHeadless({
+      content,
+      bot: createHumanBot(seed),
+      limitDesignMinutes: HUMAN_LIMIT_DESIGN_MINUTES,
+    }),
+  );
+
+  it('all finish the game', () => {
+    expect(crowd.map((log) => log.finalPhaseId)).toEqual(crowd.map(() => 'ended'));
+  });
+
+  it('all finish within the arc budget plus the per-phase slack', () => {
+    for (const log of crowd) {
+      expect(log.phaseEnteredAt.get('ended') ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+        table.totalDesignMinutes * (1 + table.tolerance),
+      );
+    }
+  });
+
+  it('really are different people', () => {
+    const arcs = new Set(crowd.map((log) => Math.round(log.phaseEnteredAt.get('ended') ?? 0)));
+    expect(arcs.size).toBeGreaterThan(1);
   });
 });

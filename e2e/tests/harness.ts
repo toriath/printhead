@@ -22,7 +22,7 @@ export const T0 = 1_700_000_000_000;
 interface ContentShape {
   readonly start: { readonly assemblyPieces: readonly { readonly id: string }[] };
   readonly objects: readonly { readonly printDesignSeconds: number }[];
-  readonly pacing: { readonly offlineCapHours: number; readonly targetHours: number };
+  readonly pacing: { readonly targetHours: number };
 }
 
 interface DevHooksShape {
@@ -68,20 +68,7 @@ export async function warp(page: Page, wallMs: number): Promise<void> {
   }, wallMs);
 }
 
-/**
- * Warp past `OFFLINE_THRESHOLD_MS` and clear the "welcome back" screen it puts
- * up. A test about the studio is not a test about offline catch-up, and the
- * modal genuinely does block clicks — which is the point of it.
- */
-export async function warpPastOffline(page: Page, wallMs: number): Promise<void> {
-  await warp(page, wallMs);
-  const dismiss = page.getByTestId('offline-dismiss');
-  if ((await dismiss.count()) > 0) {
-    await dismiss.click();
-  }
-}
-
-/** The platform clock as the page sees it — the basis for an exact offline gap. */
+/** The platform clock as the page sees it. */
 export async function nowMs(page: Page): Promise<number> {
   const now = await page.evaluate(() => window.__PRINTHEAD__?.nowMs());
   if (now === undefined) {

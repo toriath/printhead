@@ -1,6 +1,7 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
 import { curveRegistryFor } from '../curves/evaluate.js';
+import { MS_PER_SECOND } from '../engine/constants.js';
 import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, isPieceReady, nextPiece, tickAssembly } from '../systems/assembly.js';
 import {
@@ -10,6 +11,7 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from '../systems/automation.js';
+import { answerProposal, tickCommissions } from '../systems/commissions.js';
 import { designAvailability, hasDesign, startDesignDraft, tickStudio } from '../systems/designs.js';
 import {
   grantPrinter,
@@ -44,7 +46,9 @@ import {
 } from '../systems/prestige.js';
 import {
   applyChangeover,
+  applySlotOverclock,
   beginRun,
+  overclockAvailability,
   resolveSlotConfig,
   slotIndexOf,
   tickSlots,
@@ -52,6 +56,7 @@ import {
 } from '../systems/printing.js';
 import { changeoverAutomationDefs, queueEntriesResolve } from '../systems/queue.js';
 import { meetsRequirements, totalDesignMinutes } from '../systems/requirements.js';
+import { setShopPriceLevel, tickShop } from '../systems/shop.js';
 import { purchaseSlot, slotUnlockAvailability } from '../systems/slots.js';
 import {
   computeModifiers,
@@ -104,6 +109,18 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applySetSlotConfig(state, action.slotId, action.materialId, action.objectId, ctx);
     case 'START_PRINT':
       return applyStartPrint(state, action.slotId, ctx);
+    case 'OVERCLOCK_SLOT':
+      return applyOverclock(state, action.slotId, ctx);
+    case 'SET_SHOP_PRICE':
+      return (
+        setShopPriceLevel(state, ctx.content, action.priceLevelId) ??
+        reject(ctx, state, 'SET_SHOP_PRICE', 'unknown-target')
+      );
+    case 'ANSWER_COMMISSION':
+      return (
+        answerProposal(state, ctx.content, action.serial, action.accept, ctx.emit) ??
+        reject(ctx, state, 'ANSWER_COMMISSION', 'unknown-target')
+      );
     case 'SELL_PARTS':
       return applySellParts(state, action.count, ctx);
     case 'BUY_FILAMENT':
@@ -181,7 +198,9 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const manufactured = tickFactory(minted, ctx.content, simDtMs, modifiers, ctx.emit);
   const built = tickTheFinalPrint(state, manufactured, simDtMs, ctx);
   const automated = tickAutomation(built, ctx.content, simDtMs, ctx.emit);
-  return advanceWhileReady(automated, ctx);
+  const posted = tickCommissions(automated, ctx.content, simDtMs, ctx.emit);
+  const shopped = tickShop(posted, ctx.content, simDtMs, ctx.emit);
+  return advanceWhileReady(shopped, ctx);
 }
 
 /**
@@ -488,6 +507,24 @@ function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): 
     return reject(ctx, state, 'START_PRINT', 'insufficient-resources');
   }
   return started;
+}
+
+function applyOverclock(state: GameState, slotId: string, ctx: ReduceContext): GameState {
+  const blocked = overclockAvailability(state, ctx.content, slotId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'OVERCLOCK_SLOT', blocked);
+  }
+  const next = applySlotOverclock(state, ctx.content, slotId);
+  if (next === null) {
+    return reject(ctx, state, 'OVERCLOCK_SLOT', 'not-ready');
+  }
+  ctx.emit?.({
+    type: 'SLOT_OVERCLOCKED',
+    simTimeMs: state.simTimeMs,
+    slotId,
+    durationMs: ctx.content.failure.overclock.durationDesignSeconds * MS_PER_SECOND,
+  });
+  return next;
 }
 
 // --- economy ----------------------------------------------------------------

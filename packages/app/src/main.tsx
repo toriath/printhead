@@ -12,9 +12,9 @@ import { mountEditor } from './dev/mount-editor.js';
 /**
  * Shell entry point (spec §16).
  *
- * Boot order matters: load the save, replay the time away through the same
- * reducer, *then* start the frame loop — otherwise the first frame's dt would
- * double-count the gap the offline catch-up just consumed.
+ * Boot order matters: load the save, *then* start the frame loop, so the
+ * first frame measures from boot rather than from when the save was written
+ * (time away is not simulated, spec §7.4).
  */
 const container = document.getElementById('root');
 if (container === null) {
@@ -67,12 +67,7 @@ async function start(): Promise<void> {
 
   createRoot(container as HTMLElement).render(
     <StrictMode>
-      <App
-        store={game.store}
-        initialOffline={game.offline}
-        subscribeOffline={game.subscribeOffline}
-        loadWarning={loadWarning}
-      />
+      <App store={game.store} loadWarning={loadWarning} />
       {editor}
     </StrictMode>,
   );

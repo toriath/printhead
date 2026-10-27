@@ -180,6 +180,14 @@ export function meltDown(
        * through the ending and melted down on the far side of it.
        */
       ngPlus: state.ngPlus,
+      // The workshop is scrapped, not the relationships: clients remember
+      // who delivered, and the shop's name means what it meant.
+      commissions: { ...fresh.commissions, loyalty: state.commissions.loyalty },
+      shop: {
+        ...fresh.shop,
+        reputation: state.shop.reputation,
+        priceLevelId: state.shop.priceLevelId,
+      },
       assembly: {
         ...fresh.assembly,
         cooldownMs:
@@ -195,6 +203,9 @@ export function meltDown(
         prestigeCount: state.stats.prestigeCount + ONE,
         moneyPrinted: state.stats.moneyPrinted,
         platesEarned: state.stats.platesEarned + platesAwarded,
+        commissionsCompleted: state.stats.commissionsCompleted,
+        customersServed: state.stats.customersServed,
+        customersMissed: state.stats.customersMissed,
       },
     },
   };

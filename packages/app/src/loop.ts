@@ -1,4 +1,4 @@
-import { MS_PER_MINUTE, type OfflineSummary } from '@printhead/core';
+import { MS_PER_MINUTE } from '@printhead/core';
 import type { Clock, Lifecycle } from '@printhead/platform';
 import type { GameStore } from './store.js';
 
@@ -8,14 +8,14 @@ import type { GameStore } from './store.js';
  * The frame callback does *not* trust the frame timestamp — it asks the
  * platform clock how much wall-clock time really passed. That single choice
  * handles background throttling, a suspended iOS web view and a laptop lid on
- * the same code path: a gap longer than {@link OFFLINE_THRESHOLD_MS} is not a
- * slow frame, it is time away, and time away is `core`'s chunked offline
- * catch-up (spec §7.4) rather than one enormous tick.
+ * the same code path: a gap longer than {@link AWAY_THRESHOLD_MS} is not a
+ * slow frame, it is time away, and **time away is not simulated** (spec §7.4).
+ * The workshop only runs while someone is watching it.
  */
 export type FrameScheduler = (callback: () => void) => () => void;
 
 /** Gaps beyond this are treated as "the player was away", not as a slow frame. */
-export const OFFLINE_THRESHOLD_MS = MS_PER_MINUTE;
+export const AWAY_THRESHOLD_MS = MS_PER_MINUTE;
 
 export interface GameLoopOptions {
   readonly store: GameStore;
@@ -23,9 +23,7 @@ export interface GameLoopOptions {
   readonly lifecycle?: Lifecycle;
   /** Injected so tests and E2E can step frames by hand. */
   readonly schedule?: FrameScheduler;
-  readonly offlineThresholdMs?: number;
-  /** Called whenever a gap was replayed as offline progress. */
-  readonly onOffline?: (summary: OfflineSummary) => void;
+  readonly awayThresholdMs?: number;
   /** Called when the game goes to the background — the moment to save. */
   readonly onBackground?: () => void;
 }
@@ -60,7 +58,7 @@ const defaultScheduler: FrameScheduler = (callback) => {
 export function createGameLoop(options: GameLoopOptions): GameLoop {
   const { store, clock } = options;
   const schedule = options.schedule ?? defaultScheduler;
-  const threshold = options.offlineThresholdMs ?? OFFLINE_THRESHOLD_MS;
+  const threshold = options.awayThresholdMs ?? AWAY_THRESHOLD_MS;
   let cancel: (() => void) | null = null;
   // Primed at construction, not at `start()`: boot has just finished replaying
   // the time away, so "now" is the correct baseline whether or not the caller
@@ -78,8 +76,8 @@ export function createGameLoop(options: GameLoopOptions): GameLoop {
     }
     const elapsed = Math.max(now - previous, 0) * timeScale;
     if (elapsed >= threshold) {
-      options.onOffline?.(store.applyOffline(elapsed));
-      return elapsed;
+      // The player was away. Nothing happened while they were gone.
+      return 0;
     }
     store.advanceWallClock(elapsed);
     return elapsed;

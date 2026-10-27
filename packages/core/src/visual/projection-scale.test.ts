@@ -96,7 +96,14 @@ describe('the next config slot on sale (spec §4)', () => {
 
 describe('the Farm/Goliath fork (spec §5B)', () => {
   const studio = (over: Partial<GameState> = {}): GameState =>
-    at({ phaseId: 'studio', resources: { ...base.resources, parts: 1_000_000 }, ...over });
+    at({
+      phaseId: 'studio',
+      resources: { ...base.resources, parts: 1_000_000, money: 1_000_000 },
+      // Goliath's prerequisites since the M7 rebalance.
+      upgrades: { 'sintering-head': 1 },
+      stats: { ...base.stats, prestigeCount: 1 },
+      ...over,
+    });
 
   it('offers every branch with its price, its description and its layout', () => {
     const forks = toVisualState(studio(), content).forks;
@@ -116,7 +123,12 @@ describe('the Farm/Goliath fork (spec §5B)', () => {
   });
 
   it('separates "you may" from "you can pay" here too', () => {
-    const forks = toVisualState(at({ phaseId: 'studio' }), content).forks;
+    const broke = at({
+      phaseId: 'studio',
+      upgrades: { 'sintering-head': 1 },
+      stats: { ...base.stats, prestigeCount: 1 },
+    });
+    const forks = toVisualState(broke, content).forks;
     expect(forks.every((fork) => fork.available)).toBe(true);
     expect(forks.every((fork) => !fork.affordable)).toBe(true);
   });

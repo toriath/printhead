@@ -84,6 +84,15 @@ export interface SlotState {
   readonly queueIndex: number;
   /** Batches finished on the current entry, counted towards its `batches`. */
   readonly queueBatches: number;
+  /**
+   * Progress towards the next Perfect print, 0..1 (see `failure.perfectPrint`).
+   * The good twin of `failureCharge`: deterministic, so it can be watched.
+   */
+  readonly perfectCharge: number;
+  /** Design-milliseconds of overclock left on this bay; 0 when not boosted. */
+  readonly overclockMs: number;
+  /** Design-milliseconds until the bay can be overclocked again. */
+  readonly overclockCooldownMs: number;
 }
 
 /**
@@ -104,6 +113,44 @@ export interface AutomationSlotState {
   readonly threshold: number;
   /** Design-milliseconds until it next fires. */
   readonly cooldownMs: number;
+}
+
+/** One order on the commission board (see `content/commissions.json`). */
+export interface CommissionState {
+  /** Issue number on the board — stable identity for the UI and the events. */
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+  /** Parts delivered so far towards the template's `count`. */
+  readonly delivered: number;
+  /** Design-milliseconds until the client gives up. */
+  readonly remainingMs: number;
+  /**
+   * A proposal until the player takes it on. Only an accepted order counts
+   * prints towards it; an unanswered proposal leaves when its window closes.
+   */
+  readonly accepted: boolean;
+}
+
+export interface CommissionBoardState {
+  readonly open: readonly CommissionState[];
+  /** Design-milliseconds until the next offer may arrive. */
+  readonly nextOfferMs: number;
+  /** Offers ever made this run; seeds the next draw. */
+  readonly issued: number;
+  /** Orders each client has had delivered: repeat business pays better. */
+  readonly loyalty: Readonly<Record<string, number>>;
+}
+
+/** The shop front (see `content/shop.json`). */
+export interface ShopState {
+  readonly priceLevelId: string;
+  /** 0..1 — earned by serving customers, lost by sending them away empty-handed. */
+  readonly reputation: number;
+  /** Design-milliseconds until the next customer walks in. */
+  readonly nextCustomerMs: number;
+  /** Customers ever seen this run; seeds who they are and what they want. */
+  readonly visits: number;
 }
 
 export interface StatsState {
@@ -132,6 +179,11 @@ export interface StatsState {
    * been made; what the tree spends is the metal, not the engraving.
    */
   readonly platesEarned: number;
+  /** Commissions delivered on time, across the game. */
+  readonly commissionsCompleted: number;
+  /** Shop customers who left with Parts, and who left with nothing. */
+  readonly customersServed: number;
+  readonly customersMissed: number;
 }
 
 /**
@@ -293,6 +345,10 @@ export interface GameState {
   readonly fabricator: FabricatorState;
   /** Which run of the game this is, and on what terms (spec §18 M6). */
   readonly ngPlus: NewGamePlusState;
+  /** The commission board this run. */
+  readonly commissions: CommissionBoardState;
+  /** The shop front this run. */
+  readonly shop: ShopState;
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
 }
@@ -328,6 +384,9 @@ export const EMPTY_STATS: StatsState = {
   moneyPrinted: 0,
   prestigeCount: 0,
   platesEarned: 0,
+  commissionsCompleted: 0,
+  customersServed: 0,
+  customersMissed: 0,
 };
 
 export function zeroResources(): ResourceLedger {
@@ -357,6 +416,9 @@ export function emptySlot(id: string): SlotState {
     queue: [],
     queueIndex: 0,
     queueBatches: 0,
+    perfectCharge: 0,
+    overclockMs: 0,
+    overclockCooldownMs: 0,
   };
 }
 
@@ -417,6 +479,18 @@ export function createInitialState(content: Content, options: InitialStateOption
     factoryProgress: 0,
     fabricator: EMPTY_FABRICATOR,
     ngPlus: EMPTY_NEW_GAME_PLUS,
+    commissions: {
+      open: [],
+      nextOfferMs: content.commissions.firstOfferDesignSeconds * MS_PER_SECOND,
+      issued: 0,
+      loyalty: {},
+    },
+    shop: {
+      priceLevelId: content.shop.openingPriceLevel,
+      reputation: content.shop.reputationStart,
+      nextCustomerMs: content.shop.customerEveryDesignSeconds * MS_PER_SECOND,
+      visits: 0,
+    },
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,
   };

@@ -30,8 +30,6 @@ import {
 } from '@printhead/core';
 
 const content = loadContent(RAW_CONTENT);
-/** Parts handed to the workshop so the fork fixture can be captured. */
-const FORK_FIXTURE_PARTS = 5000;
 let state: GameState = createInitialState(content, { seed: 20260812 });
 
 const apply = (action: Action): void => {
@@ -47,6 +45,58 @@ const tickSeconds = (seconds: number): void => {
     apply({ type: 'TICK', simDtMs: TICK_MS });
   }
 };
+
+/**
+ * Commit the run to the fork the final print needs. Since the M7 rebalance that
+ * fork has prerequisites (a machine node, a melt-down behind you) and is paid
+ * for in money, so the workshop is granted what it costs — a *fixture*
+ * concession like the others — and the machine nodes are bought, deepest
+ * first, through the real reducer.
+ */
+const FINAL_FORK_FIXTURE_PARTS = 50_000;
+const GOLIATH_FIXTURE_PRINTERS = 6;
+const FINAL_FORK_FIXTURE_MONEY = 1_000_000;
+function commitFinalFork(): void {
+  const fork = content.forks.find((def) => def.requiredForFinalPrint);
+  if (fork === undefined || state.forkId !== null) {
+    return;
+  }
+  state = {
+    ...state,
+    resources: {
+      ...state.resources,
+      parts: state.resources.parts + FINAL_FORK_FIXTURE_PARTS,
+      money: state.resources.money + FINAL_FORK_FIXTURE_MONEY,
+    },
+  };
+  const buy = (id: string): void => {
+    if ((state.upgrades[id] ?? 0) > 0) {
+      return;
+    }
+    const def = content.upgrades.find((candidate) => candidate.id === id);
+    for (const prerequisite of def?.requiresUpgradeIds ?? []) {
+      buy(prerequisite);
+    }
+    apply({ type: 'BUY_UPGRADE', upgradeId: id });
+  };
+  for (const id of fork.requiresUpgradeIds) {
+    buy(id);
+  }
+  apply({ type: 'CHOOSE_FORK', forkId: fork.id });
+  if (state.forkId !== fork.id) {
+    throw new Error(`could not commit to ${fork.id}: check its requirements`);
+  }
+}
+
+/** Buy printers into a bay until the Fabricator's count is met, or fail loudly. */
+function staffForFabricator(slotId: string, required: number): void {
+  for (let guard = 0; countPrinters(state) < required; guard += 1) {
+    if (guard > required * 4) {
+      throw new Error(`could not staff ${slotId} to ${required} printers`);
+    }
+    apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId });
+  }
+}
 
 const dir = resolve(import.meta.dirname, '../packages/core/src/visual/__fixtures__');
 const written: string[] = [];
@@ -170,26 +220,6 @@ tickSeconds(5);
 capture('rack');
 
 /**
- * 7. The Goliath (spec §5B): the same workshop after the fork melts the rack
- * into one machine. Captured straight after the commitment so the fixture shows
- * what the renderer must switch to — a single, much larger printer.
- */
-const goliath = content.forks.find((def) => def.visual === 'goliath');
-if (goliath !== undefined) {
-  state = {
-    ...state,
-    // The commitment costs Parts the bot has not banked at this exact moment;
-    // granting them is a *fixture* concession, not a rule change — the action
-    // below still goes through the real reducer and the real availability
-    // rules, so the state it produces is one the game can reach.
-    resources: { ...state.resources, parts: state.resources.parts + FORK_FIXTURE_PARTS },
-  };
-  apply({ type: 'CHOOSE_FORK', forkId: goliath.id });
-  tickSeconds(5);
-  capture('goliath');
-}
-
-/**
  * 8. The Design Studio (spec §5D). Handing the wheel to the reference bot as
  * far as the melt-down phase is the only honest way to reach it: the capstone
  * sits behind resin, forty sold Products and a second commission, which is
@@ -210,6 +240,28 @@ tickSeconds(5);
 capture('prestige');
 
 /**
+ * The Goliath (spec §5B): a workshop after the fork melts the rack into one
+ * machine. Since the M7 rebalance Goliath needs a melt-down behind it and a
+ * sintering head, so it is captured from the rebuilt run above rather than from
+ * the first one. Captured straight after the commitment so the fixture shows
+ * what the renderer must switch to: a single, much larger printer.
+ */
+commitFinalFork();
+{
+  // The giant has to be staffed and printing to be worth a fixture: buy it a
+  // crew, load it and let it run for a moment.
+  const giant = state.slots[0];
+  if (giant !== undefined) {
+    staffForFabricator(giant.id, GOLIATH_FIXTURE_PRINTERS);
+    apply({ type: 'SET_SLOT_CONFIG', slotId: giant.id, materialId: 'pla', objectId: 'bracket' });
+    apply({ type: 'BUY_FILAMENT', materialId: 'pla', grams: 500 });
+    apply({ type: 'START_PRINT', slotId: giant.id });
+  }
+}
+tickSeconds(5);
+capture('goliath');
+
+/**
  * 10. The endgame (spec §5E, §6 phase 5): the Endgame Tree bought with Plates,
  * the printed city behind the rack, and the on-screen inflation the presses
  * caused. Reached by handing the wheel to the reference bot as far as the last
@@ -228,7 +280,6 @@ capture('endgame');
 const FABRICATOR_FIXTURE_PLATES = 40;
 const FABRICATOR_FIXTURE_PARTS = 5000;
 const fabricator = content.endgame.fabricator;
-const goliathFork = content.forks.find((def) => def.requiredForFinalPrint);
 state = {
   ...state,
   resources: {
@@ -237,13 +288,11 @@ state = {
     parts: state.resources.parts + FABRICATOR_FIXTURE_PARTS,
   },
 };
-if (goliathFork !== undefined && state.forkId === null) {
-  apply({ type: 'CHOOSE_FORK', forkId: goliathFork.id });
-}
+commitFinalFork();
 apply({ type: 'BUY_FILAMENT', materialId: fabricator.materialId, grams: fabricator.filamentGrams });
 const bay = state.slots[0];
-while (bay !== undefined && countPrinters(state) < fabricator.requiredPrinters) {
-  apply({ type: 'BUY_PRINTER', printerId: content.start.printerId, slotId: bay.id });
+if (bay !== undefined) {
+  staffForFabricator(bay.id, fabricator.requiredPrinters);
 }
 // A section may still be on the bed — the bot pre-prints them (spec §7.3) —
 // and the Fabricator will not start over the top of one. Wait it out rather

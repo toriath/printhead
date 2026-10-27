@@ -152,7 +152,8 @@ describe('intro assembly', () => {
   });
 
   it('refuses a piece that is out of order or not yet prepared', () => {
-    const fresh = { attachedPieceIds: [], cooldownMs: attachCooldownMs(first) };
+    // Bench work still running (the shipped intro has none; the rule stands).
+    const fresh = { attachedPieceIds: [], cooldownMs: 30_000 };
     expect(attachAssemblyPiece(fresh, content, second?.id ?? '')).toEqual({
       ok: false,
       reason: 'out-of-order',
