@@ -4,8 +4,9 @@ import { loadContent } from '../content/load.js';
 import { RAW_CONTENT } from '../content/raw.js';
 import type { RawContent } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
-import { MS_PER_HOUR, MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
-import { runOfflineCatchUp } from '../engine/offline.js';
+import { MS_PER_MINUTE, TICK_MS } from '../engine/constants.js';
+import { advance } from '../engine/loop.js';
+import { createPaceMapping } from '../engine/pace.js';
 import { restoreRng } from '../rng/mulberry32.js';
 import { deserializeSave, serializeSave } from '../save/serialize.js';
 import { fabricatorDurationMs, startNewGamePlus } from '../systems/endgame.js';
@@ -401,8 +402,8 @@ describe('property: resources are never negative', () => {
   });
 });
 
-describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
-  /** A save mid-print, so offline catch-up has an economy to advance. */
+describe('property: advance(2t) ≡ advance(t) ∘ advance(t)', () => {
+  /** A workshop mid-print, so there is an economy to advance. */
   const running = (): GameState => {
     let state = createInitialState(content, { seed: 11 });
     for (const piece of content.start.assemblyPieces) {
@@ -433,19 +434,46 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
     };
   };
 
-  const offline = (state: GameState, wallElapsedMs: number, carrySimMs: number) =>
-    runOfflineCatchUp({ state, content, wallElapsedMs, nowMs: 0, carrySimMs });
+  /**
+   * Live play in frames of any size: the guarantee that a long frame and two
+   * short ones agree is what lets the loop drop a frame's timestamp and trust
+   * the clock instead (spec §15).
+   */
+  const pace = createPaceMapping(content.pacing);
+  const play = (state: GameState, wallElapsedMs: number, carrySimMs: number) => {
+    let step = advance({
+      state,
+      carrySimMs,
+      wallDtMs: wallElapsedMs,
+      pace,
+      tick: (s, dt) => apply(s, tick(dt)),
+    });
+    let next = step.state;
+    let carry = step.carrySimMs;
+    while (step.pending) {
+      step = advance({
+        state: next,
+        carrySimMs: carry,
+        wallDtMs: 0,
+        pace,
+        tick: (s, dt) => apply(s, tick(dt)),
+      });
+      next = step.state;
+      carry = step.carrySimMs;
+    }
+    return { state: next, carrySimMs: carry };
+  };
 
-  it('splits a catch-up into two halves with an identical result', () => {
+  it('splits a stretch of play into two halves with an identical result', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(start, rebuilding()),
         fc.integer({ min: 0, max: 30 }),
         (from, minutes) => {
           const half = minutes * MS_PER_MINUTE;
-          const once = offline(from, half * 2, 0);
-          const first = offline(from, half, 0);
-          const second = offline(first.state, half, first.carrySimMs);
+          const once = play(from, half * 2, 0);
+          const first = play(from, half, 0);
+          const second = play(first.state, half, first.carrySimMs);
           expect(second.state).toEqual(once.state);
           expect(second.carrySimMs).toBeCloseTo(once.carrySimMs, 9);
         },
@@ -454,31 +482,23 @@ describe('property: offline(2t) ≡ offline(t) ∘ offline(t)', () => {
     );
   });
 
-  it('matches playing the same time online, tick for tick', () => {
+  it('matches ticking the same time by hand, tick for tick', () => {
     const wallMs = MS_PER_MINUTE * 20;
     for (const from of [start, rebuilding()]) {
-      const summary = offline(from, wallMs, 0);
-      let online = from;
-      for (let i = 0; i < wallMs / TICK_MS; i += 1) {
-        online = apply(online, tick(TICK_MS));
+      const played = play(from, wallMs, 0);
+      let ticked = from;
+      for (let i = 0; i < pace.toSimDtMs(wallMs) / TICK_MS; i += 1) {
+        ticked = apply(ticked, tick(TICK_MS));
       }
-      expect(summary.state).toEqual(online);
+      expect(played.state).toEqual(ticked);
     }
   });
 
-  it('rebuilds the workshop and runs the presses while the player is away', () => {
-    const away = offline(rebuilding(), MS_PER_MINUTE * 30, 0).state;
+  it('rebuilds the workshop and runs the presses on its own', () => {
+    const away = play(rebuilding(), MS_PER_MINUTE * 30, 0).state;
     expect(away.assembly.attachedPieceIds.length).toBe(content.start.assemblyPieces.length);
     expect(away.designs[content.designs[0]?.id ?? '']).toBeDefined();
     expect(away.stats.moneyPrinted).toBeGreaterThan(0);
-  });
-
-  it('caps at pacing.offlineCapHours and reports the remainder as skipped', () => {
-    const cap = content.pacing.offlineCapHours;
-    const result = offline(start, MS_PER_HOUR * (cap * 2), 0);
-    expect(result.summary.appliedWallMs).toBe(MS_PER_HOUR * cap);
-    expect(result.summary.skippedWallMs).toBe(MS_PER_HOUR * cap);
-    expect(result.summary.gains.partsProduced).toBeGreaterThan(0);
   });
 });
 

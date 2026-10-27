@@ -263,7 +263,18 @@ describe('machine-tier visuals (spec §5A)', () => {
   });
 
   it('only the top tier gets an enclosure', () => {
-    render(<Workshop visual={showcase} />);
+    // A resin bay draws Amber whatever its tier, so the top-tier bay here is
+    // loaded with PLA to show the enclosed Mk3.
+    render(
+      <Workshop
+        visual={{
+          ...showcase,
+          slots: showcase.slots.map((slot) =>
+            slot.machineTier === 3 ? { ...slot, materialId: 'pla', output: 'parts' } : slot,
+          ),
+        }}
+      />,
+    );
     expect(
       screen.getAllByTestId('printer-figure').map((f) => f.querySelector('.ph-enclosure')),
     ).toEqual([null, null, expect.anything()]);

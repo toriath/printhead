@@ -1,12 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  assemblePrinter,
-  bootGame,
-  replaceState,
-  snapshot,
-  warp,
-  warpPastOffline,
-} from './harness.js';
+import { assemblePrinter, bootGame, replaceState, snapshot, warp } from './harness.js';
 
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60 * MS_PER_SECOND;
@@ -84,7 +77,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     // "Print a building" changes the backdrop (spec §5E).
     await expect(page.getByRole('img').first()).toHaveAttribute('data-backdrop', 'skyline');
     // ...and the printed factory turns out machines on its own.
-    await warpPastOffline(page, 10 * MS_PER_MINUTE);
+    await warp(page, 10 * MS_PER_MINUTE);
     const later = (await snapshot(page)) as StateShape;
     expect(later.printers['bench-mk1'] ?? 0).toBeGreaterThan(bought.printers['bench-mk1'] ?? 0);
   });
@@ -118,7 +111,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     const section = page.getByTestId('print-section');
     await expect(section).toBeEnabled();
     await section.click();
-    await warpPastOffline(page, 5 * MS_PER_MINUTE);
+    await warp(page, 5 * MS_PER_MINUTE);
     expect(((await snapshot(page)) as StateShape).fabricator.sections).toBe(1);
 
     const start = page.getByTestId('start-fabricator');
@@ -129,18 +122,18 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     // The one synced render: the workshop is the build, drawn layer by layer.
     const build = page.getByTestId('fabricator');
     await expect(build).toBeVisible();
-    await warpPastOffline(page, 10 * MS_PER_MINUTE);
+    await warp(page, 10 * MS_PER_MINUTE);
     const layer = Number(await build.getAttribute('data-layer'));
     expect(layer).toBeGreaterThan(0);
     await expect(page.getByTestId('fabricator-status')).toContainText(`layer ${layer}`);
 
     // Run it out: the print lands, the numbers go to ∞, the credits print.
-    await warpPastOffline(page, 40 * MS_PER_MINUTE);
+    await warp(page, 40 * MS_PER_MINUTE);
     const built = (await snapshot(page)) as StateShape;
     expect(built.fabricator.completedAtMs).not.toBeNull();
     await expect(page.getByTestId('ending')).toBeVisible();
 
-    await warpPastOffline(page, 4 * MS_PER_MINUTE);
+    await warp(page, 4 * MS_PER_MINUTE);
     await expect(page.getByTestId('ending')).toHaveAttribute('data-stage', 'complete');
     await expect(page.getByTestId('phase')).toHaveText('ended');
   });

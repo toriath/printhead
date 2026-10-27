@@ -1,13 +1,13 @@
-import type { OfflineSummary } from '@printhead/core';
+import { overclockSlot } from '@printhead/core';
 import { Workshop } from '@printhead/renderer';
-import { type ReactElement, useEffect, useState } from 'react';
+import type { ReactElement } from 'react';
 import { Controls } from './controls.js';
 import { EndgamePanel, EndingScreen } from './endgame.js';
 import { FleetPanel } from './fleet.js';
 import { useVisualState } from './hooks.js';
 import { Hud } from './hud.js';
+import { LayerBanner, LayerTrack, PopupLayer, useJuice } from './juice.js';
 import { PrestigePanel, StudioPanel } from './meta.js';
-import { OfflineSummaryScreen } from './offline-summary.js';
 import { AutomationPanel, MarketPanel, RecyclerPanel, UpgradePanel } from './panels.js';
 import type { GameStore } from './store.js';
 
@@ -19,30 +19,20 @@ import type { GameStore } from './store.js';
  */
 export interface AppProps {
   readonly store: GameStore;
-  /** Catch-up applied at boot, if the player was away (spec §7.4). */
-  readonly initialOffline?: OfflineSummary | null;
-  /** Later catch-ups — the tab came back after a long time in the background. */
-  readonly subscribeOffline?: (listener: (summary: OfflineSummary) => void) => () => void;
   /** Shown when a save existed but could not be read. */
   readonly loadWarning?: string | null;
 }
 
-export function App({
-  store,
-  initialOffline = null,
-  subscribeOffline,
-  loadWarning = null,
-}: AppProps): ReactElement {
+export function App({ store, loadWarning = null }: AppProps): ReactElement {
   const visual = useVisualState(store);
   const content = store.getContent();
-  const [offline, setOffline] = useState<OfflineSummary | null>(initialOffline);
-
-  useEffect(() => subscribeOffline?.(setOffline), [subscribeOffline]);
+  const juice = useJuice(store);
+  const bays = visual.goliath ? 1 : Math.max(visual.slotCapacity, visual.slots.length);
 
   return (
     <main className="app">
       <header className="app__header">
-        <h1>PRINTHEAD</h1>
+        <h1>Printhead</h1>
         <p className="app__phase">
           {/* The id is the stable handle tests and tooling address; the name is
               what a player reads. Both are here; only one is visible. */}
@@ -62,7 +52,25 @@ export function App({
       )}
 
       <Hud visual={visual} content={content} />
-      <Workshop visual={visual} />
+      <LayerTrack content={content} phaseId={visual.phaseId} />
+      {/* Alternating two identical animations restarts the shake on every
+          failure without remounting the workshop. */}
+      <div
+        className={
+          juice.shake === 0
+            ? 'stage'
+            : `stage ${juice.shake % 2 === 0 ? 'is-shake-a' : 'is-shake-b'}`
+        }
+        data-shake={juice.shake}
+      >
+        <Workshop
+          visual={visual}
+          flourishes={juice.flourishes}
+          onSlotPress={(slotId) => store.dispatch(overclockSlot(slotId))}
+        />
+        <PopupLayer popups={juice.popups} bays={bays} />
+      </div>
+      <LayerBanner banner={juice.banner} />
       <Controls store={store} visual={visual} content={content} />
 
       {/* The economy panels appear as the game unlocks them; each one hides
@@ -86,10 +94,6 @@ export function App({
 
       {/* The ending takes the screen when it arrives (spec §6 phase 6). */}
       <EndingScreen store={store} visual={visual} />
-
-      {offline === null ? null : (
-        <OfflineSummaryScreen summary={offline} onDismiss={() => setOffline(null)} />
-      )}
     </main>
   );
 }

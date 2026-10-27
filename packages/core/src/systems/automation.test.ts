@@ -16,6 +16,7 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from './automation.js';
+import { addScrap } from './resources.js';
 
 const content = TEST_CONTENT;
 const curves = createCurveRegistry(content.curves);
@@ -23,6 +24,7 @@ const base = createInitialState(content, { seed: 1 });
 const AUTO_SELL = 'auto-sell';
 const AUTO_BUY = 'auto-buy-filament';
 const AUTO_TRADE = 'auto-trade';
+const AUTO_RECYCLE = 'auto-recycler';
 
 const defOf = (id: string): AutomationDef => {
   const def = content.automation.find((candidate) => candidate.id === id);
@@ -249,6 +251,38 @@ describe('tickAutomation', () => {
 
       const empty: GameState = { ...stocked(100, 0), slots: [testSlot()] };
       expect(tickAutomation(empty, content, interval, undefined).resources.money).toBe(100);
+    });
+  });
+
+  describe('auto-recycler', () => {
+    const due = (over: Partial<GameState>): GameState =>
+      inBench({
+        upgrades: { recycler: 1 },
+        automation: installed(AUTO_RECYCLE, { cooldownMs: 0 }),
+        slots: [testSlot({ materialId: 'pla', objectId: 'bracket', printerCount: 1 })],
+        ...over,
+      });
+    const withScrap = (state: GameState, grams: number): GameState =>
+      addScrap(state, grams, grams * 0.02);
+
+    it('feeds the whole pile into the loaded material once it reaches the threshold', () => {
+      const threshold = defOf(AUTO_RECYCLE).defaultThreshold;
+      const before = withScrap(due({}), threshold);
+      const { result, events } = collectEvents((emit) => tickAutomation(before, content, 1, emit));
+      expect(result.resources.scrap).toBe(0);
+      expect(result.filamentGrams.pla ?? 0).toBeGreaterThan(before.filamentGrams.pla ?? 0);
+      expect(events.map((event) => event.type)).toEqual(['SCRAP_RECYCLED', 'AUTOMATION_FIRED']);
+    });
+
+    it('waits while the pile is under the threshold', () => {
+      const threshold = defOf(AUTO_RECYCLE).defaultThreshold;
+      const before = withScrap(due({}), threshold - 1);
+      expect(tickAutomation(before, content, 1, undefined).resources.scrap).toBe(threshold - 1);
+    });
+
+    it('does nothing without a recycler to feed', () => {
+      const before = withScrap(due({ upgrades: {} }), 500);
+      expect(tickAutomation(before, content, 1, undefined).resources.scrap).toBe(500);
     });
   });
 

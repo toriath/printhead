@@ -28,7 +28,7 @@
       "costResource": "plates",
       "maxLevel": 5,
       "rateCurveId": "money-print-rate-bundles",
-      "unlockPhaseId": "absurd"
+      "unlockPhaseId": "prestige"
     },
     {
       "id": "pallet-printer",

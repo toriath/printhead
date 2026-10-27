@@ -1,5 +1,13 @@
 import type { Content } from '@printhead/core';
 import { type BudgetTable, buildBudgetTable, checkPhaseBudgets, gatedPhaseIds } from './budget.js';
+import {
+  buildOrder,
+  choreShare,
+  deadContent,
+  longestDroughtByPhase,
+  orderDivergence,
+  topChore,
+} from './fun.js';
 import type { RunLog } from './harness.js';
 import { type BarRow, barChart, lineChart } from './svg.js';
 import { checkWaitWalls, longestWallByPhase } from './waitwall.js';
@@ -143,6 +151,20 @@ function verdict(content: Content, log: RunLog): string {
   return `**FAIL** — ${lines.length} violation(s):\n\n${lines.join('\n')}${note}`;
 }
 
+/** How differently each strategy ordered its purchases from the reference. */
+function divergenceLines(logs: readonly RunLog[]): readonly string[] {
+  const active = logs.filter((log) => log.actions > 0);
+  const [first, ...rest] = active;
+  if (first === undefined || rest.length === 0) {
+    return [];
+  }
+  return rest.map(
+    (log) =>
+      `Build-order divergence, \`${first.botId}\` vs \`${log.botId}\`: ` +
+      `${orderDivergence(buildOrder(first), buildOrder(log)).toFixed(2)} (0 = the same order, ~0.5 = unrelated).`,
+  );
+}
+
 export function buildReport(input: ReportInput): readonly ReportFile[] {
   const { content, logs, date } = input;
   const table = buildBudgetTable(content.pacing);
@@ -222,6 +244,42 @@ export function buildReport(input: ReportInput): readonly ReportFile[] {
     'magnitude and a shared axis would flatten one of them into the floor.',
     '',
     ...CURVES.map((curve) => `![${curve.title}](./curve-${curve.key}.svg)`),
+    '',
+    '## Fun signals',
+    '',
+    'The budgets above say whether the game is the right length. These say',
+    'whether the minutes are any good (see `tools/balance/src/fun.ts`). A',
+    '*drought* is the longest stretch in a phase with nothing new: no new',
+    'upgrade, machine, material, design, branch or phase. *Chores* are upkeep',
+    'actions (sell, recycle, restock, reload) as a share of all actions. Bots',
+    'are not players: read these as where to look, not as verdicts.',
+    '',
+    markdownTable(
+      ['Bot', 'Chores', 'Most repeated', ...content.pacing.phases.slice(0, -1).map((p) => p.name)],
+      logs
+        .filter((log) => log.actions > 0)
+        .map((log) => {
+          const droughts = longestDroughtByPhase(log);
+          const chore = topChore(log);
+          return [
+            log.botId,
+            `${(choreShare(log) * 100).toFixed(0)} %`,
+            chore === null ? '—' : `${chore.type} ×${chore.count}`,
+            ...content.pacing.phases.slice(0, -1).map((phase) => {
+              const drought = droughts.get(phase.id);
+              return drought === undefined ? '—' : drought.toFixed(0);
+            }),
+          ];
+        }),
+    ),
+    '',
+    `Never bought by any bot: ${
+      deadContent(logs, content)
+        .map((id) => `\`${id}\``)
+        .join(', ') || 'nothing'
+    }.`,
+    '',
+    ...divergenceLines(logs),
     '',
     '## Activity',
     '',

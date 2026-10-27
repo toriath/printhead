@@ -43,7 +43,12 @@ import {
   platesFor,
   prestigeAvailability,
 } from '../systems/prestige.js';
-import { bestPrinterTier, resolveSlotConfig, runProgress } from '../systems/printing.js';
+import {
+  bestPrinterTier,
+  overclockAvailability,
+  resolveSlotConfig,
+  runProgress,
+} from '../systems/printing.js';
 import { countPrinters } from '../systems/requirements.js';
 import { drawScrap } from '../systems/resources.js';
 import {
@@ -135,6 +140,7 @@ function toQueueVisual(slot: SlotState, content: Content): readonly QueueEntryVi
 }
 
 function toSlotVisual(
+  state: GameState,
   slot: SlotState,
   content: Content,
   index: number,
@@ -172,6 +178,22 @@ function toSlotVisual(
         ? clamp((purgeMs - slot.changeoverMs) / purgeMs, NONE, FULL)
         : NONE,
     failureRisk: clamp(slot.failureCharge / content.failure.model.chargeThreshold, NONE, FULL),
+    perfectCharge: clamp(slot.perfectCharge, NONE, FULL),
+    overclock: {
+      active: slot.overclockMs > NONE,
+      remaining: clamp(
+        slot.overclockMs / (content.failure.overclock.durationDesignSeconds * MS_PER_SECOND),
+        NONE,
+        FULL,
+      ),
+      cooldown: clamp(
+        slot.overclockCooldownMs /
+          (content.failure.overclock.cooldownDesignSeconds * MS_PER_SECOND),
+        NONE,
+        FULL,
+      ),
+      ready: overclockAvailability(state, content, slot.id) === null,
+    },
     queue: toQueueVisual(slot, content),
     queueBatches: slot.queueBatches,
   };
@@ -593,7 +615,7 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     // Every owned slot is projected, empty ones included: the "empty slot =
     // faint outline" rule is the renderer drawing data, not inventing it.
     slots: shown.map((slot, index) =>
-      toSlotVisual(slot, content, index, shown.length, machineTier, perSlot),
+      toSlotVisual(state, slot, content, index, shown.length, machineTier, perSlot),
     ),
     fleet: toFleetVisual(state, content, active),
     slotUnlock: toSlotUnlockVisual(state, content),

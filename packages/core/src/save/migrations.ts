@@ -162,6 +162,25 @@ function migrateV5ToV6(payload: unknown): unknown {
 }
 
 /**
+ * v6 → v7: the perfect meter and the overclock (balance overhaul). A v6 bay had
+ * neither, so it starts with an empty meter and a cold, ready overclock.
+ */
+function migrateV6ToV7(payload: unknown): unknown {
+  const v6 = payload as Record<string, unknown>;
+  const slots = Array.isArray(v6.slots) ? (v6.slots as Record<string, unknown>[]) : [];
+  return {
+    ...v6,
+    saveVersion: 7,
+    slots: slots.map((slot) => ({
+      ...slot,
+      perfectCharge: 0,
+      overclockMs: 0,
+      overclockCooldownMs: 0,
+    })),
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
@@ -171,6 +190,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   3: migrateV3ToV4,
   4: migrateV4ToV5,
   5: migrateV5ToV6,
+  6: migrateV6ToV7,
 };
 
 export class SaveMigrationError extends Error {

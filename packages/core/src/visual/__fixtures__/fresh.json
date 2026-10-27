@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "phaseId": "intro",
   "phaseName": "Intro",
   "simTimeMs": 0,
@@ -26,6 +26,13 @@
       "changingOver": false,
       "changeoverProgress": 0,
       "failureRisk": 0,
+      "perfectCharge": 0,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     }
@@ -43,7 +50,7 @@
     "name": "Second config slot",
     "available": false,
     "affordable": false,
-    "cost": 900,
+    "cost": 775,
     "costResource": "parts",
     "blockedReason": "locked"
   },
@@ -51,25 +58,25 @@
     {
       "forkId": "farm-path",
       "name": "The Farm",
-      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs faster. The better economy, but the final print needs Goliath.",
       "layout": "rack",
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 585,
-      "costResource": "parts",
+      "cost": 10354.5,
+      "costResource": "money",
       "requiredForFinalPrint": false
     },
     {
       "forkId": "goliath",
       "name": "Goliath",
-      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "description": "One giant printer. The whole fleet melts into a single bay, slower and less productive than the Farm. Needs a sintering head and one melt-down behind you, and it is the only build that can attempt the final print.",
       "layout": "goliath",
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 585,
-      "costResource": "parts",
+      "cost": 10354.5,
+      "costResource": "money",
       "requiredForFinalPrint": true
     }
   ],
@@ -78,7 +85,7 @@
     "totalPieces": 7,
     "nextPieceId": "frame",
     "nextPieceName": "Frame",
-    "cooldownMs": 39000,
+    "cooldownMs": 33000,
     "ready": false,
     "selfAssembling": false,
     "progress": 0,
@@ -169,7 +176,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 99,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -180,7 +187,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 99,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -191,7 +198,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 99,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -202,7 +209,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 99,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -213,7 +220,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 500,
+      "cost": 410,
       "costResource": "parts"
     },
     {
@@ -224,7 +231,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 500,
+      "cost": 410,
       "costResource": "parts"
     },
     {
@@ -235,7 +242,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 98.7249,
+      "cost": 168.074,
       "costResource": "money"
     },
     {
@@ -246,7 +253,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 2500,
+      "cost": 9956.25,
       "costResource": "money"
     },
     {
@@ -257,7 +264,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 500,
+      "cost": 410,
       "costResource": "money"
     },
     {
@@ -268,7 +275,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 4,
+      "cost": 12.2271,
       "costResource": "plates"
     },
     {
@@ -279,7 +286,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 4,
+      "cost": 12.2271,
       "costResource": "plates"
     },
     {
@@ -290,7 +297,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 4,
+      "cost": 12.2271,
       "costResource": "plates"
     },
     {
@@ -301,7 +308,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 4,
+      "cost": 12.2271,
       "costResource": "plates"
     }
   ],
@@ -316,7 +323,7 @@
       "threshold": 40,
       "available": false,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
       "costResource": "parts"
     },
     {
@@ -329,7 +336,20 @@
       "threshold": 400,
       "available": false,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-recycler",
+      "name": "Auto-recycler",
+      "behavior": "recycle-scrap",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 20,
+      "available": false,
+      "affordable": false,
+      "cost": 720,
       "costResource": "parts"
     },
     {
@@ -342,7 +362,7 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 390,
+      "cost": 719.55,
       "costResource": "money"
     },
     {
@@ -355,7 +375,7 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
       "costResource": "parts"
     }
   ],
@@ -384,7 +404,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 2200,
+        "cost": 1100,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -400,7 +420,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 2200,
+        "cost": 1100,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -416,7 +436,7 @@
         "capstone": true,
         "available": false,
         "affordable": false,
-        "cost": 2200,
+        "cost": 1100,
         "costResource": "money",
         "blockedReason": "locked"
       }
@@ -450,7 +470,7 @@
       "maxLevel": 5,
       "available": false,
       "affordable": false,
-      "cost": 6,
+      "cost": 9,
       "costResource": "plates"
     },
     {
@@ -461,7 +481,7 @@
       "maxLevel": 5,
       "available": false,
       "affordable": false,
-      "cost": 18,
+      "cost": 14,
       "costResource": "plates"
     },
     {
@@ -492,7 +512,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 2040000,
+    "totalMs": 3300000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,

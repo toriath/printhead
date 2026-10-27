@@ -29,7 +29,7 @@ import {
 } from './format.js';
 import { useGameSelector, useVisualState } from './hooks.js';
 import { Hud, printStatus } from './hud.js';
-import { OFFLINE_THRESHOLD_MS, createGameLoop } from './loop.js';
+import { AWAY_THRESHOLD_MS, createGameLoop } from './loop.js';
 import { readSave, writeSave } from './persistence.js';
 import { createGameStore } from './store.js';
 
@@ -317,20 +317,18 @@ describe('the selector hook', () => {
 });
 
 describe('the engine loop', () => {
-  it('turns wall-clock gaps into ticks, and long gaps into offline catch-up', () => {
+  it('turns wall-clock gaps into ticks, and drops long gaps as time away', () => {
     const clock = createManualClock(1000);
     const store = createGameStore({ clock });
-    const onOffline = vi.fn();
-    const loop = createGameLoop({ store, clock, onOffline });
+    const loop = createGameLoop({ store, clock });
 
     clock.advance(MS_PER_SECOND);
     loop.frame();
     expect(store.getState().simTimeMs).toBe(MS_PER_SECOND);
-    expect(onOffline).not.toHaveBeenCalled();
 
-    clock.advance(OFFLINE_THRESHOLD_MS);
-    loop.frame();
-    expect(onOffline).toHaveBeenCalledTimes(1);
+    clock.advance(AWAY_THRESHOLD_MS);
+    expect(loop.frame()).toBe(0);
+    expect(store.getState().simTimeMs).toBe(MS_PER_SECOND);
   });
 
   it('never runs time backwards if the host clock does', () => {

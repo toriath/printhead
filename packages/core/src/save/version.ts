@@ -15,8 +15,9 @@
  *   Fabricator (its pre-printed sections, the build in flight and the moment it
  *   finished), the New Game Plus run counter with its chosen modifiers, and
  *   the count of Plates ever engraved (which is what the presses read).
+ * - v7 (M7 balance overhaul): every bay's perfect meter and overclock clocks.
  */
-export const SAVE_SCHEMA_VERSION = 6;
+export const SAVE_SCHEMA_VERSION = 7;
 
 /** Every version this build can still load — the fixture corpus mirrors it. */
-export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6] as const;
+export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6, 7] as const;

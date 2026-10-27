@@ -56,6 +56,14 @@ export interface PrintCompletedEvent extends EventBase {
   /** How many of the batch the pity timer failed (spec §7.1). */
   readonly failed: number;
   readonly scrapGrams: number;
+  /** The perfect meter filled on this batch: it yielded several times over. */
+  readonly perfect: boolean;
+}
+
+export interface SlotOverclockedEvent extends EventBase {
+  readonly type: 'SLOT_OVERCLOCKED';
+  readonly slotId: string;
+  readonly durationMs: number;
 }
 
 /** Emitted alongside PRINT_COMPLETED when the pity timer bit — for flourishes. */
@@ -320,6 +328,7 @@ export type DomainEvent =
   | SlotQueueSetEvent
   | ForkChosenEvent
   | PhaseAdvancedEvent
+  | SlotOverclockedEvent
   | ActionRejectedEvent;
 
 export type DomainEventType = DomainEvent['type'];
@@ -357,6 +366,7 @@ export const DOMAIN_EVENT_TYPES = [
   'SLOT_QUEUE_SET',
   'FORK_CHOSEN',
   'PHASE_ADVANCED',
+  'SLOT_OVERCLOCKED',
   'ACTION_REJECTED',
 ] as const satisfies readonly DomainEventType[];
 

@@ -35,6 +35,12 @@ export interface StartPrintAction {
   readonly slotId: string;
 }
 
+/** Overclock a running bay (see `failure.overclock`). */
+export interface OverclockSlotAction {
+  readonly type: 'OVERCLOCK_SLOT';
+  readonly slotId: string;
+}
+
 export interface SellPartsAction {
   readonly type: 'SELL_PARTS';
   /** Clamped to the parts in stock; `null` sells everything. */
@@ -172,6 +178,7 @@ export type Action =
   | AttachPieceAction
   | SetSlotConfigAction
   | StartPrintAction
+  | OverclockSlotAction
   | SellPartsAction
   | BuyFilamentAction
   | SellFilamentAction
@@ -209,6 +216,10 @@ export const setSlotConfig = (
   objectId: string,
 ): SetSlotConfigAction => ({ type: 'SET_SLOT_CONFIG', slotId, materialId, objectId });
 export const startPrint = (slotId: string): StartPrintAction => ({ type: 'START_PRINT', slotId });
+export const overclockSlot = (slotId: string): OverclockSlotAction => ({
+  type: 'OVERCLOCK_SLOT',
+  slotId,
+});
 export const sellParts = (count: number | null = null): SellPartsAction => ({
   type: 'SELL_PARTS',
   count,

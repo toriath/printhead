@@ -2,22 +2,28 @@ import { describe, expect, it } from 'vitest';
 import type { MaterialDef, ObjectDef } from '../content/schema.js';
 import { createCurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
+import { collectEvents } from '../events/bus.js';
 import { TEST_CONTENT, testSlot } from '../state/__fixtures__/sim.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
 import {
   type SlotConfig,
   affordableBatch,
+  applySlotOverclock,
   batchYield,
+  beginRun,
   bestPrinterTier,
   bestSpeedMultiplier,
   filamentPerBatch,
   isRunComplete,
+  nextPerfectCharge,
+  overclockAvailability,
   resolveSlotConfig,
   runDesignMs,
   runProgress,
   slotIndexOf,
   startRun,
   tickRun,
+  tickSlots,
   withSlot,
 } from './printing.js';
 
@@ -249,5 +255,115 @@ describe('slot addressing', () => {
     const next = withSlot(two, 1, { ...second, printerCount: 7 });
     expect(next.slots[1]?.printerCount).toBe(7);
     expect(next.slots[0]).toBe(two.slots[0]);
+  });
+});
+
+describe('perfect prints (failure.perfectPrint)', () => {
+  const { chargePerBatch, yieldMultiplier } = content.failure.perfectPrint;
+  const { perfectChargeMultiplier } = content.failure.overclock;
+
+  it('fills the meter one batch at a time and fires when it crosses 1', () => {
+    let charge = 0;
+    let batches = 0;
+    let fired = false;
+    while (!fired) {
+      const next = nextPerfectCharge(content, charge, false, 1);
+      charge = next.charge;
+      fired = next.perfect;
+      batches += 1;
+    }
+    expect(batches).toBe(Math.ceil(1 / chargePerBatch));
+    expect(charge).toBeLessThan(1);
+  });
+
+  it('fills faster while overclocked, and never on a batch that printed nothing', () => {
+    expect(nextPerfectCharge(content, 0, true, 1).charge).toBeCloseTo(
+      chargePerBatch * perfectChargeMultiplier,
+      9,
+    );
+    expect(nextPerfectCharge(content, 0.99, false, 0)).toEqual({ charge: 0.99, perfect: false });
+  });
+
+  it('pays out several times over through the run loop', () => {
+    const loaded: GameState = {
+      ...base,
+      printers: { 'bench-mk1': 1 },
+      filamentGrams: { pla: 1000 },
+      slots: [
+        testSlot({
+          materialId: 'pla',
+          objectId: 'bracket',
+          printerCount: 1,
+          autoRestart: false,
+          perfectCharge: 1 - chargePerBatch / 2,
+        }),
+      ],
+    };
+    const started = beginRun(loaded, content, 0, 0, undefined);
+    if (started === null) {
+      throw new Error('expected the bay to start');
+    }
+    const total = started.slots[0]?.run?.totalMs ?? 0;
+    const { result, events } = collectEvents((emit) => tickSlots(started, content, total, emit));
+    const done = events.find((event) => event.type === 'PRINT_COMPLETED');
+    expect(done).toMatchObject({ perfect: true });
+    const plain = content.objects[0]?.partsYield ?? 0;
+    expect(result.resources.parts).toBe(plain * yieldMultiplier);
+  });
+});
+
+describe('overclock (failure.overclock)', () => {
+  const { speedMultiplier, durationDesignSeconds, cooldownDesignSeconds } =
+    content.failure.overclock;
+  const running = (): GameState => {
+    const loaded: GameState = {
+      ...base,
+      printers: { 'bench-mk1': 1 },
+      filamentGrams: { pla: 1000 },
+      slots: [testSlot({ materialId: 'pla', objectId: 'bracket', printerCount: 1 })],
+    };
+    const started = beginRun(loaded, content, 0, 0, undefined);
+    if (started === null) {
+      throw new Error('expected the bay to start');
+    }
+    return started;
+  };
+
+  it('only fires on a printing bay that is out of cooldown', () => {
+    expect(overclockAvailability(base, content, 'nope')).toBe('unknown-target');
+    expect(overclockAvailability({ ...base, slots: [testSlot()] }, content, 'slot-1')).toBe(
+      'slot-idle',
+    );
+    const boosted = applySlotOverclock(running(), content, 'slot-1');
+    expect(boosted?.slots[0]?.overclockMs).toBe(durationDesignSeconds * MS_PER_SECOND);
+    expect(overclockAvailability(boosted as GameState, content, 'slot-1')).toBe('not-ready');
+  });
+
+  it('burns through the batch faster while it lasts, then cools down', () => {
+    const plain = running();
+    const boosted = applySlotOverclock(plain, content, 'slot-1') as GameState;
+    const step = 1000;
+    const slow = tickSlots(plain, content, step, undefined).slots[0]?.run?.remainingMs ?? 0;
+    const fast = tickSlots(boosted, content, step, undefined).slots[0]?.run?.remainingMs ?? 0;
+    const total = plain.slots[0]?.run?.totalMs ?? 0;
+    expect(total - fast).toBeCloseTo((total - slow) * speedMultiplier, 6);
+
+    const later = tickSlots(boosted, content, cooldownDesignSeconds * MS_PER_SECOND, undefined);
+    expect(later.slots[0]?.overclockMs).toBe(0);
+    expect(later.slots[0]?.overclockCooldownMs).toBe(0);
+  });
+
+  it('is locked until its phase, on content that unlocks it later', () => {
+    const later = {
+      ...content,
+      failure: {
+        ...content.failure,
+        overclock: { ...content.failure.overclock, unlockPhaseId: 'bench' },
+      },
+    };
+    expect(overclockAvailability({ ...running(), phaseId: 'intro' }, later, 'slot-1')).toBe(
+      'locked',
+    );
+    expect(overclockAvailability({ ...running(), phaseId: 'bench' }, later, 'slot-1')).toBeNull();
   });
 });

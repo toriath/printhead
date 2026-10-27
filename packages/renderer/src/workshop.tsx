@@ -1,5 +1,6 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
+import type { FaceId } from './character-kit.js';
 import { Fabricator } from './fabricator.js';
 import {
   BACKDROP_HEIGHT,
@@ -35,6 +36,10 @@ import { WORKSHOP_CSS } from './styles.js';
  */
 export interface WorkshopProps {
   readonly visual: VisualState;
+  /** Short-lived face reactions by slot id, derived from events by the shell. */
+  readonly flourishes?: Readonly<Record<string, FaceId>>;
+  /** Tap a printer to overclock its bay; omitted, the workshop is read-only. */
+  readonly onSlotPress?: (slotId: string) => void;
 }
 
 const EMPTY_BAY_ID = 'locked';
@@ -67,6 +72,8 @@ function lockedBay(index: number, capacity: number): SlotVisual {
     changingOver: false,
     changeoverProgress: 0,
     failureRisk: 0,
+    perfectCharge: 0,
+    overclock: { active: false, remaining: 0, cooldown: 0, ready: false },
     queue: [],
     queueBatches: 0,
   };
@@ -86,14 +93,20 @@ export function bays(visual: VisualState): readonly SlotVisual[] {
  * is the *same printer*, which is exactly the joke the fork is making — so the
  * badge, the progress bar and the pity meter all keep working.
  */
-function Goliath({ visual }: WorkshopProps): ReactElement | null {
+function Goliath({ visual, flourishes, onSlotPress }: WorkshopProps): ReactElement | null {
   const slot = visual.slots[0];
   if (slot === undefined) {
     return null;
   }
+  const flourish = flourishes?.[slot.slotId];
   return (
     <g data-testid="goliath" transform={`scale(${GOLIATH_SCALE})`}>
-      <Slot slot={slot} />
+      <Slot
+        slot={slot}
+        goliath
+        {...(flourish === undefined ? {} : { flourish })}
+        {...(onSlotPress === undefined ? {} : { onPress: onSlotPress })}
+      />
     </g>
   );
 }
@@ -178,7 +191,7 @@ function Backdrop({ visual, width }: { visual: VisualState; width: number }): Re
   );
 }
 
-export function Workshop({ visual }: WorkshopProps): ReactElement {
+export function Workshop({ visual, flourishes, onSlotPress }: WorkshopProps): ReactElement {
   const rack = bays(visual);
   /*
    * The final print takes the whole frame (spec §4: "a deliberate return to
@@ -223,17 +236,26 @@ export function Workshop({ visual }: WorkshopProps): ReactElement {
       {building ? (
         <Fabricator visual={visual} />
       ) : visual.goliath ? (
-        <Goliath visual={visual} />
+        <Goliath
+          visual={visual}
+          {...(flourishes === undefined ? {} : { flourishes })}
+          {...(onSlotPress === undefined ? {} : { onSlotPress })}
+        />
       ) : (
-        rack.map((slot, index) => (
-          <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
-            <Slot
-              slot={slot}
-              selfAssembling={visual.assembly.selfAssembling}
-              {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
-            />
-          </g>
-        ))
+        rack.map((slot, index) => {
+          const flourish = flourishes?.[slot.slotId];
+          return (
+            <g key={slot.slotId} transform={`translate(${bayX(index)}, 0)`}>
+              <Slot
+                slot={slot}
+                selfAssembling={visual.assembly.selfAssembling}
+                {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
+                {...(flourish === undefined ? {} : { flourish })}
+                {...(onSlotPress === undefined ? {} : { onPress: onSlotPress })}
+              />
+            </g>
+          );
+        })
       )}
       <Mint visual={visual} width={width} />
     </svg>

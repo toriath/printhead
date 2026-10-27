@@ -1,5 +1,4 @@
 import {
-  MS_PER_HOUR,
   RAW_CONTENT,
   TICK_MS,
   advancePhase,
@@ -90,33 +89,6 @@ describe('game store bridge', () => {
     const store = createGameStore({ clock: createManualClock() });
     store.dispatch(advancePhase());
     expect(store.getState().phaseId).toBe('intro');
-  });
-
-  it('replays offline time through the same reducer and summarises it', () => {
-    const store = createGameStore({ clock: createManualClock() });
-    const content = store.getContent();
-    for (const piece of content.start.assemblyPieces) {
-      store.advanceWallClock(piece.attachDesignSeconds * 1000);
-      store.dispatch(attachPiece(piece.id));
-    }
-    const slotId = `${content.start.slotIdPrefix}-1`;
-    store.dispatch(setSlotConfig(slotId, 'pla', 'bracket'));
-    store.dispatch(startPrint(slotId));
-
-    const summary = store.applyOffline(MS_PER_HOUR);
-    expect(summary.appliedWallMs).toBe(MS_PER_HOUR);
-    expect(summary.skippedWallMs).toBe(0);
-    expect(summary.gains.partsProduced).toBeGreaterThan(0);
-    expect(summary.eventCounts.PRINT_COMPLETED).toBeGreaterThan(0);
-  });
-
-  it('caps offline catch-up at the content cap', () => {
-    const store = createGameStore({ clock: createManualClock() });
-    const capHours = store.getContent().pacing.offlineCapHours;
-    const summary = store.applyOffline(MS_PER_HOUR * (capHours + 12));
-    expect(summary.cappedHours).toBe(capHours);
-    expect(summary.appliedWallMs).toBe(MS_PER_HOUR * capHours);
-    expect(summary.skippedWallMs).toBe(MS_PER_HOUR * 12);
   });
 
   it('picks up hot-reloaded content (pace changes live)', () => {

@@ -256,7 +256,7 @@ export const StatsStateV6Schema = StatsStateV5Schema.extend({
 }).strict();
 
 export const GameStateV6Schema = GameStateV5Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  saveVersion: z.literal(6),
   stats: StatsStateV6Schema,
   /** Fractional machines the printed factory has accrued (spec §5E). */
   factoryProgress: NonNegative,
@@ -264,8 +264,22 @@ export const GameStateV6Schema = GameStateV5Schema.extend({
   ngPlus: NewGamePlusStateSchema,
 }).strict();
 
+// --- v7 (M7 balance overhaul) ------------------------------------------------
+
+/** Every bay carries its perfect meter and its overclock clocks. */
+export const SlotStateV7Schema = SlotStateSchema.extend({
+  perfectCharge: NonNegative,
+  overclockMs: NonNegative,
+  overclockCooldownMs: NonNegative,
+}).strict();
+
+export const GameStateV7Schema = GameStateV6Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  slots: z.array(SlotStateV7Schema),
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV6Schema;
+export const GameStateSchema = GameStateV7Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -282,3 +296,4 @@ export type GameStateV3 = z.infer<typeof GameStateV3Schema>;
 export type GameStateV4 = z.infer<typeof GameStateV4Schema>;
 export type GameStateV5 = z.infer<typeof GameStateV5Schema>;
 export type GameStateV6 = z.infer<typeof GameStateV6Schema>;
+export type GameStateV7 = z.infer<typeof GameStateV7Schema>;

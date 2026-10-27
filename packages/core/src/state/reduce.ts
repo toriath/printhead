@@ -1,6 +1,7 @@
 import { indexById } from '../content/load.js';
 import type { Content } from '../content/schema.js';
 import { curveRegistryFor } from '../curves/evaluate.js';
+import { MS_PER_SECOND } from '../engine/constants.js';
 import type { ActionRejectedReason } from '../events/types.js';
 import { attachAssemblyPiece, isPieceReady, nextPiece, tickAssembly } from '../systems/assembly.js';
 import {
@@ -44,7 +45,9 @@ import {
 } from '../systems/prestige.js';
 import {
   applyChangeover,
+  applySlotOverclock,
   beginRun,
+  overclockAvailability,
   resolveSlotConfig,
   slotIndexOf,
   tickSlots,
@@ -104,6 +107,8 @@ export function reduce(state: GameState, action: Action, ctx: ReduceContext): Ga
       return applySetSlotConfig(state, action.slotId, action.materialId, action.objectId, ctx);
     case 'START_PRINT':
       return applyStartPrint(state, action.slotId, ctx);
+    case 'OVERCLOCK_SLOT':
+      return applyOverclock(state, action.slotId, ctx);
     case 'SELL_PARTS':
       return applySellParts(state, action.count, ctx);
     case 'BUY_FILAMENT':
@@ -488,6 +493,24 @@ function applyStartPrint(state: GameState, slotId: string, ctx: ReduceContext): 
     return reject(ctx, state, 'START_PRINT', 'insufficient-resources');
   }
   return started;
+}
+
+function applyOverclock(state: GameState, slotId: string, ctx: ReduceContext): GameState {
+  const blocked = overclockAvailability(state, ctx.content, slotId);
+  if (blocked !== null) {
+    return reject(ctx, state, 'OVERCLOCK_SLOT', blocked);
+  }
+  const next = applySlotOverclock(state, ctx.content, slotId);
+  if (next === null) {
+    return reject(ctx, state, 'OVERCLOCK_SLOT', 'not-ready');
+  }
+  ctx.emit?.({
+    type: 'SLOT_OVERCLOCKED',
+    simTimeMs: state.simTimeMs,
+    slotId,
+    durationMs: ctx.content.failure.overclock.durationDesignSeconds * MS_PER_SECOND,
+  });
+  return next;
 }
 
 // --- economy ----------------------------------------------------------------

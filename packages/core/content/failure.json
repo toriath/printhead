@@ -7,5 +7,17 @@
   "recycler": {
     "requiresUpgradeId": "recycler",
     "yieldFraction": 0.6
+  },
+  "perfectPrint": {
+    "chargePerBatch": 0.1,
+    "yieldMultiplier": 4
+  },
+  "overclock": {
+    "unlockPhaseId": "intro",
+    "durationDesignSeconds": 15,
+    "cooldownDesignSeconds": 60,
+    "speedMultiplier": 2,
+    "failureChargeMultiplier": 2,
+    "perfectChargeMultiplier": 2
   }
 }

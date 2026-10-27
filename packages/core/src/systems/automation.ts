@@ -6,10 +6,11 @@ import type { EventSink } from '../events/types.js';
 import type { AutomationSlotState, GameState } from '../state/game-state.js';
 import { type Cost, nextCost } from './cost.js';
 import { payCost, sellPartsFrom } from './economy.js';
+import { recycleScrapInto } from './failure.js';
 import { purchaseFilament, quoteFor, sellFilamentToMarket } from './market.js';
 import { isPhaseReached } from './phases.js';
 import { resolveSlotConfig } from './printing.js';
-import { isInstalled } from './upgrades.js';
+import { computeModifiers, isInstalled } from './upgrades.js';
 
 /**
  * Automation (spec §5C). The design brief is "introduce friction, then sell its
@@ -291,6 +292,46 @@ function fireTradeFilament(
   return next;
 }
 
+/**
+ * Recycle the whole Scrap pile once it reaches the threshold, into whatever the
+ * first bay is loaded with (an empty bay: the first material), which is the
+ * same target the recycler panel quotes. No recycler installed, nothing to do.
+ */
+function fireRecycleScrap(
+  state: GameState,
+  content: Content,
+  threshold: number,
+  emit: EventSink | undefined,
+): GameState {
+  if (state.resources.scrap < threshold || state.resources.scrap <= NONE) {
+    return state;
+  }
+  const slot = state.slots.at(NONE);
+  const config = slot === undefined ? null : resolveSlotConfig(content, slot);
+  const target = config?.material ?? content.materials.at(NONE);
+  if (target === undefined) {
+    return state;
+  }
+  const result = recycleScrapInto(
+    state,
+    content,
+    computeModifiers(state, content),
+    target.id,
+    null,
+  );
+  if (typeof result === 'string') {
+    return state;
+  }
+  emit?.({
+    type: 'SCRAP_RECYCLED',
+    simTimeMs: state.simTimeMs,
+    materialId: result.materialId,
+    scrapGrams: result.scrapGrams,
+    filamentGrams: result.filamentGrams,
+  });
+  return result.state;
+}
+
 function fire(
   state: GameState,
   content: Content,
@@ -305,6 +346,8 @@ function fire(
       return fireBuyFilament(state, content, owned.threshold, def.moneyReserve, emit);
     case 'trade-filament':
       return fireTradeFilament(state, content, def, owned.threshold, emit);
+    case 'recycle-scrap':
+      return fireRecycleScrap(state, content, owned.threshold, emit);
     case 'auto-changeover':
       /*
        * The rota is turned by the print loop, not by this timer.

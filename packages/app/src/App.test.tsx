@@ -1,10 +1,5 @@
 import 'fake-indexeddb/auto';
-import {
-  MS_PER_HOUR,
-  MS_PER_SECOND,
-  RAW_CONTENT,
-  createStaticContentSource,
-} from '@printhead/core';
+import { MS_PER_HOUR, MS_PER_SECOND } from '@printhead/core';
 import { type ManualClock, type ManualLifecycle, createMemoryPlatform } from '@printhead/platform';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -134,13 +129,11 @@ describe('App shell', () => {
   });
 });
 
-describe('the offline summary screen (spec §7.4)', () => {
-  it('shows what the workshop did while the player was away, then dismisses', async () => {
+describe('time away (spec §7.4: no offline progress)', () => {
+  it('resumes a save exactly where it was left, however long ago', async () => {
     const platform = createMemoryPlatform(1_000_000);
     const clock = platform.clock as ManualClock;
     const first = await bootGame({ platform, autoStart: false });
-
-    // Get a printer running, then save and come back two hours later.
     const store = first.store;
     const content = store.getContent();
     for (const piece of content.start.assemblyPieces) {
@@ -152,52 +145,28 @@ describe('the offline summary screen (spec §7.4)', () => {
     store.dispatch({ type: 'SET_SLOT_CONFIG', slotId, materialId: 'pla', objectId: 'bracket' });
     store.dispatch({ type: 'START_PRINT', slotId });
     await first.autosave.saveNow();
+    const before = first.store.getState();
     first.loop.stop();
 
     clock.advance(2 * MS_PER_HOUR);
     const second = await bootGame({ platform, autoStart: false });
-    expect(second.offline).not.toBeNull();
-
-    render(<App store={second.store} initialOffline={second.offline} />);
-    expect(screen.getByTestId('offline-summary')).toBeDefined();
-    expect(screen.getByTestId('offline-away').textContent).toContain('2 h');
-    expect(Number(screen.getByTestId('offline-prints').textContent)).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByTestId('offline-dismiss'));
-    expect(screen.queryByTestId('offline-summary')).toBeNull();
+    expect(second.store.getState()).toEqual(before);
   });
 
-  it('says so when the offline cap swallowed part of the absence', async () => {
-    const platform = createMemoryPlatform(1_000_000);
-    const clock = platform.clock as ManualClock;
-    const content = createStaticContentSource(RAW_CONTENT).get();
-    const seed = await bootGame({ platform, autoStart: false });
-    await seed.autosave.saveNow();
-    clock.advance((content.pacing.offlineCapHours + 5) * MS_PER_HOUR);
-
-    const back = await bootGame({ platform, autoStart: false });
-    render(<App store={back.store} initialOffline={back.offline} />);
-    expect(screen.getByTestId('offline-capped').textContent).toContain('5 h');
-  });
-
-  it('appears when the tab comes back after a long spell in the background', async () => {
+  it('drops a long spell in the background instead of replaying it', async () => {
     const harness = await boot();
     const { game } = harness;
-    render(
-      <App
-        store={game.store}
-        initialOffline={game.offline}
-        subscribeOffline={game.subscribeOffline}
-      />,
-    );
-    expect(screen.queryByTestId('offline-summary')).toBeNull();
-
-    // The loop's first frame establishes "now"; the next one arrives late.
+    render(<App store={game.store} />);
     act(() => {
       game.loop.frame();
     });
-    harness.warp(3 * MS_PER_HOUR);
-    expect(screen.getByTestId('offline-summary')).toBeDefined();
+    const before = game.store.getState().simTimeMs;
+    const clock = game.platform.clock as ManualClock;
+    clock.advance(3 * MS_PER_HOUR);
+    act(() => {
+      game.loop.frame();
+    });
+    expect(game.store.getState().simTimeMs).toBe(before);
   });
 });
 
@@ -212,10 +181,8 @@ describe('save and reload', () => {
     await first.autosave.saveNow();
     const before = first.store.getState();
 
-    // No wall time passes, so there is nothing to catch up on.
     const second = await bootGame({ platform, autoStart: false });
     expect(second.load.kind).toBe('loaded');
-    expect(second.offline).toBeNull();
     expect(second.store.getState()).toEqual(before);
   });
 
@@ -232,7 +199,7 @@ describe('save and reload', () => {
     const game = await bootGame({ platform, autoStart: false });
     await writeSave({ storage: platform.storage }, game.store.getState(), 9_000_000);
     const back = await bootGame({ platform, autoStart: false });
-    expect(back.offline).toBeNull();
+    expect(back.store.getState().simTimeMs).toBe(game.store.getState().simTimeMs);
   });
 });
 

@@ -90,6 +90,10 @@ export function readMetric(state: GameState, content: Content, metric: Metric): 
       return state.stats.prestigeCount;
     case 'moneyPrinted':
       return state.stats.moneyPrinted;
+    case 'moneyEarned':
+      return state.stats.moneyEarned;
+    case 'platesEarned':
+      return state.stats.platesEarned;
     case 'moneyPrintersInstalled':
       return countMoneyPrinters(state);
     case 'endgameNodes':

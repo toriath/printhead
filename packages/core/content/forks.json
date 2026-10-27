@@ -2,10 +2,10 @@
   {
     "id": "farm-path",
     "name": "The Farm",
-    "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+    "description": "Throughput. Every bay keeps its own machines, and every machine runs faster. The better economy, but the final print needs Goliath.",
     "visual": "rack",
     "costCurveId": "fork-cost",
-    "costResource": "parts",
+    "costResource": "money",
     "unlockPhaseId": "studio",
     "requiresUpgradeIds": [],
     "requires": [],
@@ -28,13 +28,18 @@
   {
     "id": "goliath",
     "name": "Goliath",
-    "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+    "description": "One giant printer. The whole fleet melts into a single bay, slower and less productive than the Farm. Needs a sintering head and one melt-down behind you, and it is the only build that can attempt the final print.",
     "visual": "goliath",
     "costCurveId": "fork-cost",
-    "costResource": "parts",
+    "costResource": "money",
     "unlockPhaseId": "studio",
-    "requiresUpgradeIds": [],
-    "requires": [],
+    "requiresUpgradeIds": ["sintering-head"],
+    "requires": [
+      {
+        "metric": "prestigeCount",
+        "atLeast": 1
+      }
+    ],
     "slotCapacity": 1,
     "printersPerSlot": 64,
     "requiredForFinalPrint": true,
@@ -47,7 +52,7 @@
       {
         "type": "partsYieldMultiplier",
         "combine": "multiply",
-        "value": 3.2
+        "value": 2.4
       }
     ]
   }

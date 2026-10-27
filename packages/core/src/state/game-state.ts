@@ -84,6 +84,15 @@ export interface SlotState {
   readonly queueIndex: number;
   /** Batches finished on the current entry, counted towards its `batches`. */
   readonly queueBatches: number;
+  /**
+   * Progress towards the next Perfect print, 0..1 (see `failure.perfectPrint`).
+   * The good twin of `failureCharge`: deterministic, so it can be watched.
+   */
+  readonly perfectCharge: number;
+  /** Design-milliseconds of overclock left on this bay; 0 when not boosted. */
+  readonly overclockMs: number;
+  /** Design-milliseconds until the bay can be overclocked again. */
+  readonly overclockCooldownMs: number;
 }
 
 /**
@@ -357,6 +366,9 @@ export function emptySlot(id: string): SlotState {
     queue: [],
     queueIndex: 0,
     queueBatches: 0,
+    perfectCharge: 0,
+    overclockMs: 0,
+    overclockCooldownMs: 0,
   };
 }
 

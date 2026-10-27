@@ -3,11 +3,13 @@
  * and prints the phase timeline versus the spec §6 budget. Exits non-zero on a
  * budget violation so CI treats balance drift like a failing test.
  *
- *   pnpm balance:sim [botId]
+ *   pnpm balance:sim            # every bot in PACING_BOTS, all must pass
+ *   pnpm balance:sim [botId]    # one bot
  */
 import { RAW_CONTENT, loadContent, requirementProgress } from '@printhead/core';
-import { REFERENCE_BOT, findBot } from './bots.js';
+import { PACING_BOTS, findBot } from './bots.js';
 import { buildBudgetTable, checkPhaseBudgets } from './budget.js';
+import type { Bot } from './harness.js';
 import { type RunLog, runHeadless } from './harness.js';
 
 function printTimeline(log: RunLog, content: ReturnType<typeof loadContent>): void {
@@ -63,10 +65,8 @@ function printBlockers(log: RunLog, content: ReturnType<typeof loadContent>): vo
   }
 }
 
-function main(): void {
-  const botId = process.argv[2];
-  const content = loadContent(RAW_CONTENT);
-  const bot = botId === undefined ? REFERENCE_BOT : findBot(botId);
+/** Run one bot, print its timeline, and return its budget violations. */
+function simulate(bot: Bot, content: ReturnType<typeof loadContent>): number {
   const log = runHeadless({ content, bot });
 
   console.log(`bot: ${log.botId}`);
@@ -87,16 +87,34 @@ function main(): void {
 
   const violations = checkPhaseBudgets(buildBudgetTable(content.pacing), log.phaseDurations);
   if (violations.length > 0) {
-    console.error(`\n${violations.length} budget violation(s):`);
+    console.error(`\n${violations.length} budget violation(s) for ${log.botId}:`);
     for (const violation of violations) {
       console.error(
         `  ${violation.phaseId}: ${violation.reason} ` +
           `(${violation.actualDesignMinutes.toFixed(1)} vs ${violation.budgetDesignMinutes})`,
       );
     }
+  }
+  return violations.length;
+}
+
+function main(): void {
+  const botId = process.argv[2];
+  const content = loadContent(RAW_CONTENT);
+  const bots = botId === undefined ? PACING_BOTS : [findBot(botId)];
+  let violations = 0;
+  for (const [index, bot] of bots.entries()) {
+    if (index > 0) {
+      console.log(`\n${'-'.repeat(60)}\n`);
+    }
+    violations += simulate(bot, content);
+  }
+  if (violations > 0) {
     process.exit(1);
   }
-  console.log('\nbalance: OK — all phases within tolerance');
+  console.log(
+    `\nbalance: OK — ${bots.map((b) => b.id).join(', ')} within tolerance in every phase`,
+  );
 }
 
 main();

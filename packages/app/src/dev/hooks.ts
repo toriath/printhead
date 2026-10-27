@@ -1,4 +1,4 @@
-import type { GameState, OfflineSummary } from '@printhead/core';
+import type { GameState } from '@printhead/core';
 import type { ManualClock } from '@printhead/platform';
 import type { BootedGame } from '../boot.js';
 
@@ -25,17 +25,21 @@ export interface BootOverrides {
   readonly paused?: boolean;
 }
 
+const WARP_STEP_MS = 10_000;
+
 export interface DevHooks {
   readonly game: BootedGame;
-  /** Advance wall-clock time and run one frame — the whole loop, instantly. */
+  /**
+   * Play `wallMs` of wall-clock time instantly, as if the game had been open
+   * and watched the whole while. (A real gap that long is time away, which is
+   * not simulated.)
+   */
   warp(wallMs: number): void;
-  /** The platform clock, so a test can compute an offline gap exactly. */
+  /** The platform clock as the game sees it. */
   nowMs(): number;
   /** JSON snapshot of the simulation state, for save/reload equality checks. */
   snapshot(): GameState;
   saveNow(): Promise<void>;
-  /** The most recent offline catch-up, at boot or on returning to the tab. */
-  lastOffline(): OfflineSummary | null;
   pause(): void;
   resume(): void;
 }
@@ -61,24 +65,24 @@ export interface InstallDevHooksOptions {
 
 export function installDevHooks(options: InstallDevHooksOptions): DevHooks {
   const { game, clock } = options;
-  let lastOffline: OfflineSummary | null = game.offline;
-  game.subscribeOffline((summary) => {
-    lastOffline = summary;
-  });
-
   const hooks: DevHooks = {
     game,
     warp(wallMs) {
       if (clock === undefined) {
         throw new Error('warp() needs a manual clock — boot with __PRINTHEAD_BOOT__.nowMs');
       }
+      // Small steps, so no single advance hits the per-call tick cap.
+      for (let left = wallMs; left > 0; left -= WARP_STEP_MS) {
+        game.store.advanceWallClock(Math.min(WARP_STEP_MS, left));
+      }
       clock.advance(wallMs);
+      // The loop sees the jump as time away and drops it, so nothing is
+      // counted twice.
       game.loop.frame();
     },
     nowMs: () => game.platform.clock.nowMs(),
     snapshot: () => game.store.getState(),
     saveNow: () => game.autosave.saveNow(),
-    lastOffline: () => lastOffline,
     pause: () => game.loop.stop(),
     resume: () => game.loop.start(),
   };

@@ -25,6 +25,7 @@ import {
   buyUpgrade,
   chooseFork,
   computeModifiers,
+  countPrinters,
   createCurveRegistry,
   createDesign,
   designAvailability,
@@ -35,6 +36,7 @@ import {
   forkCost,
   hasBlueprint,
   hasRecycler,
+  isAutomationActive,
   isForkChosen,
   isMaterialAvailable,
   isPhaseReached,
@@ -51,6 +53,8 @@ import {
   nextSlotCost,
   nextSlotUnlock,
   nextUpgradeCost,
+  overclockAvailability,
+  overclockSlot,
   platesFor,
   prestige,
   prestigeAvailability,
@@ -440,6 +444,15 @@ function savingTargetParts(
   content: Content,
   curves: CurveRegistry,
 ): number | null {
+  // Saving for the final fork's prerequisites outranks everything else.
+  const required = content.forks.find((def) => def.requiredForFinalPrint);
+  if (required !== undefined && state.forkId === null && blueprintInView(state, content)) {
+    const next = firstBuildable(state, content, required.requiresUpgradeIds, new Set());
+    const cost = next === null ? null : nextUpgradeCost(state, content, curves, next);
+    if (cost !== null && cost.resource === 'parts') {
+      return cost.amount;
+    }
+  }
   const printer = unlocked(content.printers, content, state.phaseId)[0];
   const printerCost =
     printer === undefined ? null : nextPrinterCost(state, content, curves, printer.id);
@@ -593,6 +606,11 @@ function recycleMoves(state: GameState, content: Content): readonly Action[] {
   if (!hasRecycler(state, content)) {
     return [];
   }
+  // Once the auto-recycler is running, recycling is not the player's job.
+  const auto = content.automation.find((def) => def.behavior === 'recycle-scrap');
+  if (auto !== undefined && isAutomationActive(state, auto.id)) {
+    return [];
+  }
   const slot = state.slots[0];
   const config = slot === undefined ? null : resolveSlotConfig(content, slot);
   const target = config?.material ?? cheapestMaterial(state, content);
@@ -600,6 +618,21 @@ function recycleMoves(state: GameState, content: Content): readonly Action[] {
     return [];
   }
   return [recycleScrap(target.id, null)];
+}
+
+/** Tap every bay whose overclock is ready and whose failure meter allows it. */
+function overclockMoves(state: GameState, content: Content, belowRisk: number): readonly Action[] {
+  if (belowRisk <= 0 || !phaseAllows(state, content, 'OVERCLOCK_SLOT')) {
+    return [];
+  }
+  const threshold = content.failure.model.chargeThreshold;
+  return activeSlots(state, content)
+    .filter(
+      (slot) =>
+        overclockAvailability(state, content, slot.id) === null &&
+        slot.failureCharge < threshold * belowRisk,
+    )
+    .map((slot) => overclockSlot(slot.id));
 }
 
 export interface PolicyOptions {
@@ -644,6 +677,13 @@ export interface PolicyOptions {
    * measuring.
    */
   readonly newGamePlusModifierIds: readonly string[] | null;
+  /**
+   * Overclock a bay when its failure meter is below this share of the
+   * threshold (see `failure.overclock`). 1 overclocks whenever it can; 0
+   * never does. It is the active player's lever, so the ten-minute player
+   * mostly misses it by construction.
+   */
+  readonly overclockBelowRisk: number;
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -1187,6 +1227,68 @@ function feedstockMoves(state: GameState, content: Content): readonly Action[] {
 }
 
 /**
+ * The branch the final print needs can carry its own prerequisites (Goliath
+ * needs a sintering head since the M7 rebalance). A player who has seen the
+ * blueprint reads that off the fork card and saves for it; the bot does the
+ * same. Returns the upgrade to buy now, `'save'` while it cannot be afforded
+ * yet, or `null` when nothing stands in the way.
+ */
+/** Machines a run should field before it starts saving for the final fork. */
+const SAVE_FOR_FORK_MIN_PRINTERS = 8;
+
+function finalForkPrerequisite(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): Action | 'save' | null {
+  if (!blueprintInView(state, content) || state.forkId !== null) {
+    return null;
+  }
+  const required = content.forks.find((def) => def.requiredForFinalPrint);
+  if (required === undefined) {
+    return null;
+  }
+  // Walk the machine tree down to the first missing node that can be bought
+  // today: the sintering head needs the SLA unit, which needs the enclosure,
+  // and a melt-down took all of them away.
+  const next = firstBuildable(state, content, required.requiresUpgradeIds, new Set());
+  if (next === null) {
+    return null;
+  }
+  const cost = nextUpgradeCost(state, content, curves, next);
+  if (cost === null || cost.resource === 'filament') {
+    return null;
+  }
+  return state.resources[cost.resource] >= cost.amount ? buyUpgrade(next) : 'save';
+}
+
+function firstBuildable(
+  state: GameState,
+  content: Content,
+  ids: readonly string[],
+  seen: Set<string>,
+): string | null {
+  for (const id of ids) {
+    if ((state.upgrades[id] ?? 0) > 0 || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const verdict = upgradeAvailability(state, content, id);
+    if (verdict === null) {
+      return id;
+    }
+    if (verdict === 'missing-prerequisite') {
+      const def = content.upgrades.find((candidate) => candidate.id === id);
+      const deeper = firstBuildable(state, content, def?.requiresUpgradeIds ?? [], seen);
+      if (deeper !== null) {
+        return deeper;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * The last print (spec §6 phase 6). Start it the moment the workshop qualifies;
  * otherwise pre-print a section, which is never wasted — it shortens the build
  * and it survives the melt-down (spec §7.3).
@@ -1275,11 +1377,16 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       // A bay the studio has claimed is *not* misconfigured: it is printing
       // Products on purpose, and re-loading it with a stock object would throw
       // away the whole reason the Design Studio exists (spec §5D).
+      // …unless the run is saving Parts for the final fork's prerequisites:
+      // Products pay in money, so a studio bay would never get it there.
+      const needParts = finalForkPrerequisite(state, content, curveRegistryFor(content)) === 'save';
       const misconfigured = bays.find(
         (slot) =>
           slot.queue.length === 0 &&
-          slot.designId === null &&
-          (slot.materialId !== material.id || slot.objectId !== object.id),
+          (slot.designId === null || needParts) &&
+          (slot.designId !== null ||
+            slot.materialId !== material.id ||
+            slot.objectId !== object.id),
       );
       if (misconfigured !== undefined) {
         if (misconfigured.run === null && misconfigured.changeoverMs <= 0) {
@@ -1289,6 +1396,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       }
 
       moves.push(...recycleMoves(state, content));
+      moves.push(...overclockMoves(state, content, options.overclockBelowRisk));
       moves.push(...retuneAutoSell(state, content, curves));
       moves.push(...retuneAutoBuy(state, content));
       moves.push(...fundMoneyGoal(state, content, studioMoneyGoal(state, content, curves)));
@@ -1318,6 +1426,15 @@ export function createPolicyBot(options: PolicyOptions): Bot {
         moves.push(...finalPrint);
         return moves;
       }
+      const prerequisite = finalForkPrerequisite(state, content, curves);
+      if (prerequisite !== null && prerequisite !== 'save') {
+        moves.push(prerequisite);
+        return moves;
+      }
+      // Saving up for it postpones capacity and tree purchases only, and only
+      // once there is a fleet to earn the Parts with: a freshly melted-down
+      // workshop that saves before rebuilding saves forever.
+      const saving = prerequisite === 'save' && countPrinters(state) >= SAVE_FOR_FORK_MIN_PRINTERS;
       if (
         options.newGamePlusModifierIds !== null &&
         newGamePlusAvailability(state, content) === null &&
@@ -1341,7 +1458,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (draft !== null) {
         moves.push(draft);
       }
-      const studioBay = designBayMove(state, content, curves);
+      const studioBay = needParts ? null : designBayMove(state, content, curves);
       if (studioBay !== null) {
         moves.push(studioBay);
         return moves;
@@ -1423,9 +1540,11 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       const investments: readonly Action[] =
         forkBuy !== null
           ? [forkBuy]
-          : options.capacityFirst
-            ? [...capacityMoves, ...treeMoves]
-            : [...treeMoves, ...capacityMoves];
+          : saving
+            ? []
+            : options.capacityFirst
+              ? [...capacityMoves, ...treeMoves]
+              : [...treeMoves, ...capacityMoves];
       const investment = investments[0];
       if (investment !== undefined) {
         moves.push(investment);
@@ -1468,6 +1587,7 @@ export const greedySpenderBot = createPolicyBot({
   preferFork: 'throughput',
   useQueues: false,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 1,
 });
 
 /**
@@ -1486,6 +1606,7 @@ export const balancedBot = createPolicyBot({
   preferFork: 'flexibility',
   useQueues: false,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 0.5,
 });
 
 /**
@@ -1502,12 +1623,22 @@ export const idleHeavyBot = createPolicyBot({
   preferFork: 'flexibility',
   useQueues: true,
   newGamePlusModifierIds: null,
+  overclockBelowRisk: 0.5,
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];
 
-/** The bot the CI budget gate measures (spec §12.6). */
+/** The bot the report leads with and single-bot tools default to (spec §12.6). */
 export const REFERENCE_BOT = balancedBot;
+
+/**
+ * The bots the CI budget gate holds to the phase windows. Two strategies that
+ * bracket an attentive player: one who keeps a reserve and one who spends on
+ * sight. Content that only paces one of them is overfit, not balanced.
+ * `idle-heavy` is measured in the report but not gated: it checks in every ten
+ * minutes, so it cannot be held to a five-minute intro.
+ */
+export const PACING_BOTS: readonly Bot[] = [balancedBot, greedySpenderBot];
 
 export function findBot(id: string): Bot {
   const bot = BOTS.find((candidate) => candidate.id === id);

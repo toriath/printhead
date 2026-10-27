@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="272" viewBox="0 0 760 272" role="img">
+  <style>
+    .surface { fill: #fcfcfb; }
+    .ink { fill: #0b0b0b; }
+    .ink-2 { fill: #52514e; }
+    .grid { stroke: #dcdcd8; stroke-width: 1; }
+    .axis { stroke: #b4b3ae; stroke-width: 1; }
+    .line { fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linejoin: round; }
+    .band { fill: #2a78d6; opacity: 0.12; }
+    .ok { fill: #008300; }
+    .over { fill: #e34948; }
+    text { font-family: ui-sans-serif, system-ui, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .surface { fill: #1a1a19; }
+      .ink { fill: #ffffff; }
+      .ink-2 { fill: #c3c2b7; }
+      .grid { stroke: #33332f; }
+      .axis { stroke: #55554f; }
+      .line { stroke: #3987e5; }
+      .band { fill: #3987e5; opacity: 0.18; }
+      .over { fill: #e66767; }
+    }
+  </style><rect class="surface" width="760" height="272" rx="6"/><text class="ink" x="16" y="22" font-size="13" font-weight="600">Phase timeline vs budget</text><line class="axis" x1="132" y1="28" x2="132" y2="242"/><text class="ink-2" x="122" y="44" font-size="11" text-anchor="end">Intro</text><rect class="band" x="147.61" y="32" width="7.81" height="16" rx="3"/><rect class="ok" x="132" y="34" width="16.92" height="12" rx="4"/><line class="axis" x1="151.52" y1="30" x2="151.52" y2="50"/><text class="ink" x="622" y="44" font-size="11">4.3 / 5 · OK</text><text class="ink-2" x="122" y="70" font-size="11" text-anchor="end">Bench</text><rect class="band" x="225.67" y="58" width="46.84" height="16" rx="3"/><rect class="ok" x="132" y="60" width="109.29" height="12" rx="4"/><line class="axis" x1="249.09" y1="56" x2="249.09" y2="76"/><text class="ink" x="622" y="70" font-size="11">28.0 / 30 · OK</text><text class="ink-2" x="122" y="96" font-size="11" text-anchor="end">Farm</text><rect class="band" x="381.8" y="84" width="124.9" height="16" rx="3"/><rect class="ok" x="132" y="86" width="351.93" height="12" rx="4"/><line class="axis" x1="444.25" y1="82" x2="444.25" y2="102"/><text class="ink" x="622" y="96" font-size="11">90.2 / 80 · OK</text><text class="ink-2" x="122" y="122" font-size="11" text-anchor="end">Studio</text><rect class="band" x="366.19" y="110" width="117.09" height="16" rx="3"/><rect class="ok" x="132" y="112" width="254.35" height="12" rx="4"/><line class="axis" x1="424.73" y1="108" x2="424.73" y2="128"/><text class="ink" x="622" y="122" font-size="11">65.2 / 75 · OK</text><text class="ink-2" x="122" y="148" font-size="11" text-anchor="end">The Melt-downs</text><rect class="band" x="413.02" y="136" width="140.51" height="16" rx="3"/><rect class="ok" x="132" y="138" width="282.97" height="12" rx="4"/><line class="axis" x1="483.28" y1="134" x2="483.28" y2="154"/><text class="ink" x="622" y="148" font-size="11">72.5 / 90 · OK</text><text class="ink-2" x="122" y="174" font-size="11" text-anchor="end">The Absurd</text><rect class="band" x="381.8" y="162" width="124.9" height="16" rx="3"/><rect class="ok" x="132" y="164" width="270.14" height="12" rx="4"/><line class="axis" x1="444.25" y1="160" x2="444.25" y2="180"/><text class="ink" x="622" y="174" font-size="11">69.2 / 80 · OK</text><text class="ink-2" x="122" y="200" font-size="11" text-anchor="end">The End</text><rect class="band" x="319.35" y="188" width="93.67" height="16" rx="3"/><rect class="ok" x="132" y="190" width="223.08" height="12" rx="4"/><line class="axis" x1="366.19" y1="186" x2="366.19" y2="206"/><text class="ink" x="622" y="200" font-size="11">57.2 / 60 · OK</text><text class="ink-2" x="122" y="226" font-size="11" text-anchor="end">Ended</text><rect class="band" x="147.61" y="214" width="7.81" height="16" rx="3"/><rect class="over" x="132" y="216" width="478" height="12" rx="4"/><line class="axis" x1="151.52" y1="212" x2="151.52" y2="232"/><text class="ink" x="622" y="226" font-size="11">122.5 / 5 · OVER</text><text class="ink-2" x="132" y="262" font-size="10">design minutes — bar: actual · tick: budget · band: tolerance window</text></svg>

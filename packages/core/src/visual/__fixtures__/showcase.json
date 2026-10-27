@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "phaseId": "studio",
   "phaseName": "Studio",
   "simTimeMs": 4620000,
@@ -26,6 +26,13 @@
       "changingOver": false,
       "changeoverProgress": 0,
       "failureRisk": 0.85,
+      "perfectCharge": 0.6,
+      "overclock": {
+        "active": true,
+        "remaining": 0.5,
+        "cooldown": 0.7,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     },
@@ -49,6 +56,13 @@
       "changingOver": false,
       "changeoverProgress": 0,
       "failureRisk": 0.4,
+      "perfectCharge": 0.6,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     },
@@ -72,6 +86,13 @@
       "changingOver": true,
       "changeoverProgress": 0.4,
       "failureRisk": 0,
+      "perfectCharge": 0,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     },
@@ -95,6 +116,13 @@
       "changingOver": false,
       "changeoverProgress": 0,
       "failureRisk": 0,
+      "perfectCharge": 0,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     }

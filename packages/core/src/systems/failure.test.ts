@@ -22,6 +22,8 @@ const noModifiers = computeModifiers(base, content);
 const pity = (over: Partial<FailureContent['model']> = {}): FailureContent => ({
   model: { strategy: 'pity-timer', chargeThreshold: 1, carryFraction: 0, ...over },
   recycler: content.failure.recycler,
+  perfectPrint: content.failure.perfectPrint,
+  overclock: content.failure.overclock,
 });
 
 const holdingScrap = (grams: number, value: number, over: Partial<GameState> = {}): GameState => ({

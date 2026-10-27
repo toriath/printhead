@@ -205,7 +205,7 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
 
   it('disables a press the Plates cannot cover', () => {
     const { store } = stubStore();
-    const press = prestige.moneyPrinters[0];
+    const press = prestige.moneyPrinters.find((row) => row.available && !row.affordable);
     render(<PrestigePanel store={store} visual={prestige} />);
     expect(press?.affordable).toBe(false);
     expect(

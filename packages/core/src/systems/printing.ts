@@ -8,6 +8,7 @@ import type { GameState, PrintRunState, SlotState } from '../state/game-state.js
 import { creditDesignPrints, productValueOf } from './designs.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
 import { inflationMultiplier } from './inflation.js';
+import { isPhaseReached } from './phases.js';
 import { isQueueRunning, nextQueueEntry, queueEntryDone, queueStockFloor } from './queue.js';
 import { addPool, withFilament } from './resources.js';
 import { type ModifierMap, computeModifiers, modifierOf } from './upgrades.js';
@@ -414,15 +415,18 @@ function completeRun(
     return withSlot(state, index, { ...slot, run: null });
   }
 
-  const perPrint = chargePerPrint(
-    config.material,
-    bestFailureChargeMultiplier(state, content),
-    modifiers,
-  );
+  // An overclocked bay pays for its speed in failure charge and earns it back
+  // in perfect charge (see `failure.overclock`).
+  const boosted = slot.overclockMs > NONE;
+  const overclock = content.failure.overclock;
+  const perPrint =
+    chargePerPrint(config.material, bestFailureChargeMultiplier(state, content), modifiers) *
+    (boosted ? overclock.failureChargeMultiplier : FULL);
   const outcome = resolveBatchFailures(content.failure, slot.failureCharge, run.batch, perPrint);
+  const perfect = nextPerfectCharge(content, slot.perfectCharge, boosted, outcome.succeeded);
   const level =
     config.pool === 'products' ? (state.designs[config.design.id]?.level ?? NONE) : NONE;
-  const produced = batchYield(
+  const plain = batchYield(
     config,
     outcome.succeeded,
     modifiers,
@@ -430,6 +434,12 @@ function completeRun(
     level,
     inflationMultiplier(state, content, curves),
   );
+  const multiplier = perfect.perfect ? content.failure.perfectPrint.yieldMultiplier : FULL;
+  const produced: BatchYield = {
+    ...plain,
+    count: plain.count * multiplier,
+    value: plain.value * multiplier,
+  };
   const scrapped = scrapFromFailure(config.material, config.filamentGrams * outcome.failed);
 
   const banked = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
@@ -462,6 +472,7 @@ function completeRun(
     value: produced.value,
     failed: outcome.failed,
     scrapGrams: scrapped.grams,
+    perfect: perfect.perfect,
   });
   if (progress.levelUp !== null) {
     emit?.({
@@ -485,6 +496,7 @@ function completeRun(
     ...slot,
     run: null,
     failureCharge: outcome.charge,
+    perfectCharge: perfect.charge,
     // Only a bay with a rota counts batches against it; a bay printing one
     // config forever would otherwise carry a meaningless ever-growing number
     // into every save.
@@ -613,6 +625,95 @@ function tickChangeover(
   };
 }
 
+/**
+ * The perfect meter after a batch (see `failure.perfectPrint`). Only a batch
+ * that printed something can be Perfect; an overclocked one fills the meter
+ * faster. Crossing 1 makes this batch Perfect and keeps the overshoot.
+ */
+export function nextPerfectCharge(
+  content: Content,
+  charge: number,
+  boosted: boolean,
+  succeeded: number,
+): { readonly charge: number; readonly perfect: boolean } {
+  if (succeeded <= NONE) {
+    return { charge, perfect: false };
+  }
+  const { perfectPrint, overclock } = content.failure;
+  const gained = perfectPrint.chargePerBatch * (boosted ? overclock.perfectChargeMultiplier : FULL);
+  const filled = charge + gained;
+  // Ten batches of 0.1 sum to 0.9999999999999999; the tenth must still fire.
+  if (filled < FULL - Number.EPSILON) {
+    return { charge: filled, perfect: false };
+  }
+  return {
+    charge: Math.max(Math.min(filled - FULL, FULL - perfectPrint.chargePerBatch), NONE),
+    perfect: true,
+  };
+}
+
+/** Run the bay's overclock and cooldown clocks down by `dtMs`. */
+function tickOverclock(state: GameState, index: number, dtMs: number): GameState {
+  const slot = state.slots.at(index);
+  if (slot === undefined || (slot.overclockMs <= NONE && slot.overclockCooldownMs <= NONE)) {
+    return state;
+  }
+  return withSlot(state, index, {
+    ...slot,
+    overclockMs: Math.max(slot.overclockMs - dtMs, NONE),
+    overclockCooldownMs: Math.max(slot.overclockCooldownMs - dtMs, NONE),
+  });
+}
+
+export type OverclockRejection = 'unknown-target' | 'locked' | 'slot-idle' | 'not-ready';
+
+/**
+ * Can this bay be overclocked right now? It has to be printing (there is
+ * nothing to speed up otherwise), out of its cooldown, and the phase has to
+ * have reached the overclock's unlock.
+ */
+export function overclockAvailability(
+  state: GameState,
+  content: Content,
+  slotId: string,
+): OverclockRejection | null {
+  const slot = state.slots.find((candidate) => candidate.id === slotId);
+  if (slot === undefined) {
+    return 'unknown-target';
+  }
+  if (
+    !isPhaseReached(content.pacing.phases, state.phaseId, content.failure.overclock.unlockPhaseId)
+  ) {
+    return 'locked';
+  }
+  if (slot.overclockCooldownMs > NONE) {
+    return 'not-ready';
+  }
+  return slot.run === null ? 'slot-idle' : null;
+}
+
+/** Fire the overclock on a bay. `null` when `overclockAvailability` says no. */
+export function applySlotOverclock(
+  state: GameState,
+  content: Content,
+  slotId: string,
+): GameState | null {
+  if (overclockAvailability(state, content, slotId) !== null) {
+    return null;
+  }
+  const index = slotIndexOf(state, slotId);
+  const slot = state.slots.at(index);
+  if (slot === undefined) {
+    return null;
+  }
+  const { durationDesignSeconds, cooldownDesignSeconds } = content.failure.overclock;
+  return withSlot(state, index, {
+    ...slot,
+    overclockMs: durationDesignSeconds * MS_PER_SECOND,
+    overclockCooldownMs: cooldownDesignSeconds * MS_PER_SECOND,
+  });
+}
+
 function tickSlot(
   state: GameState,
   content: Content,
@@ -622,7 +723,7 @@ function tickSlot(
   modifiers: ModifierMap,
   curves: CurveRegistry,
 ): GameState {
-  const purge = tickChangeover(state, index, dtMs, emit);
+  const purge = tickChangeover(tickOverclock(state, index, dtMs), index, dtMs, emit);
   let next = purge.state;
   if (purge.blocked) {
     return next;
@@ -650,7 +751,13 @@ function tickSlot(
   if (running === undefined || running.run === null) {
     return next;
   }
-  next = withSlot(next, index, { ...running, run: tickRun(running.run, remainingDt) });
+  // An overclocked bay burns through its batch faster. The boost clock itself
+  // runs in plain sim time, so a 20-second overclock lasts 20 seconds.
+  const burn =
+    running.overclockMs > NONE
+      ? remainingDt * content.failure.overclock.speedMultiplier
+      : remainingDt;
+  next = withSlot(next, index, { ...running, run: tickRun(running.run, burn) });
 
   let completions = NONE;
   while (completions < MAX_RUN_COMPLETIONS_PER_TICK) {

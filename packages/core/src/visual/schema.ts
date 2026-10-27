@@ -42,8 +42,12 @@ import { z } from 'zod';
  *   synced, layer-by-layer build (spec §6 phase 6) with the sections
  *   pre-printed for it (spec §7.3), and the ending sequence — stage, progress
  *   and the credits themselves — followed by the New Game Plus offer.
+ * - v8 (M7 balance overhaul) — **frozen**: active play. Every bay carries its
+ *   perfect meter and its overclock (boost remaining, cooldown remaining,
+ *   whether it can fire now), so the renderer can show both promises the bay
+ *   is making: the failure coming and the Perfect print coming.
  */
-export const VISUAL_STATE_VERSION = 7;
+export const VISUAL_STATE_VERSION = 8;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -105,6 +109,21 @@ export const SlotVisualSchema = z
      * deterministic, so this is a promise to the player, not a probability.
      */
     failureRisk: Unit,
+    /** 0..1 towards the next Perfect print — the good twin of `failureRisk`. */
+    perfectCharge: Unit,
+    /** The bay's overclock (see `failure.overclock`). */
+    overclock: z
+      .object({
+        /** Boosted right now. */
+        active: z.boolean(),
+        /** 0..1 of the boost still to run; 0 when not boosted. */
+        remaining: Unit,
+        /** 0..1 of the cooldown still to run; 0 when ready. */
+        cooldown: Unit,
+        /** Unlocked, out of cooldown and printing: the button is live. */
+        ready: z.boolean(),
+      })
+      .strict(),
     /** The rota this bay works through; empty when it prints one config. */
     queue: z.array(QueueEntryVisualSchema),
     /** Batches finished on the current rota entry. */

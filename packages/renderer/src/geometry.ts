@@ -52,20 +52,24 @@ export const SPOOL_CY = 20;
 export const SPOOL_R = 13;
 export const SPOOL_HUB_R = 4;
 
+/** The printer character (design system: Cast), drawn from 200 units into the bay. */
+export const CHARACTER_SIZE = 168;
+export const CHARACTER_Y = 4;
+
 export const CONTROLLER_X = 96;
 export const CONTROLLER_Y = 156;
 export const CONTROLLER_WIDTH = 42;
 export const CONTROLLER_HEIGHT = 14;
 
-export const PROGRESS_Y = BAY_HEIGHT - 26;
+export const PROGRESS_Y = BAY_HEIGHT - 38;
 export const PROGRESS_HEIGHT = 5;
-export const LABEL_Y = BAY_HEIGHT - 12;
+export const LABEL_Y = BAY_HEIGHT - 7;
 export const BADGE_R = 13;
 export const BADGE_CX = BAY_WIDTH - 22;
 export const BADGE_CY = 22;
 
 /** The pity meter: a hairline under the progress bar (spec §7.1). */
-export const RISK_Y = BAY_HEIGHT - 19;
+export const RISK_Y = BAY_HEIGHT - 30;
 export const RISK_HEIGHT = 2;
 
 export const CORNER_RADIUS = 4;

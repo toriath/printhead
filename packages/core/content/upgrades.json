@@ -170,7 +170,7 @@
     "costCurveId": "endgame-node-cost",
     "costResource": "plates",
     "requiresUpgradeIds": [],
-    "unlockPhaseId": "absurd",
+    "unlockPhaseId": "prestige",
     "effects": [
       {
         "type": "machineTier",

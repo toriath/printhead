@@ -50,6 +50,8 @@ describe('toVisualState', () => {
           changingOver: false,
           changeoverProgress: 0,
           failureRisk: 0,
+          perfectCharge: 0,
+          overclock: { active: false, remaining: 0, cooldown: 0, ready: false },
           queue: [],
           queueBatches: 0,
         },

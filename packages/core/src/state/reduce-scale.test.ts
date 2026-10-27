@@ -202,14 +202,27 @@ describe('SET_SLOT_QUEUE (spec §5B)', () => {
 });
 
 describe('CHOOSE_FORK (spec §5B)', () => {
-  const studio = (over: Partial<GameState> = {}) => farmSim({ phaseId: 'studio', ...over });
+  // The fork is priced in money since the M7 rebalance.
+  const studio = (over: Partial<GameState> = {}) =>
+    farmSim({
+      phaseId: 'studio',
+      resources: { ...createSim().state.resources, parts: 5000, money: 1_000_000 },
+      // Goliath's prerequisites since the M7 rebalance.
+      upgrades: { 'sintering-head': 1 },
+      stats: { ...createSim().state.stats, prestigeCount: 1 },
+      ...over,
+    });
 
   it('commits the run and announces it', () => {
     const sim = studio();
-    const cost = forkCost(content, curves, 'farm-path')?.amount ?? 0;
+    const cost = forkCost(content, curves, 'farm-path');
+    if (cost === null || cost.resource === 'filament') {
+      throw new Error('expected the fork to cost a resource');
+    }
+    const before = sim.state.resources[cost.resource];
     sim.do(chooseFork('farm-path'));
     expect(sim.state.forkId).toBe('farm-path');
-    expect(sim.state.resources.parts).toBe(5000 - cost);
+    expect(sim.state.resources[cost.resource]).toBe(before - cost.amount);
     expect(sim.eventsOf('FORK_CHOSEN')[0]).toMatchObject({ forkId: 'farm-path' });
   });
 

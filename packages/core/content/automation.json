@@ -25,6 +25,18 @@
     "moneyReserve": 5
   },
   {
+    "id": "auto-recycler",
+    "name": "Auto-recycler",
+    "behavior": "recycle-scrap",
+    "costCurveId": "automation-cost",
+    "costResource": "parts",
+    "unlockPhaseId": "bench",
+    "requiresUpgradeIds": ["recycler"],
+    "maxLevel": 1,
+    "intervalDesignSeconds": 10,
+    "defaultThreshold": 20
+  },
+  {
     "id": "auto-trade",
     "name": "Auto-trading desk",
     "behavior": "trade-filament",

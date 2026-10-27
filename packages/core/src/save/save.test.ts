@@ -8,6 +8,7 @@ import fixtureV3 from './__fixtures__/save-v3.json' with { type: 'json' };
 import fixtureV4 from './__fixtures__/save-v4.json' with { type: 'json' };
 import fixtureV5 from './__fixtures__/save-v5.json' with { type: 'json' };
 import fixtureV6 from './__fixtures__/save-v6.json' with { type: 'json' };
+import fixtureV7 from './__fixtures__/save-v7.json' with { type: 'json' };
 import { MIGRATIONS, SaveMigrationError, migrateToCurrent } from './migrations.js';
 import { GameStateSchema } from './schema.js';
 import {
@@ -53,13 +54,14 @@ describe('save round-trip', () => {
  */
 describe('save fixture corpus', () => {
   it('covers every supported version', () => {
-    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([...SUPPORTED_SAVE_VERSIONS]).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(fixtureV1.version).toBe(1);
     expect(fixtureV2.version).toBe(2);
     expect(fixtureV3.version).toBe(3);
     expect(fixtureV4.version).toBe(4);
     expect(fixtureV5.version).toBe(5);
     expect(fixtureV6.version).toBe(6);
+    expect(fixtureV7.version).toBe(7);
   });
 
   it('loads the released v1 fixture by migrating it forward', () => {
@@ -154,9 +156,15 @@ describe('save fixture corpus', () => {
     expect(loaded.ngPlus).toEqual({ run: 0, modifierIds: [] });
   });
 
-  it('loads the released v6 fixture untouched', () => {
+  it('loads the released v6 fixture, giving every bay a cold perfect meter and overclock', () => {
     const loaded = fromSaveFile(fixtureV6);
-    expect(loaded).toEqual(fixtureV6.state);
+    expect(loaded.saveVersion).toBe(SAVE_SCHEMA_VERSION);
+    for (const slot of loaded.slots) {
+      expect(slot.perfectCharge).toBe(0);
+      expect(slot.overclockMs).toBe(0);
+      expect(slot.overclockCooldownMs).toBe(0);
+    }
+    expect({ ...loaded, saveVersion: 6, slots: fixtureV6.state.slots }).toEqual(fixtureV6.state);
     // The M6 shape the fixture exists to pin: an Endgame Tree bought with
     // Plates, a printed factory turning over, sections pre-printed for the
     // Fabricator and the final print itself in flight (spec §5E, §7.3).
@@ -165,6 +173,14 @@ describe('save fixture corpus', () => {
     expect(loaded.fabricator.sections).toBeGreaterThan(0);
     expect(loaded.fabricator.run).not.toBeNull();
     expect(loaded.phaseId).toBe('end');
+  });
+
+  it('loads the released v7 fixture untouched', () => {
+    const loaded = fromSaveFile(fixtureV7);
+    expect(loaded).toEqual(fixtureV7.state);
+    expect(loaded.slots.every((slot) => 'perfectCharge' in slot && 'overclockMs' in slot)).toBe(
+      true,
+    );
   });
 
   it('re-saving a migrated old save produces a current-schema file', () => {

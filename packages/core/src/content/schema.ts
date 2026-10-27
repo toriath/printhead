@@ -49,6 +49,7 @@ export const GatedActionTypeSchema = z.enum([
   'NEW_GAME_PLUS',
   'SET_SLOT_CONFIG',
   'START_PRINT',
+  'OVERCLOCK_SLOT',
   'SELL_PARTS',
   'BUY_FILAMENT',
   'SELL_FILAMENT',
@@ -105,6 +106,17 @@ export const MetricSchema = z.enum([
   'prestigeCount',
   /** Money the Plates have printed directly (spec §5E). */
   'moneyPrinted',
+  /**
+   * Money from every source this run: sales, trades and the presses (a
+   * melt-down starts it again from zero). The Absurd gates on this rather than `moneyPrinted` so a run that
+   * spends its Plates on the tree before the presses is slower, not stuck.
+   */
+  'moneyEarned',
+  /**
+   * Plates engraved across the whole game, spent or not (spec §5E). The pile
+   * (`plates`) cannot gate a phase: the presses and the tree spend it.
+   */
+  'platesEarned',
   'moneyPrintersInstalled',
   /** Levels installed in the Endgame Tree (spec §5E) — the Plate sink. */
   'endgameNodes',
@@ -142,7 +154,6 @@ export const PacingFileSchema = z
   .object({
     targetHours: Positive,
     baselineHours: Positive,
-    offlineCapHours: Positive,
     phaseBudgetTolerance: Fraction,
     phases: z.array(PhaseDefSchema).min(1),
   })
@@ -600,11 +611,28 @@ export const ChangeoverAutomationSchema = z
   })
   .strict();
 
+/**
+ * Auto-recycler: feeds the Scrap pile back through the recycler once it holds
+ * `defaultThreshold` grams, into the material the first bay is loaded with.
+ * Without it the recycler is the single most repeated action in the game — the
+ * balance bots recycled by hand over eight hundred times a run — and the
+ * automation tree exists to sell the removal of exactly that kind of chore.
+ */
+export const RecycleScrapAutomationSchema = z
+  .object({
+    ...AutomationBase,
+    behavior: z.literal('recycle-scrap'),
+    /** Grams of Scrap to wait for before a firing. */
+    defaultThreshold: NonNegative,
+  })
+  .strict();
+
 export const AutomationDefSchema = z.discriminatedUnion('behavior', [
   SellPartsAutomationSchema,
   BuyFilamentAutomationSchema,
   TradeFilamentAutomationSchema,
   ChangeoverAutomationSchema,
+  RecycleScrapAutomationSchema,
 ]);
 
 export const AutomationFileSchema = z.array(AutomationDefSchema).min(1);
@@ -638,6 +666,34 @@ export const FailureFileSchema = z
         requiresUpgradeId: IdSchema,
         /** Share of the scrap's banked value that survives recycling (< 1). */
         yieldFraction: z.number().finite().positive().max(1),
+      })
+      .strict(),
+    /**
+     * Perfect prints: the pity timer's good twin. Every finished batch adds
+     * `chargePerBatch` to the bay's perfect meter; the batch that fills it is
+     * Perfect and yields `yieldMultiplier` times over. Deterministic like the
+     * failure timer, so the player can watch the next one coming.
+     */
+    perfectPrint: z
+      .object({
+        chargePerBatch: z.number().finite().positive().max(1),
+        yieldMultiplier: z.number().finite().min(1),
+      })
+      .strict(),
+    /**
+     * Overclock: tap a running bay to print faster for a while, at the price
+     * of failure charge (the spec's fast-and-risky end of §5A, made active).
+     * It also fills the perfect meter faster, so the gamble cuts both ways.
+     */
+    overclock: z
+      .object({
+        unlockPhaseId: IdSchema,
+        durationDesignSeconds: Positive,
+        /** Counted from the moment it fires, so it includes the boost itself. */
+        cooldownDesignSeconds: Positive,
+        speedMultiplier: z.number().finite().min(1),
+        failureChargeMultiplier: z.number().finite().min(1),
+        perfectChargeMultiplier: z.number().finite().min(1),
       })
       .strict(),
   })

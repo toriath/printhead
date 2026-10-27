@@ -1,15 +1,20 @@
 {
   "targetHours": 8,
   "baselineHours": 8,
-  "offlineCapHours": 24,
   "phaseBudgetTolerance": 0.2,
   "phases": [
     {
       "id": "intro",
       "name": "Intro",
       "budgetDesignMinutes": 5,
-      "waitWallBudgetDesignMinutes": 1.0,
-      "allowedActions": ["ATTACH_PIECE", "SET_SLOT_CONFIG", "START_PRINT", "SELL_PARTS"],
+      "waitWallBudgetDesignMinutes": 1,
+      "allowedActions": [
+        "ATTACH_PIECE",
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "SELL_PARTS"
+      ],
       "advanceWhen": [
         {
           "metric": "assemblyProgress",
@@ -33,6 +38,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -65,6 +71,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -100,6 +107,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -127,18 +135,19 @@
         },
         {
           "metric": "productsSold",
-          "atLeast": 40
+          "atLeast": 60
         }
       ]
     },
     {
       "id": "prestige",
-      "name": "Prestige runs 1-2",
+      "name": "The Melt-downs",
       "budgetDesignMinutes": 90,
       "waitWallBudgetDesignMinutes": 6,
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -159,8 +168,8 @@
       ],
       "advanceWhen": [
         {
-          "metric": "prestigeCount",
-          "atLeast": 2
+          "metric": "platesEarned",
+          "atLeast": 30
         },
         {
           "metric": "moneyPrintersInstalled",
@@ -168,7 +177,11 @@
         },
         {
           "metric": "moneyPrinted",
-          "atLeast": 250000
+          "atLeast": 93750
+        },
+        {
+          "metric": "prestigeCount",
+          "atLeast": 4
         }
       ]
     },
@@ -180,6 +193,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -209,8 +223,8 @@
           "atLeast": 8
         },
         {
-          "metric": "moneyPrinted",
-          "atLeast": 3000000
+          "metric": "moneyEarned",
+          "atLeast": 443154
         }
       ]
     },
@@ -222,6 +236,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",
@@ -257,6 +272,7 @@
       "allowedActions": [
         "SET_SLOT_CONFIG",
         "START_PRINT",
+        "OVERCLOCK_SLOT",
         "SELL_PARTS",
         "BUY_FILAMENT",
         "SELL_FILAMENT",

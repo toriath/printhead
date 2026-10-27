@@ -5,7 +5,6 @@ import {
   type DomainEvent,
   type EventBus,
   type GameState,
-  type OfflineSummary,
   type ReduceContext,
   type VisualState,
   advance,
@@ -16,14 +15,13 @@ import {
   createStaticContentSource,
   reduce,
   restoreRng,
-  runOfflineCatchUp,
   toVisualState,
 } from '@printhead/core';
 import { type Clock, createSystemClock } from '@printhead/platform';
 
 /**
  * Store bridge (spec §10/§15): "the sim is the store". React subscribes here;
- * everything else — pace, ticking, projection, offline catch-up — is core's
+ * everything else — pace, ticking, projection — is core's
  * job. The bridge owns no gameplay logic, only wiring.
  */
 export interface GameStore {
@@ -35,8 +33,6 @@ export interface GameStore {
   replaceState(state: GameState): void;
   /** Feed wall-clock milliseconds in; the engine turns them into fixed ticks. */
   advanceWallClock(wallDtMs: number): number;
-  /** Deterministic chunked catch-up through the same reducer (spec §7.4). */
-  applyOffline(wallElapsedMs: number): OfflineSummary;
   subscribe(listener: () => void): () => void;
   /** Domain events (Observer, spec §15) — for sound, flourishes, achievements. */
   onEvent(listener: (event: DomainEvent) => void): () => void;
@@ -132,22 +128,6 @@ export function createGameStore(options: GameStoreOptions = {}): GameStore {
         notify();
       }
       return result.ticks;
-    },
-    applyOffline(wallElapsedMs) {
-      const result = runOfflineCatchUp({
-        state,
-        content,
-        wallElapsedMs,
-        nowMs: clock.nowMs(),
-        carrySimMs,
-      });
-      for (const event of result.events) {
-        bus.emit(event);
-      }
-      setState(result.state);
-      carrySimMs = result.carrySimMs;
-      notify();
-      return result.summary;
     },
     subscribe(listener) {
       listeners.add(listener);

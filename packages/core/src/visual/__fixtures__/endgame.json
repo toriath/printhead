@@ -1,8 +1,8 @@
 {
-  "version": 7,
+  "version": 8,
   "phaseId": "end",
   "phaseName": "The End",
-  "simTimeMs": 22035000,
+  "simTimeMs": 23315000,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
@@ -11,8 +11,8 @@
       "index": 0,
       "materialId": "pla",
       "materialName": "PLA",
-      "objectId": "gearset",
-      "objectName": "Gear set",
+      "objectId": "bracket",
+      "objectName": "Bracket",
       "output": "parts",
       "designId": null,
       "machineTier": 5,
@@ -21,11 +21,18 @@
       "phaseOffset": 0,
       "occupied": true,
       "running": true,
-      "progress": 0.7070833333333312,
+      "progress": 0.95,
       "batch": 9,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.6624000000000008,
+      "failureRisk": 0.25280000000000635,
+      "perfectCharge": 0.7,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0.75,
+        "ready": false
+      },
       "queue": [],
       "queueBatches": 0
     }
@@ -43,7 +50,7 @@
     "name": "Second config slot",
     "available": true,
     "affordable": false,
-    "cost": 900,
+    "cost": 775,
     "costResource": "parts",
     "blockedReason": null
   },
@@ -51,25 +58,25 @@
     {
       "forkId": "farm-path",
       "name": "The Farm",
-      "description": "Throughput. Every bay keeps its own machines, and every machine runs a little faster.",
+      "description": "Throughput. Every bay keeps its own machines, and every machine runs faster. The better economy, but the final print needs Goliath.",
       "layout": "rack",
       "chosen": false,
       "available": true,
-      "affordable": false,
-      "cost": 585,
-      "costResource": "parts",
+      "affordable": true,
+      "cost": 10354.5,
+      "costResource": "money",
       "requiredForFinalPrint": false
     },
     {
       "forkId": "goliath",
       "name": "Goliath",
-      "description": "One giant printer. The whole fleet is melted into a single bay — and it is the only build that can attempt the final print.",
+      "description": "One giant printer. The whole fleet melts into a single bay, slower and less productive than the Farm. Needs a sintering head and one melt-down behind you, and it is the only build that can attempt the final print.",
       "layout": "goliath",
       "chosen": false,
-      "available": true,
-      "affordable": false,
-      "cost": 585,
-      "costResource": "parts",
+      "available": false,
+      "affordable": true,
+      "cost": 10354.5,
+      "costResource": "money",
       "requiredForFinalPrint": true
     }
   ],
@@ -93,16 +100,16 @@
     "complete": true
   },
   "ledger": {
-    "parts": 27,
-    "money": 2043338.0128908758,
-    "scrap": 0,
+    "parts": 199,
+    "money": 440053.1354341961,
+    "scrap": 324,
     "products": 0,
-    "plates": 5.119999999999999,
+    "plates": 3.9715999999999987,
     "filamentGrams": {
-      "pla": 2923.6000000000013,
-      "petg": 500,
-      "resin": 1500,
-      "metal": 831,
+      "pla": 8,
+      "petg": 0,
+      "resin": 2750,
+      "metal": 827,
       "composite": 660
     }
   },
@@ -113,11 +120,11 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.16660915584661376,
+      "buyPerGram": 0.1482791318193522,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 2923.6000000000013
+      "heldGrams": 8
     },
     {
       "materialId": "petg",
@@ -125,11 +132,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.26954909883293904,
-      "sellPerGram": 0.249737240068718,
-      "priceMultiplier": 1.0111580357905698,
-      "stockGrams": 6759.999999998854,
-      "heldGrams": 500
+      "buyPerGram": 0.21528387200204083,
+      "sellPerGram": 0.19946050740989082,
+      "priceMultiplier": 0.9074265431038545,
+      "stockGrams": 6500,
+      "heldGrams": 0
     },
     {
       "materialId": "resin",
@@ -137,11 +144,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 1.1341011117063577,
-      "sellPerGram": 1.0507446799959403,
-      "priceMultiplier": 0.9724222159713473,
-      "stockGrams": 5179.9999999993815,
-      "heldGrams": 1500
+      "buyPerGram": 1.0719145566567114,
+      "sellPerGram": 0.9931288367424431,
+      "priceMultiplier": 1.032718826122594,
+      "stockGrams": 4229.999999999109,
+      "heldGrams": 2750
     },
     {
       "materialId": "metal",
@@ -149,11 +156,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 4.302819043034327,
-      "sellPerGram": 3.9865618433713035,
-      "priceMultiplier": 0.9223509230265432,
-      "stockGrams": 14.333333333326951,
-      "heldGrams": 831
+      "buyPerGram": 4.2299339944484,
+      "sellPerGram": 3.9190338458564424,
+      "priceMultiplier": 1.0188154555311721,
+      "stockGrams": 26.333333333325843,
+      "heldGrams": 827
     },
     {
       "materialId": "composite",
@@ -177,29 +184,29 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 158,
+      "cost": 269,
       "costResource": "parts"
     },
     {
       "upgradeId": "recycler",
       "name": "Scrap recycler",
       "tree": "machine",
-      "level": 1,
+      "level": 0,
       "maxLevel": 1,
-      "available": false,
-      "affordable": false,
-      "cost": 158,
+      "available": true,
+      "affordable": true,
+      "cost": 169,
       "costResource": "parts"
     },
     {
       "upgradeId": "hardened-nozzle",
       "name": "Hardened nozzle",
       "tree": "machine",
-      "level": 3,
+      "level": 0,
       "maxLevel": 3,
-      "available": false,
-      "affordable": false,
-      "cost": 405,
+      "available": true,
+      "affordable": true,
+      "cost": 169,
       "costResource": "parts"
     },
     {
@@ -210,7 +217,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 158,
+      "cost": 269,
       "costResource": "parts"
     },
     {
@@ -221,7 +228,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": false,
-      "cost": 500,
+      "cost": 410,
       "costResource": "parts"
     },
     {
@@ -232,7 +239,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 500,
+      "cost": 410,
       "costResource": "parts"
     },
     {
@@ -243,7 +250,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 252.73574400000007,
+      "cost": 430.2694400000001,
       "costResource": "money"
     },
     {
@@ -254,7 +261,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 2500,
+      "cost": 9956.25,
       "costResource": "money"
     },
     {
@@ -265,7 +272,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": true,
-      "cost": 500,
+      "cost": 410,
       "costResource": "money"
     },
     {
@@ -276,7 +283,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 8,
+      "cost": 24.4542,
       "costResource": "plates"
     },
     {
@@ -287,7 +294,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 8,
+      "cost": 24.4542,
       "costResource": "plates"
     },
     {
@@ -298,7 +305,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": false,
-      "cost": 8,
+      "cost": 24.4542,
       "costResource": "plates"
     },
     {
@@ -309,7 +316,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 8,
+      "cost": 24.4542,
       "costResource": "plates"
     }
   ],
@@ -324,7 +331,7 @@
       "threshold": 40,
       "available": true,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
       "costResource": "parts"
     },
     {
@@ -337,7 +344,20 @@
       "threshold": 400,
       "available": true,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
+      "costResource": "parts"
+    },
+    {
+      "automationId": "auto-recycler",
+      "name": "Auto-recycler",
+      "behavior": "recycle-scrap",
+      "level": 0,
+      "installed": false,
+      "enabled": false,
+      "threshold": 20,
+      "available": false,
+      "affordable": false,
+      "cost": 720,
       "costResource": "parts"
     },
     {
@@ -350,7 +370,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 819,
+      "cost": 1511.055,
       "costResource": "money"
     },
     {
@@ -363,13 +383,13 @@
       "threshold": 60,
       "available": true,
       "affordable": false,
-      "cost": 390,
+      "cost": 720,
       "costResource": "parts"
     }
   ],
   "recycler": {
-    "installed": true,
-    "scrapGrams": 0,
+    "installed": false,
+    "scrapGrams": 324,
     "yieldGrams": 0,
     "yieldMaterialId": "pla"
   },
@@ -392,7 +412,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 140800,
+        "cost": 55139.04,
         "costResource": "money",
         "blockedReason": "missing-prerequisite"
       },
@@ -408,7 +428,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 140800,
+        "cost": 55139.04,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -416,15 +436,15 @@
         "designId": "money-plate",
         "name": "Money plate",
         "materialId": "resin",
-        "level": 13,
+        "level": 20,
         "maxLevel": 20,
         "owned": true,
-        "levelProgress": 0.5,
-        "productValue": 15951.206228985922,
+        "levelProgress": 0,
+        "productValue": 28533.858187665566,
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 140800,
+        "cost": 55139.04,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -432,10 +452,10 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 22,
-    "platesHeld": 5.119999999999999,
-    "runsCompleted": 5,
-    "moneyPerDesignSecond": 1920,
+    "platesOnOffer": 10,
+    "platesHeld": 3.9715999999999987,
+    "runsCompleted": 7,
+    "moneyPerDesignSecond": 481.37625,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -443,11 +463,11 @@
       "moneyPrinterId": "bill-printer",
       "name": "Bill printer",
       "tier": 1,
-      "level": 2,
+      "level": 3,
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 29,
+      "cost": 31,
       "costResource": "plates"
     },
     {
@@ -458,7 +478,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 18,
+      "cost": 27,
       "costResource": "plates"
     },
     {
@@ -469,7 +489,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 18,
+      "cost": 14,
       "costResource": "plates"
     },
     {
@@ -487,8 +507,8 @@
   "backdrop": "skyline",
   "inflation": {
     "active": true,
-    "multiplier": 3.332183116932275,
-    "moneyPrinted": 3015380.0000015264
+    "multiplier": 2.965582636387044,
+    "moneyPrinted": 2132984.9737508255
   },
   "fabricator": {
     "unlocked": true,
@@ -500,17 +520,17 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 2040000,
+    "totalMs": 3098280,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 660,
-    "sections": 0,
+    "sections": 1,
     "maxSections": 4,
     "sectionRunning": true,
-    "sectionProgress": 0.9285714285714286,
+    "sectionProgress": 0.61967083085465,
     "sectionAvailable": false,
     "sectionBlockedReason": "slot-busy",
-    "sectionCost": 250,
+    "sectionCost": 400,
     "sectionCostResource": "parts",
     "forkAllows": false,
     "slotsCommitted": false,

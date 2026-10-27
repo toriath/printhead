@@ -72,11 +72,11 @@ Changing a slot's configuration has a **changeover cost** (time + filament waste
 
 ## 5. Upgrade Trees
 
-**A. Machine** (every node changes the SVG): frame acrylic→aluminum→steel; nozzle brass→hardened→glowing; bed tape→heated→auto-level; enclosure; second extruder (multi-material within one slot); SLA unit; speed/quality slider (fast+risky ↔ slow+reliable).
+**A. Machine** (every node changes the SVG): frame acrylic→aluminum→steel; nozzle brass→hardened→glowing; bed tape→heated→auto-level; enclosure; second extruder (multi-material within one slot); SLA unit. The fast+risky ↔ slow+reliable choice is **Overclock** (§7.5): tap a running bay for a short burst of speed that costs failure charge.
 
 **B. Farm**: printer N cost ≈ base × growth^N (parts; growth is data); printer-to-slot assignment; print queues (auto-changeover per slot); **per-run fork:** *Farm* (throughput) vs. *Goliath* (one giant printer; required for the largest endgame builds).
 
-**C. Automation** (introduce friction, then sell its removal): auto-sell threshold; auto-buy filament; auto-trading; maintenance bots (printed — printers degrade with runtime); auto-changeover; late auto-designer.
+**C. Automation** (introduce friction, then sell its removal): auto-sell threshold; auto-buy filament; auto-recycler; auto-trading; maintenance bots (printed — printers degrade with runtime); auto-changeover; late auto-designer.
 
 **D. Design**: Design Studio (needs resin); designs level per printed batch; design slots; designs persist through prestige; capstone **Money Plate design** → unlocks prestige.
 
@@ -102,7 +102,15 @@ These budgets are **data** (`content/pacing.json`) and are enforced by automated
 1. Failure: **deterministic pity-timer** (accumulated failure charge), not raw RNG.
 2. Market: **sine + seeded noise + supply response** (flooding lowers price).
 3. Goliath **required for the final print**; a Farm build can pre-print sections to stay viable.
-4. Offline progress: **deterministic chunked fast-forward, capped 24 h**, summary screen on return.
+4. **No offline progress.** The workshop only runs while the game is open; time away (tab hidden, app closed) is not simulated, and a save resumes exactly where it was left. Being present is what the active mechanics (§7.5) reward.
+5. **Active play** (§7.5): Overclock and Perfect prints, both deterministic.
+6. **Goliath needs a sintering head and one melt-down**, so the first run is always a Farm run and metal has a job; the fork is paid in money, so a late run can always afford it.
+
+### 7.5 Active play (balance overhaul)
+
+- **Overclock.** Tap a running bay (or its button): it prints `speedMultiplier`× faster for `durationDesignSeconds`, then cools down; while boosted, every print adds `failureChargeMultiplier`× the failure charge and `perfectChargeMultiplier`× the perfect charge. Unlocked from the intro. Data: `failure.json → overclock`.
+- **Perfect prints.** Every finished batch adds `chargePerBatch` to the bay's perfect meter; the batch that fills it yields `yieldMultiplier`× and is celebrated. The good twin of the pity timer: deterministic, visible, anticipated. Data: `failure.json → perfectPrint`.
+- **Juice** is presentation driven by domain events (pop-ups, a Perfect burst, a failure shake, a layer fanfare, faces that react); it never feeds back into the simulation.
 
 ---
 
@@ -158,9 +166,10 @@ The coding agent must **build its own balancing instruments before tuning number
 1. **Headless harness** (`pnpm balance:sim`): runs the real `core` at maximum speed with pluggable **bot strategies** (at minimum: `greedy-spender`, `balanced`, `idle-heavy` check-in-every-10-min). Outputs a run log: phase completion times, resource curves, decision counts.
 2. **Wait-wall detector:** flags any stretch > N design-minutes where the bot had no affordable meaningful action — the classic idle-game dead zone. Budgeted per phase in `pacing.json`.
 3. **Sweep runner** (`pnpm balance:sweep`): grid/random search over selected data fields (by JSON pointer), parallel across workers, emitting CSV.
-4. **Auto-tuner** (`pnpm balance:tune`): simple optimizer (hill-climb / bisection per parameter) that adjusts chosen fields until phase times hit the §6 budget within tolerance; writes the winning values **back into `content/` via a proper patch**, never into code.
+4. **Auto-tuner** (`pnpm balance:tune`): simple optimizer (hill-climb / bisection per parameter) that adjusts chosen fields until phase times hit the §6 budget within tolerance, scored across every gated bot and penalised for fun regressions (droughts, dead content; see 7); writes the winning values **back into `content/` via a proper patch**, never into code.
 5. **Report generator** (`pnpm balance:report`): markdown + SVG charts (resource curves, phase timeline, wait-walls) into `docs/balance-reports/<date>/`; every balance PR must attach one.
-6. **CI regression:** the `balanced` bot must finish each phase within budget ± 20 % and total within ± 20 %; wait-walls under budget. A balance regression fails CI exactly like a failing unit test.
+6. **CI regression:** the `balanced` and `greedy-spender` bots must each finish each phase within budget ± 20 % and total within ± 20 %; wait-walls under budget. A balance regression fails CI exactly like a failing unit test.
+7. **Fun signals** (in the report): the budgets measure length, not quality. The report also shows the longest stretch per phase with nothing new (a *drought*), the share of actions that are upkeep chores, content no bot bought before the ending (*dead content*), and how differently the strategies ordered their purchases. Bots are not players: these say where to look.
 
 Workflow mandate: when a milestone introduces a mechanic, the agent (a) extends the bots to use it, (b) runs sweep/tune to fit the time budget, (c) commits data + report. Manual number-guessing is a smell; the tools are the way.
 
@@ -169,12 +178,12 @@ Workflow mandate: when a milestone introduces a mechanic, the agent (a) extends 
 | Layer | Tooling | Bar |
 |---|---|---|
 | `core` unit | Vitest | ≥ 90 % line/branch |
-| `core` properties | fast-check | Resources ≥ 0; offline(2t) ≡ offline(t)∘offline(t); prestige preserves Designs exactly; money printing monotone in Plates; buy/sell round-trips never create value; **pace invariance:** phase order & unlock sequence identical for any `targetHours` |
+| `core` properties | fast-check | Resources ≥ 0; advance(2t) ≡ advance(t)∘advance(t); prestige preserves Designs exactly; money printing monotone in Plates; buy/sell round-trips never create value; **pace invariance:** phase order & unlock sequence identical for any `targetHours` |
 | `core` mutation | **Stryker** | Score ≥ 80 % on `systems/` + curve library; CI-gated |
 | Balance | `tools/balance` bots | §12 budgets as CI assertions |
 | Content | zod + ref-checker | All content valid; no dangling ids; no literals in systems |
 | `renderer` | Vitest + Testing Library | Every `VisualState` fixture renders; upgrade visuals snapshot-tested |
-| E2E | Playwright (chromium, in container) | Intro; save→reload equality; offline summary; prestige; editor smoke (dev build) |
+| E2E | Playwright (chromium, in container) | Intro; save→reload equality; time away changes nothing; prestige; editor smoke (dev build) |
 | Saves | Fixture corpus | Every released schema version loads forever |
 
 TDD is the default working mode. Determinism rule: **no `Math.random`, no `Date.now` in `core`** — inject seeded `rng` (mulberry32, forkable streams) and `now`. Every bug reproducible from `(seed, actionLog)`.
@@ -193,7 +202,7 @@ A dev-only in-app **Editor panel** — think Unity Inspector for this game:
 ## 15. Architecture & Patterns (name them in code)
 
 - **Reducer/Command:** every change is an `Action` through one pure `reduce(state, action, ctx)`; `TICK` is an action. Enables replay/undo-in-dev/save-as-log.
-- **Fixed-timestep engine:** accumulator, `dt = 100 ms`, pace applied once (§8); render reads at rAF pace; offline = chunked ticks, same code path, 24 h cap.
+- **Fixed-timestep engine:** accumulator, `dt = 100 ms`, pace applied once (§8); render reads at rAF pace; a gap longer than a minute is time away and is dropped, not replayed.
 - **Strategy:** material identities, failure model, market model as pluggable strategies selected by content data.
 - **State machine:** phases (Intro → … → Ended) as explicit FSM gating features/UI.
 - **Observer/event bus:** sim emits domain events (`PRINT_COMPLETED`, `UPGRADE_INSTALLED`) for achievements/sound/flourishes; renderer state itself comes only from `VisualState`.
@@ -212,7 +221,7 @@ printhead/
 │   ├── core/
 │   │   ├── content/               # ALL numbers live here (JSON + zod + generated types)
 │   │   └── src/
-│   │       ├── engine/            # tick, accumulator, pace, offline
+│   │       ├── engine/            # tick, accumulator, pace
 │   │       ├── state/             # GameState, reducer, actions
 │   │       ├── systems/           # printing, market, failure, automation, prestige (no literals!)
 │   │       ├── curves/            # parametric curve interpreters
@@ -235,7 +244,7 @@ printhead/
 - **CI (`ci.yml`)**, inside the devcontainer image: `biome ci` → content validation → `tsc -b` → `vitest --coverage` → `stryker run` (gated) → **balance bots vs. budgets** → `playwright test` → `vite build`. Green CI = releasable, reproducible web build.
 - **Web release:** tag → build → deploy (GitHub Pages/Cloudflare Pages) + **itch.io via butler** (existing account/workflow). PWA installable from day one.
 - **macOS:** container builds web bundle → host runs `pnpm tauri build` (Xcode CLT), sign + notarize — `scripts/release-macos.sh`.
-- **iOS:** host `pnpm tauri ios build` → Xcode → TestFlight → App Store; safe-area & touch-target audit; recompute offline progress on foreground (critical on iOS); `navigator.storage.persist()` on web.
+- **iOS:** host `pnpm tauri ios build` → Xcode → TestFlight → App Store; safe-area & touch-target audit; drop the backgrounded gap on foreground (no offline progress); `navigator.storage.persist()` on web.
 - Versioning: Changesets; save-schema bump whenever state shape changes.
 
 ## 18. Implementation Milestones
@@ -247,7 +256,7 @@ printhead/
 - **M4 — Slots & scale:** slots 2–4, fleet assignment UI, Farm/Goliath fork, per-slot rendering with badges.
 - **M5 — Meta + editor v2:** Design Studio, products, prestige melt-down → Plates, self-assembling intro replay, money printing; editor covers all content types via schema (should be automatic — verify).
 - **M6 — Endgame:** Endgame tree, inflation display, Fabricator final print (the one synced render), ending sequence, credits, NG+/sandbox.
-- **M7 — Ship:** PWA polish, offline UX, save-corpus hardening, editor stripped from prod bundle, **printable STL generated + CI-validated (§20)**, web + itch.io release; then Tauri macOS/iOS on host.
+- **M7 — Ship:** PWA polish, save-corpus hardening, editor stripped from prod bundle, **printable STL generated + CI-validated (§20)**, web + itch.io release; then Tauri macOS/iOS on host.
 
 Each milestone: plan → tests → implement → mutation run → **balance run + report** → ADR update if architecture shifted.
 
