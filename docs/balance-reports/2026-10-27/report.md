@@ -10,17 +10,19 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 % for the arc, ±35 % 
 
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
-| Intro | 1 (1–1) | 510.0 | 0.8 | 0.8 | 90.0 |
-| Bench | 26 (17–35) | — | 17.9 | 18.9 | 140.0 |
-| Farm | 98 (64–132) | — | 88.4 | 89.8 | 280.0 |
-| Studio | 45 (29–61) | — | 34.0 | 36.5 | — |
-| The Melt-downs | 120 (78–162) | — | 120.9 | 129.1 | — |
-| The Absurd | 80 (52–108) | — | 53.3 | 74.4 | — |
-| The End | 50 (33–68) | — | 48.9 | 38.5 | — |
-| Ended | sandbox | — | 144.8 | 120.9 | — |
-| **Total (the arc)** | **420** | **510.0** | **364.3** | **388.1** | **510.0** |
+| Intro | 1 (1–1) | 590.0 | 0.8 | 0.8 | 90.0 |
+| Bench | 26 (17–35) | — | 21.5 | 23.2 | 180.0 |
+| The Shop | 30 (20–41) | — | 27.6 | 27.3 | 320.0 |
+| Farm | 98 (64–132) | — | 96.9 | 99.3 | — |
+| Studio | 45 (29–61) | — | 38.2 | 39.8 | — |
+| The Agency | 35 (23–47) | — | 30.5 | 30.5 | — |
+| The Melt-downs | 120 (78–162) | — | 89.4 | 90.6 | — |
+| The Absurd | 80 (52–108) | — | 81.7 | 84.8 | — |
+| The End | 50 (33–68) | — | 50.2 | 50.1 | — |
+| Ended | sandbox | — | 150.2 | 140.6 | — |
+| **Total (the arc)** | **485** | **590.0** | **436.8** | **446.4** | **590.0** |
 
-The reference run took 509.0 design-minutes (8.48 wall-hours at targetHours=8) and ended in `ended`.
+The reference run took 587.0 design-minutes (9.78 wall-hours at targetHours=8) and ended in `ended`.
 
 ## Wait walls
 
@@ -33,10 +35,12 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Phase | Longest wall | Budget | Walls found |
 |---|---|---|---|
 | Intro | 0.1 | 1 | 2 |
-| Bench | 0.9 | 3 | 21 |
-| Farm | 0.3 | 5 | 123 |
-| Studio | 0.2 | 5 | 27 |
-| The Melt-downs | 0.9 | 6 | 74 |
+| Bench | 0.9 | 3 | 20 |
+| The Shop | 0.2 | 4 | 63 |
+| Farm | 0.3 | 5 | 177 |
+| Studio | 0.2 | 5 | 26 |
+| The Agency | 0.0 | 5 | 0 |
+| The Melt-downs | 0.3 | 6 | 4 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
 | Ended | 0.0 | 60 | 0 |
@@ -61,16 +65,16 @@ upgrade, machine, material, design, branch or phase. *Chores* are upkeep
 actions (sell, recycle, restock, reload) as a share of all actions. Bots
 are not players: read these as where to look, not as verdicts.
 
-| Bot | Chores | Most repeated | Intro | Bench | Farm | Studio | The Melt-downs | The Absurd | The End |
-|---|---|---|---|---|---|---|---|---|---|
-| greedy-spender | 38 % | RECYCLE_SCRAP ×343 | 1 | 10 | 40 | 14 | 51 | 27 | 28 |
-| balanced | 39 % | SET_SLOT_CONFIG ×322 | 1 | 10 | 40 | 14 | 59 | 27 | 28 |
-| idle-heavy | 48 % | SELL_PARTS ×11 | 60 | 99 | 53 | — | — | — | — |
+| Bot | Chores | Most repeated | Intro | Bench | The Shop | Farm | Studio | The Agency | The Melt-downs | The Absurd | The End |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| greedy-spender | 49 % | RECYCLE_SCRAP ×810 | 1 | 12 | 18 | 40 | 12 | 21 | 48 | 35 | 27 |
+| balanced | 51 % | RECYCLE_SCRAP ×893 | 1 | 13 | 17 | 41 | 12 | 22 | 62 | 37 | 26 |
+| idle-heavy | 73 % | SET_SLOT_CONFIG ×20 | 60 | 120 | 290 | — | — | — | — | — | — |
 
-Never bought by any bot: `central-bank`.
+Never bought by any bot: `pallet-printer`, `central-bank`.
 
-Build-order divergence, `greedy-spender` vs `balanced`: 0.01 (0 = the same order, ~0.5 = unrelated).
-Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.21 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `balanced`: 0.00 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.00 (0 = the same order, ~0.5 = unrelated).
 
 ## Human crowd
 
@@ -80,21 +84,21 @@ drag is where a real player is likely to stall.
 
 | Human | Arc | vs budget | Slowest phase vs its budget |
 |---|---|---|---|
-| human-11 | 433 min | 3 % | intro (×4.67) |
-| human-23 | 423 min | 1 % | intro (×2.13) |
-| human-37 | 408 min | -3 % | intro (×2.27) |
-| human-41 | 409 min | -3 % | intro (×1.87) |
-| human-59 | 374 min | -11 % | intro (×6.40) |
-| human-73 | 406 min | -3 % | intro (×3.87) |
+| human-11 | 640 min | 32 % | prestige (×1.49) |
+| human-23 | 598 min | 23 % | farm (×1.86) |
+| human-37 | 603 min | 24 % | prestige (×1.58) |
+| human-41 | 608 min | 25 % | absurd (×1.78) |
+| human-59 | 531 min | 9 % | end (×1.22) |
+| human-73 | 632 min | 30 % | farm (×1.81) |
 
 ## Activity
 
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
-| idle | 51 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 6108 | 2150 | 48887 | 5855 | 10.7 % | ended |
-| balanced | 6108 | 2028 | 40626 | 4773 | 10.5 % | ended |
-| idle-heavy | 51 | 94 | 2817 | 275 | 8.9 % | farm |
+| idle | 59 | 0 | 0 | 0 | — | intro |
+| greedy-spender | 7044 | 2813 | 3418 | 409 | 10.7 % | ended |
+| balanced | 7044 | 2785 | 176753 | 20878 | 10.6 % | ended |
+| idle-heavy | 59 | 86 | 3038 | 264 | 8.0 % | shop |
 
 ---
 

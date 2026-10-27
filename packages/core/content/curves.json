@@ -3,7 +3,7 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 5.7134,
+    "base": 5,
     "growth": 1.16154
   },
   {
@@ -17,28 +17,28 @@
     "id": "upgrade-cost-sla",
     "name": "SLA / sintering head cost",
     "type": "exponential",
-    "base": 410,
+    "base": 615,
     "growth": 2.4
   },
   {
     "id": "automation-cost",
     "name": "Automation upgrade cost",
     "type": "exponential",
-    "base": 404.747,
+    "base": 918.513,
     "growth": 2.1
   },
   {
     "id": "slot-cost",
     "name": "Config slot cost",
     "type": "exponential",
-    "base": 1743.53,
-    "growth": 2.5
+    "base": 2615.3,
+    "growth": 4.155
   },
   {
     "id": "fork-cost",
     "name": "Farm / Goliath commitment cost (money)",
     "type": "constant",
-    "value": 3740.8
+    "value": 2614.88
   },
   {
     "id": "design-level-value",
@@ -51,7 +51,7 @@
     "id": "prestige-plates",
     "name": "Plates granted at melt-down",
     "type": "power",
-    "base": 0.244168,
+    "base": 0.217798,
     "exponent": 0.5
   },
   {
@@ -59,7 +59,7 @@
     "name": "Money printed per design-second per plate",
     "type": "linear",
     "base": 0,
-    "step": 1.4225
+    "step": 0.873176
   },
   {
     "id": "no-op",
@@ -71,8 +71,8 @@
     "id": "design-cost",
     "name": "Design draft cost",
     "type": "exponential",
-    "base": 174.024,
-    "growth": 3.9825
+    "base": 205.348,
+    "growth": 5.54523
   },
   {
     "id": "money-printer-cost",
@@ -85,7 +85,7 @@
     "id": "design-slot-cost",
     "name": "Design desk cost",
     "type": "exponential",
-    "base": 3646.5,
+    "base": 9090.72,
     "growth": 4
   },
   {
@@ -135,7 +135,7 @@
     "name": "Money printed per design-second per plate (bundles)",
     "type": "linear",
     "base": 0,
-    "step": 1.28491
+    "step": 2.23497
   },
   {
     "id": "money-print-rate-pallets",

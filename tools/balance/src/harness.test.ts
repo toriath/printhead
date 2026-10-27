@@ -60,7 +60,7 @@ describe('budget table', () => {
     expect(table.arcTolerance).toBe(0.2);
     // The arc's budget. The terminal `ended` sandbox is outside it: nothing
     // ends that phase, so it has no duration to budget (see `terminalPhaseId`).
-    expect(table.totalDesignMinutes).toBe(420);
+    expect(table.totalDesignMinutes).toBe(485);
     expect(table.terminalPhaseId).toBe('ended');
     const intro = table.phases[0];
     expect(intro?.budgetDesignMinutes).toBe(1);
@@ -72,8 +72,10 @@ describe('budget table', () => {
     const durations = new Map<string, number>([
       ['intro', 1],
       ['bench', 1],
+      ['shop', 30],
       ['farm', 400],
       ['studio', 45],
+      ['agency', 35],
       ['prestige', 120],
       ['absurd', 80],
       ['ended', 999],
@@ -176,7 +178,7 @@ describe('headless harness', () => {
     expect(log.phaseEnteredAt.has('intro')).toBe(true);
     expect(log.phaseEnteredAt.has('bench')).toBe(true);
     expect(log.phaseDurations.has('bench')).toBe(true);
-    expect(log.finalPhaseId).toBe('farm');
+    expect(log.finalPhaseId).toBe('shop');
   });
 
   it('an idle bot never leaves the first phase', () => {
@@ -272,8 +274,10 @@ describe.each(PACING_BOTS.map((bot) => [bot.id, bot] as const))(
       expect([...GATED_PHASES]).toEqual([
         'intro',
         'bench',
+        'shop',
         'farm',
         'studio',
+        'agency',
         'prestige',
         'absurd',
         'end',

@@ -562,12 +562,16 @@ describe('the workshop wall', () => {
 
   it('starts bare and fills up, layer by layer, never losing what it hung', () => {
     const intro = wallOf('intro');
+    const shop = wallOf('shop');
     const farm = wallOf('farm');
+    const agency = wallOf('agency');
     const absurd = wallOf('absurd');
     const end = wallOf('end');
     expect(intro).toEqual([]);
-    expect(farm).toEqual(expect.arrayContaining([...intro, 'shelf', 'clock']));
-    expect(absurd).toEqual(expect.arrayContaining([...farm, 'blueprint', 'plates', 'neon']));
+    expect(shop).toEqual(['shop-sign']);
+    expect(farm).toEqual(expect.arrayContaining([...shop, 'shelf', 'clock']));
+    expect(agency).toEqual(expect.arrayContaining([...farm, 'blueprint', 'staff-desk']));
+    expect(absurd).toEqual(expect.arrayContaining([...agency, 'plates', 'neon']));
     expect(end).toEqual(expect.arrayContaining([...absurd, 'lights']));
   });
 

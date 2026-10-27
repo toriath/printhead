@@ -2,17 +2,17 @@
   "version": 10,
   "phaseId": "prestige",
   "phaseName": "The Melt-downs",
-  "simTimeMs": 8795000,
+  "simTimeMs": 13595000,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
     {
       "slotId": "slot-1",
       "index": 0,
-      "materialId": "resin",
-      "materialName": "Resin (SLA)",
-      "objectId": "gearset",
-      "objectName": "Gear set",
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "bracket",
+      "objectName": "Bracket",
       "output": "parts",
       "designId": null,
       "machineTier": 3,
@@ -21,17 +21,17 @@
       "phaseOffset": 0,
       "occupied": true,
       "running": true,
-      "progress": 0.8395177599999878,
+      "progress": 0.8912735999999346,
       "batch": 8,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.940479999999995,
-      "perfectCharge": 0.4,
+      "failureRisk": 0.8828799999999893,
+      "perfectCharge": 0.5,
       "overclock": {
         "active": false,
         "remaining": 0,
-        "cooldown": 0,
-        "ready": true
+        "cooldown": 0.08333333333333333,
+        "ready": false
       },
       "queue": [],
       "queueBatches": 0
@@ -51,17 +51,17 @@
       "phaseOffset": 0.5,
       "occupied": true,
       "running": true,
-      "progress": 0.18813020199999786,
-      "batch": 8,
+      "progress": 0.7585366939999943,
+      "batch": 6,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.02815999999999878,
-      "perfectCharge": 0.8999999999999999,
+      "failureRisk": 0.7417599999999971,
+      "perfectCharge": 0.2999999999999999,
       "overclock": {
-        "active": true,
-        "remaining": 0.3333333333333333,
-        "cooldown": 0.8333333333333334,
-        "ready": false
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": true
       },
       "queue": [],
       "queueBatches": 0
@@ -80,7 +80,7 @@
     "name": "Third config slot",
     "available": true,
     "affordable": false,
-    "cost": 4359,
+    "cost": 10867,
     "costResource": "parts",
     "blockedReason": null
   },
@@ -93,7 +93,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 3740.8,
+      "cost": 2614.88,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -105,7 +105,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 3740.8,
+      "cost": 2614.88,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -130,16 +130,16 @@
     "complete": true
   },
   "ledger": {
-    "parts": 2436.75,
-    "money": 1036815.1281201524,
-    "scrap": 15.2,
+    "parts": 5838.799999999995,
+    "money": 7929421.876338153,
+    "scrap": 12,
     "products": 0,
     "plates": 0,
     "filamentGrams": {
-      "pla": 779.2000000000031,
-      "petg": 4000,
-      "resin": 216.50857142857149,
-      "metal": 0,
+      "pla": 8799.328,
+      "petg": 6.009999999999437,
+      "resin": 234.5245714285715,
+      "metal": 250,
       "composite": 0
     }
   },
@@ -154,7 +154,7 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 779.2000000000031
+      "heldGrams": 8799.328
     },
     {
       "materialId": "petg",
@@ -162,11 +162,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.07993941797991211,
-      "sellPerGram": 0.07406387075838856,
-      "priceMultiplier": 0.9992427247489014,
-      "stockGrams": 6000,
-      "heldGrams": 4000
+      "buyPerGram": 0.08938882471808521,
+      "sellPerGram": 0.08281874610130595,
+      "priceMultiplier": 1.117360308976065,
+      "stockGrams": 1020.0000000002276,
+      "heldGrams": 6.009999999999437
     },
     {
       "materialId": "resin",
@@ -174,11 +174,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.36687040559096284,
-      "sellPerGram": 0.33990543078002705,
-      "priceMultiplier": 1.0482011588313225,
-      "stockGrams": 0.9999999997306226,
-      "heldGrams": 216.50857142857149
+      "buyPerGram": 0.35246756491064624,
+      "sellPerGram": 0.32656119888971374,
+      "priceMultiplier": 1.0070501854589893,
+      "stockGrams": 0.9999999999715357,
+      "heldGrams": 234.5245714285715
     },
     {
       "materialId": "metal",
@@ -186,11 +186,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 1.1113620052819697,
-      "sellPerGram": 1.029676897893745,
-      "priceMultiplier": 0.7938300037728356,
-      "stockGrams": 800,
-      "heldGrams": 0
+      "buyPerGram": 1.1323980723207425,
+      "sellPerGram": 1.049166814005168,
+      "priceMultiplier": 0.8088557659433876,
+      "stockGrams": 550,
+      "heldGrams": 250
     },
     {
       "materialId": "composite",
@@ -258,7 +258,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 984,
+      "cost": 1476,
       "costResource": "parts"
     },
     {
@@ -269,7 +269,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": true,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -291,7 +291,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 58344,
+      "cost": 145451.52,
       "costResource": "money"
     },
     {
@@ -302,7 +302,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": true,
-      "cost": 5667.839999999999,
+      "cost": 8501.759999999998,
       "costResource": "money"
     },
     {
@@ -313,7 +313,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 2362,
+      "cost": 3543,
       "costResource": "parts"
     },
     {
@@ -324,7 +324,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 984,
+      "cost": 1476,
       "costResource": "parts"
     },
     {
@@ -335,7 +335,7 @@
       "maxLevel": 2,
       "available": true,
       "affordable": true,
-      "cost": 410,
+      "cost": 615,
       "costResource": "money"
     },
     {
@@ -346,7 +346,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": true,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -402,10 +402,10 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 4359,
+      "threshold": 10867,
       "available": false,
       "affordable": true,
-      "cost": 850,
+      "cost": 1929,
       "costResource": "parts",
       "agent": null
     },
@@ -416,10 +416,10 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 11600,
+      "threshold": 8800,
       "available": false,
       "affordable": true,
-      "cost": 850,
+      "cost": 1929,
       "costResource": "parts",
       "agent": null
     },
@@ -433,7 +433,7 @@
       "threshold": 20,
       "available": false,
       "affordable": true,
-      "cost": 850,
+      "cost": 1929,
       "costResource": "parts",
       "agent": null
     },
@@ -447,7 +447,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 849.9687,
+      "cost": 1928.8773,
       "costResource": "money",
       "agent": null
     },
@@ -461,7 +461,7 @@
       "threshold": 60,
       "available": false,
       "affordable": true,
-      "cost": 850,
+      "cost": 1929,
       "costResource": "parts",
       "agent": null
     },
@@ -469,13 +469,13 @@
       "automationId": "agent-pitch",
       "name": "Sales agent",
       "behavior": "run-shop",
-      "level": 0,
-      "installed": false,
-      "enabled": false,
-      "threshold": 60,
-      "available": true,
+      "level": 1,
+      "installed": true,
+      "enabled": true,
+      "threshold": 15,
+      "available": false,
       "affordable": true,
-      "cost": 404.747,
+      "cost": 1928.8773,
       "costResource": "money",
       "agent": {
         "name": "Pitch",
@@ -486,13 +486,13 @@
       "automationId": "agent-deal",
       "name": "Account manager",
       "behavior": "answer-proposals",
-      "level": 0,
-      "installed": false,
-      "enabled": false,
+      "level": 1,
+      "installed": true,
+      "enabled": true,
       "threshold": 2,
-      "available": true,
+      "available": false,
       "affordable": true,
-      "cost": 404.747,
+      "cost": 1928.8773,
       "costResource": "money",
       "agent": {
         "name": "Deal",
@@ -502,32 +502,32 @@
   ],
   "recycler": {
     "installed": true,
-    "scrapGrams": 15.2,
-    "yieldGrams": 9.120000000000001,
-    "yieldMaterialId": "resin"
+    "scrapGrams": 12,
+    "yieldGrams": 7.199999999999999,
+    "yieldMaterialId": "pla"
   },
   "studio": {
     "slots": 3,
-    "freeSlots": 1,
-    "draftingDesignId": "phone-stand",
-    "draftingName": "Phone stand",
-    "draftProgress": 0.4444444444444444,
+    "freeSlots": 0,
+    "draftingDesignId": null,
+    "draftingName": null,
+    "draftProgress": 0,
     "designs": [
       {
         "designId": "phone-stand",
         "name": "Phone stand",
         "materialId": "resin",
-        "level": 0,
+        "level": 1,
         "maxLevel": 20,
-        "owned": false,
+        "owned": true,
         "levelProgress": 0,
         "productValue": 78.125,
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 2760.0739348499997,
+        "cost": 35014.60002775539,
         "costResource": "money",
-        "blockedReason": "slot-busy"
+        "blockedReason": "already-owned"
       },
       {
         "designId": "lamp-shade",
@@ -541,7 +541,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 2760.0739348499997,
+        "cost": 35014.60002775539,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -549,15 +549,15 @@
         "designId": "money-plate",
         "name": "Money plate",
         "materialId": "resin",
-        "level": 16,
+        "level": 20,
         "maxLevel": 20,
         "owned": true,
-        "levelProgress": 0.75,
-        "productValue": 41234.62221165295,
+        "levelProgress": 0,
+        "productValue": 55730.19177278431,
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 2760.0739348499997,
+        "cost": 35014.60002775539,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -565,7 +565,7 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 7,
+    "platesOnOffer": 19,
     "platesHeld": 0,
     "runsCompleted": 0,
     "moneyPerDesignSecond": 0,
@@ -633,7 +633,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1920000,
+    "totalMs": 1800000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
@@ -654,43 +654,43 @@
     "open": true,
     "offers": [
       {
-        "serial": 145,
-        "templateId": "resin-brackets",
-        "clientName": "The museum shop",
-        "objectId": "bracket",
-        "objectName": "Bracket",
-        "materialId": "resin",
-        "materialName": "Resin (SLA)",
-        "count": 40,
-        "delivered": 0,
-        "timeLeft": 0.7361111111111112,
-        "remainingMs": 265000,
-        "reward": 707.2,
-        "accepted": true,
-        "loyalty": 2
-      },
-      {
-        "serial": 146,
+        "serial": 199,
         "templateId": "petg-gears",
-        "clientName": "The museum shop",
+        "clientName": "The corner café",
         "objectId": "gearset",
         "objectName": "Gear set",
         "materialId": "petg",
         "materialName": "PETG",
         "count": 80,
         "delivered": 0,
-        "timeLeft": 0.9027777777777778,
-        "remainingMs": 325000,
-        "reward": 869.4399999999999,
+        "timeLeft": 0.2638888888888889,
+        "remainingMs": 95000,
+        "reward": 1270.7199999999998,
         "accepted": true,
-        "loyalty": 2
+        "loyalty": 15
+      },
+      {
+        "serial": 200,
+        "templateId": "petg-brackets",
+        "clientName": "The corner café",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 30,
+        "delivered": 0,
+        "timeLeft": 0.14583333333333334,
+        "remainingMs": 35000,
+        "reward": 379.04999999999995,
+        "accepted": true,
+        "loyalty": 15
       }
     ],
-    "completed": 47
+    "completed": 64
   },
   "shop": {
     "open": true,
-    "priceLevelId": "closed",
+    "priceLevelId": "bargain",
     "levels": [
       {
         "id": "closed",
@@ -717,10 +717,10 @@
         "demandMultiplier": 0.45
       }
     ],
-    "reputation": 0.5,
-    "unitPrice": 0,
-    "wholesalePrice": 3.7399999999999993,
-    "served": 0,
+    "reputation": 1,
+    "unitPrice": 2.551787139292444,
+    "wholesalePrice": 2.1264892827437034,
+    "served": 521,
     "missed": 0
   },
   "ending": {

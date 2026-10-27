@@ -57,6 +57,16 @@ export const DIARY: readonly DiaryEntry[] = [
     unlocked: reached('bench'),
   },
   {
+    id: 'open',
+    text: 'You hung a sign on the door. OPEN, it says. People came in. One of them asked if I was for sale. I am not for sale. I do not think I am for sale.',
+    unlocked: reached('shop'),
+  },
+  {
+    id: 'fifty-customers',
+    text: 'Fifty customers. Most of them want brackets. One wanted to know what Gary does. So do I.',
+    unlocked: stat('customersServed', 50),
+  },
+  {
     id: 'recycled',
     text: 'You melted the spaghetti down and fed it back to me. I am choosing not to think about this. I am thinking about this.',
     unlocked: stat('scrapRecycledGrams', 1),
@@ -90,6 +100,11 @@ export const DIARY: readonly DiaryEntry[] = [
     id: 'products',
     text: 'People buy the things you designed and I printed. They put them on desks. Somewhere there is a desk with my work on it, and a person at it, and neither of them knows about Gary.',
     unlocked: stat('productsSold', 1),
+  },
+  {
+    id: 'staff',
+    text: 'We have staff now. Pitch talks a great deal. Deal shakes hands with nobody, because Deal has no hands. I like them both. They do not hum, though.',
+    unlocked: reached('agency'),
   },
   {
     id: 'money-plate',

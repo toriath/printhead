@@ -53,7 +53,7 @@ export function describeUpgrade(content: Content | undefined, upgradeId: string)
 
 const AUTOMATION_TEXT: Readonly<Record<string, string>> = {
   'run-shop': 'Runs the shop front by the stock on the shelf.',
-  'answer-proposals': 'Takes on clients as they knock, two orders at a time.',
+  'answer-proposals': 'Takes on the jobs the workshop is set up for, two at a time.',
   'sell-parts': 'Sells parts above a threshold for you',
   'buy-filament': 'Tops up the loaded filament for you',
   'trade-filament': 'Buys filament cheap and sells it dear',

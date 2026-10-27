@@ -67,6 +67,41 @@
       ]
     },
     {
+      "id": "shop",
+      "name": "The Shop",
+      "budgetDesignMinutes": 30,
+      "waitWallBudgetDesignMinutes": 4,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP"
+      ],
+      "advanceWhen": [
+        {
+          "metric": "customersServed",
+          "atLeast": 180
+        },
+        {
+          "metric": "commissionsCompleted",
+          "atLeast": 3
+        },
+        {
+          "metric": "shopReputation",
+          "atLeast": 0.8
+        }
+      ]
+    },
+    {
       "id": "farm",
       "name": "Farm",
       "budgetDesignMinutes": 98,
@@ -142,7 +177,49 @@
         },
         {
           "metric": "productsSold",
-          "atLeast": 61
+          "atLeast": 98
+        }
+      ]
+    },
+    {
+      "id": "agency",
+      "name": "The Agency",
+      "budgetDesignMinutes": 35,
+      "waitWallBudgetDesignMinutes": 5,
+      "allowedActions": [
+        "SET_SLOT_CONFIG",
+        "START_PRINT",
+        "OVERCLOCK_SLOT",
+        "ANSWER_COMMISSION",
+        "SET_SHOP_PRICE",
+        "SELL_PARTS",
+        "BUY_FILAMENT",
+        "SELL_FILAMENT",
+        "BUY_PRINTER",
+        "BUY_UPGRADE",
+        "BUY_AUTOMATION",
+        "SET_AUTOMATION",
+        "RECYCLE_SCRAP",
+        "BUY_SLOT",
+        "ASSIGN_PRINTER",
+        "SET_SLOT_QUEUE",
+        "CHOOSE_FORK",
+        "CREATE_DESIGN",
+        "SET_SLOT_DESIGN",
+        "SELL_PRODUCTS"
+      ],
+      "advanceWhen": [
+        {
+          "metric": "agentsHired",
+          "atLeast": 2
+        },
+        {
+          "metric": "commissionsCompleted",
+          "atLeast": 10
+        },
+        {
+          "metric": "customersServed",
+          "atLeast": 520
         }
       ]
     },
@@ -235,7 +312,7 @@
         },
         {
           "metric": "moneyEarned",
-          "atLeast": 278512
+          "atLeast": 191196
         }
       ]
     },

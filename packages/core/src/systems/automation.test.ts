@@ -562,9 +562,12 @@ describe('agents', () => {
       remainingMs: 30_000,
       accepted: false,
     });
+    const template = content.commissions.templates[0];
+    // Ready for the job: the filament for the whole order is on the shelf.
     const state = inBench({
       phaseId: 'farm',
       automation: installed(DEAL),
+      filamentGrams: { ...base.filamentGrams, [template?.materialId ?? '']: 100_000 },
       commissions: { ...base.commissions, open: [proposal(1), proposal(2), proposal(3)] },
     });
     const { result, events } = collectEvents((emit) =>
@@ -573,5 +576,30 @@ describe('agents', () => {
     const limit = defOf(DEAL).defaultThreshold;
     expect(result.commissions.open.filter((offer) => offer.accepted)).toHaveLength(limit);
     expect(events.filter((event) => event.type === 'COMMISSION_ANSWERED')).toHaveLength(limit);
+  });
+
+  it('Deal passes over a job the workshop is not set up for', () => {
+    const template = content.commissions.templates[0];
+    const state = inBench({
+      phaseId: 'farm',
+      automation: installed(DEAL),
+      filamentGrams: { ...base.filamentGrams, [template?.materialId ?? '']: 0 },
+      slots: [],
+      commissions: {
+        ...base.commissions,
+        open: [
+          {
+            serial: 1,
+            templateId: template?.id ?? '',
+            clientId: content.commissions.clients[0]?.id ?? '',
+            delivered: 0,
+            remainingMs: 30_000,
+            accepted: false,
+          },
+        ],
+      },
+    });
+    const after = tickAutomation(state, content, due(DEAL), undefined);
+    expect(after.commissions.open[0]?.accepted).toBe(false);
   });
 });

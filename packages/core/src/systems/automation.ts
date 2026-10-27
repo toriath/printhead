@@ -4,7 +4,7 @@ import type { CurveRegistry } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { AutomationSlotState, GameState } from '../state/game-state.js';
-import { answerProposal } from './commissions.js';
+import { answerProposal, commissionTemplate } from './commissions.js';
 import { type Cost, nextCost } from './cost.js';
 import { payCost, sellPartsFrom } from './economy.js';
 import { recycleScrapInto } from './failure.js';
@@ -44,6 +44,13 @@ export function isAutomationActive(state: GameState, id: string): boolean {
 }
 
 /** How many automations are installed — a phase-gate metric (spec §6). */
+/** Agents on staff: installed automations that come with a persona. */
+export function countAgents(state: GameState, content: Content): number {
+  return content.automation.filter(
+    (def) => def.persona !== undefined && automationLevel(state, def.id) > NONE,
+  ).length;
+}
+
 export function countAutomations(state: GameState): number {
   let total = NONE;
   for (const owned of Object.values(state.automation)) {
@@ -359,7 +366,29 @@ function fireRunShop(
   return setShopPriceLevel(state, content, wanted) ?? state;
 }
 
-/** The account manager's rule: take proposals on while there is room. */
+/**
+ * Whether the workshop is ready for a job: a bay already printing that object
+ * in that material, or enough of the filament in stock to print all of it. The
+ * account manager takes on only these — an agent that signs jobs nobody can
+ * print just fills the board with orders that run out.
+ */
+function readyFor(state: GameState, content: Content, templateId: string): boolean {
+  const template = commissionTemplate(content, templateId);
+  const object = content.objects.find((candidate) => candidate.id === template?.objectId);
+  if (template === undefined || object === undefined) {
+    return false;
+  }
+  const loaded = state.slots.some(
+    (slot) =>
+      slot.printerCount > NONE &&
+      slot.materialId === template.materialId &&
+      slot.objectId === template.objectId,
+  );
+  const grams = (template.count / object.partsYield) * object.filamentGrams;
+  return loaded || (state.filamentGrams[template.materialId] ?? NONE) >= grams;
+}
+
+/** The account manager's rule: take on jobs the workshop is ready for, while there is room. */
 function fireAnswerProposals(
   state: GameState,
   content: Content,
@@ -372,7 +401,7 @@ function fireAnswerProposals(
     if (open >= limit) {
       break;
     }
-    if (offer.accepted) {
+    if (offer.accepted || !readyFor(next, content, offer.templateId)) {
       continue;
     }
     const answered = answerProposal(next, content, offer.serial, true, emit);

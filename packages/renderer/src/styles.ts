@@ -138,6 +138,12 @@ export const WORKSHOP_CSS = `
 .ph-wall-hand { stroke: #1C2330; stroke-width: 2.5; stroke-linecap: round; }
 .ph-wall-blueprint { fill: #2E5FC2; stroke: #1C2330; stroke-width: 2; }
 .ph-wall-blueprint-ink { fill: none; stroke: #cfe0ff; stroke-width: 1.5; stroke-linecap: round; }
+.ph-wall-signboard { fill: #1C2330; stroke: #ff8ab3; stroke-width: 2; }
+.ph-wall-open { font: 400 16px/1 'Tilt Warp', 'Arial Rounded MT Bold', sans-serif; fill: #ff8ab3; letter-spacing: 2px; filter: drop-shadow(0 0 4px #ff3d84); }
+.ph-wall-till { fill: #9AA6B2; stroke: #1C2330; stroke-width: 2; }
+.ph-wall-till-screen { fill: #1FA595; stroke: #1C2330; stroke-width: 1.5; }
+.ph-wall-monitor { fill: #1C2330; stroke: #6C7884; stroke-width: 2; }
+.ph-wall-monitor-glow { fill: #2E5FC2; animation: ph-bulb 2.2s ease-in-out infinite alternate; }
 .ph-wall-plate { fill: #E2AA3A; stroke: #7a5208; stroke-width: 2; }
 .ph-wall-neon { font: 400 30px/1 'Tilt Warp', 'Arial Rounded MT Bold', sans-serif; fill: #ff8ab3; letter-spacing: 4px; filter: drop-shadow(0 0 4px #ff3d84) drop-shadow(0 0 12px #ff3d84); animation: ph-neon 4s steps(1) infinite; }
 @keyframes ph-neon { 0%, 92%, 96% { opacity: 1; } 93%, 97% { opacity: 0.35; } }

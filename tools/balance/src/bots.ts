@@ -67,6 +67,7 @@ import {
   productValueOf,
   quoteFor,
   recycleScrap,
+  requirementProgress,
   resolveSlotConfig,
   sectionAvailability,
   sellParts,
@@ -356,10 +357,11 @@ function affordableAutomation(
       })
     : content.automation;
   for (const def of ordered) {
-    // The bots run the shop and answer clients themselves; the agents are
-    // for a player who would rather not.
+    // The bots run the shop and answer clients themselves; they take on
+    // staff only when the layer they are in asks for it (The Agency).
+    const agent = AGENT_BEHAVIORS.includes(def.behavior);
     if (
-      AGENT_BEHAVIORS.includes(def.behavior) ||
+      (agent && !gateWants(state, content, 'agentsHired')) ||
       automationAvailability(state, content, def.id) !== null
     ) {
       continue;
@@ -739,6 +741,26 @@ function commissionTarget(
 
 /** Parts kept back from the shelf: below this the shop stays shut. */
 const SHOP_RESERVE_PARTS = 50;
+/** While a layer's gate wants customers: the price, and the Parts kept back. */
+const SHOP_GATE_PRICE = 'fair';
+const SHOP_GATE_RESERVE_PARTS = 5;
+
+/** The current layer still asks for more of `metric` before it opens the next. */
+function gateWants(state: GameState, content: Content, metric: string): boolean {
+  const phase = content.pacing.phases.find((candidate) => candidate.id === state.phaseId);
+  const wanted = phase?.advanceWhen.filter((requirement) => requirement.metric === metric) ?? [];
+  return wanted.length > 0 && requirementProgress(state, content, wanted).some((req) => !req.met);
+}
+
+/** Agents on staff doing a given job. */
+function countAgentsOf(state: GameState, content: Content, behavior: string): number {
+  return content.automation.filter(
+    (def) =>
+      def.persona !== undefined &&
+      def.behavior === behavior &&
+      (state.automation[def.id]?.level ?? 0) > 0,
+  ).length;
+}
 
 /**
  * Run the shop: open at the bot's price, and shut it while saving Parts for
@@ -750,12 +772,21 @@ function shopMove(
   curves: CurveRegistry,
   price: string | null,
 ): Action | null {
-  if (
-    price === null ||
-    !isShopOpen(state, content) ||
-    !phaseAllows(state, content, 'SET_SHOP_PRICE')
-  ) {
+  if (!isShopOpen(state, content) || !phaseAllows(state, content, 'SET_SHOP_PRICE')) {
     return null;
+  }
+  // Once a sales agent is on staff, the shop is theirs to run.
+  if (countAgentsOf(state, content, 'run-shop') > 0) {
+    return null;
+  }
+  // The Shop layer asks for a shop that is actually open: serve its customers
+  // at a fair price, keeping a handful of Parts back for the bays.
+  if (gateWants(state, content, 'customersServed') || gateWants(state, content, 'shopReputation')) {
+    const open = state.resources.parts < SHOP_GATE_RESERVE_PARTS ? 'closed' : SHOP_GATE_PRICE;
+    return state.shop.priceLevelId === open ? null : setShopPrice(open);
+  }
+  if (price === null) {
+    return state.shop.priceLevelId === 'closed' ? null : setShopPrice('closed');
   }
   const target = savingTargetParts(state, content, curves);
   // Shut whenever Parts are being saved for anything: customers would eat
@@ -1499,7 +1530,9 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       }
       // An open commission sets the target when there is one worth chasing:
       // that is what the board is for, and it replaces chasing the margin.
-      const order = options.chaseCommissions ? commissionTarget(state, content) : null;
+      // Every player chases orders when the layer they are in asks for them.
+      const chase = options.chaseCommissions || gateWants(state, content, 'commissionsCompleted');
+      const order = chase ? commissionTarget(state, content) : null;
       const object = order?.object ?? bestObject(content, state.phaseId);
       if (object === undefined) {
         return [];
@@ -1516,7 +1549,7 @@ export function createPolicyBot(options: PolicyOptions): Bot {
 
       const moves: Action[] = [];
       const curves = curveRegistryFor(content);
-      if (options.chaseCommissions) {
+      if (chase) {
         moves.push(...answerMoves(state, content));
       }
       const shop = shopMove(state, content, curves, options.shopPrice);
@@ -1547,7 +1580,11 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       // away the whole reason the Design Studio exists (spec §5D).
       // …unless the run is saving Parts for the final fork's prerequisites:
       // Products pay in money, so a studio bay would never get it there.
-      const needParts = finalForkPrerequisite(state, content, curveRegistryFor(content)) === 'save';
+      // …or the layer asks for orders delivered and one is there to chase:
+      // an order is Parts of a kind, and a bay printing Products never makes them.
+      const needParts =
+        finalForkPrerequisite(state, content, curveRegistryFor(content)) === 'save' ||
+        (order !== null && gateWants(state, content, 'commissionsCompleted'));
       const misconfigured = bays.find(
         (slot) =>
           slot.queue.length === 0 &&
@@ -1560,9 +1597,12 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       // left to finish its batch — but the rest of the workshop is not put on
       // hold for it: a bay on auto-restart may never be idle at a check-in,
       // and waiting for it froze a sloppy player out of the studio forever.
+      // With an order to fill for the layer's gate, a player re-loads the bay
+      // mid-print rather than wait for an idle moment that may never come.
+      const urgent = order !== null && gateWants(state, content, 'commissionsCompleted');
       if (
         misconfigured !== undefined &&
-        misconfigured.run === null &&
+        (misconfigured.run === null || urgent) &&
         misconfigured.changeoverMs <= 0
       ) {
         moves.push(setSlotConfig(misconfigured.id, material.id, object.id));

@@ -245,8 +245,9 @@ function scaled(seed: number): GameState {
   return {
     ...base,
     phaseId: 'farm',
-    resources: { ...base.resources, parts: 3000 },
-    partsValue: 3000,
+    // Comfortably more than a second bay costs, so random play can afford it.
+    resources: { ...base.resources, parts: 12000 },
+    partsValue: 12000,
     printers: { [printerId]: ceiling },
     slots: [
       testSlot({

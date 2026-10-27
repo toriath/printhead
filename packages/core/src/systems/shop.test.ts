@@ -17,7 +17,7 @@ const level = (id: string) => {
 };
 /** In the bench, open at a price, with stock on the shelf. */
 function open(priceLevelId: string, parts: number): GameState {
-  const bench = { ...base, phaseId: 'bench' };
+  const bench = { ...base, phaseId: 'shop' };
   const priced = setShopPriceLevel(bench, content, priceLevelId) ?? bench;
   return {
     ...priced,
@@ -31,7 +31,7 @@ describe('the shop front', () => {
     expect(isShopOpen(base, content)).toBe(false);
     expect(base.shop.priceLevelId).toBe(shop.openingPriceLevel);
     expect(setShopPriceLevel(base, content, 'fair')).toBeNull();
-    const shut = { ...base, phaseId: 'bench', resources: { ...base.resources, parts: 50 } };
+    const shut = { ...base, phaseId: 'shop', resources: { ...base.resources, parts: 50 } };
     expect(tickShop(shut, content, 10 * 60 * MS_PER_SECOND, undefined).resources.parts).toBe(50);
   });
 

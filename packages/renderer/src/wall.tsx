@@ -8,7 +8,18 @@ import { FLOOR_WIDTH } from './geometry.js';
  * without a word or a number. Art, not rules: the ids below only pick
  * decorations, and the wall starts bare.
  */
-const WALL_ORDER = ['intro', 'bench', 'farm', 'studio', 'prestige', 'absurd', 'end', 'ended'];
+const WALL_ORDER = [
+  'intro',
+  'bench',
+  'shop',
+  'farm',
+  'studio',
+  'agency',
+  'prestige',
+  'absurd',
+  'end',
+  'ended',
+];
 
 /** How tall the wall band is, in floor units. */
 export const WALL_HEIGHT = 120;
@@ -18,6 +29,46 @@ function stage(phaseId: string): number {
 }
 
 const SPOOL_COLOURS = ['#E23673', '#1FA595', '#F5A23A', '#9AA6B2'];
+
+/** The Shop: a lit OPEN sign and a till on the counter. */
+function ShopSign(): ReactElement {
+  return (
+    <g data-wall="shop-sign" className="ph-wall-item">
+      <path d="M40 14v10M90 14v10" className="ph-wall-hand" />
+      <rect x={30} y={24} width={70} height={30} rx={6} className="ph-wall-signboard" />
+      <text x={65} y={45} textAnchor="middle" className="ph-wall-open">
+        OPEN
+      </text>
+      <rect x={40} y={74} width={46} height={26} rx={4} className="ph-wall-till" />
+      <rect x={46} y={66} width={34} height={10} rx={2} className="ph-wall-till-screen" />
+    </g>
+  );
+}
+
+/** The Agency: a staff desk with a monitor that glows. */
+function StaffDesk(): ReactElement {
+  return (
+    <g data-wall="staff-desk" className="ph-wall-item">
+      <rect
+        x={FLOOR_WIDTH - 130}
+        y={34}
+        width={52}
+        height={36}
+        rx={4}
+        className="ph-wall-monitor"
+      />
+      <rect
+        x={FLOOR_WIDTH - 125}
+        y={39}
+        width={42}
+        height={24}
+        rx={2}
+        className="ph-wall-monitor-glow"
+      />
+      <path d={`M${FLOOR_WIDTH - 104} 70v10M${FLOOR_WIDTH - 150} 84h96`} className="ph-wall-hand" />
+    </g>
+  );
+}
 
 function SpoolShelf(): ReactElement {
   return (
@@ -108,9 +159,11 @@ export function WorkshopWall({ phaseId }: { phaseId: string }): ReactElement {
     <g data-testid="workshop-wall" data-wall-stage={reached}>
       <rect x={0} y={0} width={FLOOR_WIDTH} height={WALL_HEIGHT} className="ph-wall" />
       <path d={`M0 ${WALL_HEIGHT}H${FLOOR_WIDTH}`} className="ph-wall-skirting" />
+      {reached >= stage('shop') ? <ShopSign /> : null}
       {reached >= stage('farm') ? <SpoolShelf /> : null}
       {reached >= stage('farm') ? <Clock /> : null}
       {reached >= stage('studio') ? <Blueprint /> : null}
+      {reached >= stage('agency') ? <StaffDesk /> : null}
       {reached >= stage('prestige') ? <Plates /> : null}
       {reached >= stage('absurd') ? <Neon /> : null}
       {reached >= stage('end') ? <Lights /> : null}

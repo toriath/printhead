@@ -1,5 +1,5 @@
 {
-  "unlockPhaseId": "bench",
+  "unlockPhaseId": "shop",
   "priceLevels": [
     { "id": "closed", "name": "Closed", "priceMultiplier": 0, "demandMultiplier": 0 },
     { "id": "bargain", "name": "Bargain", "priceMultiplier": 1.2, "demandMultiplier": 1.7 },

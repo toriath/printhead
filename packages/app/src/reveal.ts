@@ -41,8 +41,9 @@ function conditions(
   const { stats } = state;
   const phase = content.pacing.phases.findIndex((candidate) => candidate.id === state.phaseId);
   const pastIntro = phase > 0;
-  // Past the Bench, or back after a melt-down, the player has met all of this.
-  const veteran = phase > 1 || stats.prestigeCount > 0;
+  // Past the Shop, or back after a melt-down, the player has met all of this.
+  const shopIndex = content.pacing.phases.findIndex((candidate) => candidate.id === 'shop');
+  const veteran = phase > Math.max(shopIndex, 1) || stats.prestigeCount > 0;
   const restock = model.buyFilament;
   const stock = restock === null ? 0 : (visual.ledger.filamentGrams[restock.materialId] ?? 0);
   const lowStock = restock !== null && stock < restock.grams * LOW_STOCK_SHARE;

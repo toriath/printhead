@@ -25,7 +25,7 @@
     "requiresUpgradeId": "universal-fabricator",
     "materialId": "composite",
     "filamentGrams": 600,
-    "designMinutes": 32,
+    "designMinutes": 30,
     "minDesignMinutes": 20,
     "layers": 140,
     "requiredPrinters": 16,

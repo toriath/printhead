@@ -1,5 +1,5 @@
 {
-  "unlockPhaseId": "bench",
+  "unlockPhaseId": "shop",
   "boardSize": 3,
   "offerEveryDesignSeconds": 60,
   "firstOfferDesignSeconds": 5,
@@ -24,7 +24,7 @@
       "count": 12,
       "timeLimitDesignSeconds": 150,
       "rewardMultiplier": 3,
-      "unlockPhaseId": "bench"
+      "unlockPhaseId": "shop"
     },
     {
       "id": "pla-gears",
@@ -33,7 +33,7 @@
       "count": 24,
       "timeLimitDesignSeconds": 240,
       "rewardMultiplier": 3,
-      "unlockPhaseId": "bench"
+      "unlockPhaseId": "shop"
     },
     {
       "id": "petg-brackets",
@@ -42,7 +42,7 @@
       "count": 30,
       "timeLimitDesignSeconds": 240,
       "rewardMultiplier": 3.5,
-      "unlockPhaseId": "bench"
+      "unlockPhaseId": "shop"
     },
     {
       "id": "petg-gears",

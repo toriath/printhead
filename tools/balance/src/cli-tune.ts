@@ -84,11 +84,15 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
 ];
 
 /**
- * Phases with real gates — since M6 that is every phase of the arc. The
- * terminal `ended` sandbox is not one of them: nothing ends it, so its
- * "duration" is however long the player stays and there is nothing to fit.
+ * Phases with real gates: every phase of the arc, read from content so a layer
+ * grown in later is fitted with the rest. The terminal sandbox is not one of
+ * them: nothing ends it, so its "duration" is however long the player stays
+ * and there is nothing to fit.
  */
-const DEFAULT_PHASES = ['intro', 'bench', 'farm', 'studio', 'prestige', 'absurd', 'end'] as const;
+function defaultPhases(): readonly string[] {
+  const phases = loadContent(RAW_CONTENT).pacing.phases;
+  return phases.slice(0, -1).map((phase) => phase.id);
+}
 
 function parseList(argv: readonly string[], flag: string): readonly string[] | undefined {
   const index = argv.indexOf(`--${flag}`);
@@ -134,7 +138,7 @@ function main(): void {
   const argv = process.argv.slice(2);
   const write = argv.includes('--write');
   const botId = parseList(argv, 'bot')?.[0];
-  const phaseIds = parseList(argv, 'phases') ?? [...DEFAULT_PHASES];
+  const phaseIds = parseList(argv, 'phases') ?? defaultPhases();
   const knobPointers = parseList(argv, 'knobs');
   const knobs =
     knobPointers === undefined

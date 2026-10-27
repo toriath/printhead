@@ -50,7 +50,7 @@
     "name": "Second config slot",
     "available": false,
     "affordable": false,
-    "cost": 1744,
+    "cost": 2616,
     "costResource": "parts",
     "blockedReason": "locked"
   },
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 3740.8,
+      "cost": 2614.88,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 3740.8,
+      "cost": 2614.88,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -228,7 +228,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -239,7 +239,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -261,7 +261,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 3646.5,
+      "cost": 9090.72,
       "costResource": "money"
     },
     {
@@ -272,7 +272,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "money"
     },
     {
@@ -283,7 +283,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -294,7 +294,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -305,7 +305,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "money"
     },
     {
@@ -316,7 +316,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 410,
+      "cost": 615,
       "costResource": "parts"
     },
     {
@@ -375,7 +375,7 @@
       "threshold": 40,
       "available": false,
       "affordable": false,
-      "cost": 405,
+      "cost": 919,
       "costResource": "parts",
       "agent": null
     },
@@ -389,7 +389,7 @@
       "threshold": 400,
       "available": false,
       "affordable": false,
-      "cost": 405,
+      "cost": 919,
       "costResource": "parts",
       "agent": null
     },
@@ -403,7 +403,7 @@
       "threshold": 20,
       "available": false,
       "affordable": false,
-      "cost": 405,
+      "cost": 919,
       "costResource": "parts",
       "agent": null
     },
@@ -417,7 +417,7 @@
       "threshold": 250,
       "available": false,
       "affordable": false,
-      "cost": 404.747,
+      "cost": 918.513,
       "costResource": "money",
       "agent": null
     },
@@ -431,7 +431,7 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 405,
+      "cost": 919,
       "costResource": "parts",
       "agent": null
     },
@@ -442,10 +442,10 @@
       "level": 0,
       "installed": false,
       "enabled": false,
-      "threshold": 60,
+      "threshold": 15,
       "available": false,
       "affordable": false,
-      "cost": 404.747,
+      "cost": 918.513,
       "costResource": "money",
       "agent": {
         "name": "Pitch",
@@ -462,7 +462,7 @@
       "threshold": 2,
       "available": false,
       "affordable": false,
-      "cost": 404.747,
+      "cost": 918.513,
       "costResource": "money",
       "agent": {
         "name": "Deal",
@@ -495,7 +495,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 174.024,
+        "cost": 205.348,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -511,7 +511,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 174.024,
+        "cost": 205.348,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -527,7 +527,7 @@
         "capstone": true,
         "available": false,
         "affordable": false,
-        "cost": 174.024,
+        "cost": 205.348,
         "costResource": "money",
         "blockedReason": "locked"
       }
@@ -603,7 +603,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1920000,
+    "totalMs": 1800000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,

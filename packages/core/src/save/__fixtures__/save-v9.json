@@ -3,30 +3,30 @@
   "savedAtMs": 1723420800000,
   "state": {
     "saveVersion": 9,
-    "simTimeMs": 21236000,
-    "tickCount": 212360,
+    "simTimeMs": 26696000,
+    "tickCount": 266960,
     "phaseId": "end",
-    "phaseEnteredAtMs": 20994100,
+    "phaseEnteredAtMs": 26452400,
     "rng": {
       "seed": 7,
       "count": 0
     },
     "resources": {
-      "parts": 53616,
-      "scrap": 450,
-      "money": 1358050.7608271667,
+      "parts": 53014.6,
+      "scrap": 286,
+      "money": 1260840.3779213473,
       "designs": 3,
       "products": 0,
-      "plates": 51.0496
+      "plates": 47.2896
     },
-    "partsValue": 1553.2571507909915,
-    "scrapValue": 22.499999999999993,
+    "partsValue": 1229.5187179214806,
+    "scrapValue": 14.299999999999988,
     "productsValue": 0,
     "filamentGrams": {
-      "pla": 4,
-      "petg": 2000,
-      "resin": 1000,
-      "metal": 101,
+      "pla": 0,
+      "petg": 250,
+      "resin": 1500,
+      "metal": 835,
       "composite": 660
     },
     "printers": {
@@ -48,21 +48,21 @@
         "level": 1,
         "enabled": true,
         "threshold": 250,
-        "cooldownMs": 14000
+        "cooldownMs": 29000
       }
     },
     "market": {
       "petg": {
-        "stockGrams": 4631.999999999425,
-        "pressure": -0.340196664619427
+        "stockGrams": 6769.999999999072,
+        "pressure": 0.029867038159257165
       },
       "resin": {
-        "stockGrams": 6500,
-        "pressure": 0.010492984457276085
+        "stockGrams": 4921.999999999616,
+        "pressure": -0.26732808827279086
       },
       "metal": {
-        "stockGrams": 800,
-        "pressure": 0.050926289671691126
+        "stockGrams": 1.1333333333267368,
+        "pressure": -0.13705170554632518
       }
     },
     "slots": [
@@ -74,12 +74,12 @@
         "printerCount": 18,
         "autoRestart": false,
         "run": null,
-        "failureCharge": 0.04800000000000204,
+        "failureCharge": 0.18720000000000667,
         "changeoverMs": 0,
         "queue": [],
         "queueIndex": 0,
         "queueBatches": 0,
-        "perfectCharge": 0.5000000000000001,
+        "perfectCharge": 0.4999999999999999,
         "overclockMs": 0,
         "overclockCooldownMs": 0
       }
@@ -107,11 +107,11 @@
     "selfAssembling": true,
     "factoryProgress": 0.03333333333330322,
     "fabricator": {
-      "sections": 3,
+      "sections": 2,
       "sectionRun": null,
       "run": {
-        "remainingMs": 1320000,
-        "totalMs": 1380000
+        "remainingMs": 1380000,
+        "totalMs": 1440000
       },
       "completedAtMs": null
     },
@@ -120,28 +120,21 @@
       "modifierIds": []
     },
     "commissions": {
-      "open": [
-        {
-          "serial": 18,
-          "templateId": "pla-gears",
-          "clientId": "studio",
-          "delivered": 0,
-          "remainingMs": 44000,
-          "accepted": false
-        }
-      ],
-      "nextOfferMs": 59000,
-      "issued": 18,
+      "open": [],
+      "nextOfferMs": 14000,
+      "issued": 14,
       "loyalty": {
-        "cafe": 54,
-        "studio": 63,
-        "theatre": 8,
-        "museum": 2
+        "cafe": 76,
+        "studio": 99,
+        "theatre": 5,
+        "museum": 12,
+        "garage": 1,
+        "ministry": 1
       }
     },
     "shop": {
       "priceLevelId": "closed",
-      "reputation": 0.5,
+      "reputation": 1,
       "nextCustomerMs": 14000,
       "visits": 0
     },
@@ -158,22 +151,22 @@
       "cooldownMs": 0
     },
     "stats": {
-      "printsCompleted": 202,
-      "printsFailed": 50,
-      "partsProduced": 1574,
+      "printsCompleted": 517,
+      "printsFailed": 143,
+      "partsProduced": 746.6,
       "partsSold": 0,
-      "moneyEarned": 368919.05393421813,
-      "filamentPurchasedGrams": 11541,
-      "filamentSoldGrams": 2500,
-      "scrapProducedGrams": 450,
+      "moneyEarned": 269977.82722989324,
+      "filamentPurchasedGrams": 7565,
+      "filamentSoldGrams": 1000,
+      "scrapProducedGrams": 286,
       "scrapRecycledGrams": 0,
       "productsProduced": 0,
       "productsSold": 0,
-      "moneyPrinted": 1868721.6718995112,
-      "prestigeCount": 8,
-      "platesEarned": 85,
-      "commissionsCompleted": 127,
-      "customersServed": 0,
+      "moneyPrinted": 1975518.8871238797,
+      "prestigeCount": 7,
+      "platesEarned": 81,
+      "commissionsCompleted": 194,
+      "customersServed": 520,
       "customersMissed": 0
     }
   }

@@ -120,6 +120,14 @@ export const MetricSchema = z.enum([
    */
   'platesEarned',
   'moneyPrintersInstalled',
+  /** Shop customers who left with Parts (The Shop layer). */
+  'customersServed',
+  /** Client orders delivered, across the game. */
+  'commissionsCompleted',
+  /** The shop's reputation, 0..1. */
+  'shopReputation',
+  /** Agents on staff: automations with a persona, installed (The Agency layer). */
+  'agentsHired',
   /** Levels installed in the Endgame Tree (spec §5E) — the Plate sink. */
   'endgameNodes',
   /** Fabricator sections pre-printed (spec §7.3). */

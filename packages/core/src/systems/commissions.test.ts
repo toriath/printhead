@@ -27,7 +27,7 @@ function acceptAll(state: GameState): GameState {
 const content = TEST_CONTENT;
 const base = createInitialState(content, { seed: 7 });
 const board = content.commissions;
-const inBench: GameState = { ...base, phaseId: 'bench' };
+const inBench: GameState = { ...base, phaseId: 'shop' };
 const firstMs = board.firstOfferDesignSeconds * MS_PER_SECOND;
 
 describe('the commission board', () => {
