@@ -24,6 +24,7 @@ describe('bundled content', () => {
     expect([...CONTENT_FILE_NAMES].sort()).toEqual(
       [
         'automation',
+        'commissions',
         'curves',
         'designs',
         'failure',

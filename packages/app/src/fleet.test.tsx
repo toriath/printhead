@@ -57,9 +57,16 @@ describe('FleetPanel', () => {
 
   it('walks a machine to the next bay with room', () => {
     const { store, dispatched } = stubStore();
-    render(<FleetPanel store={store} visual={rack} />);
-    const from = rack.slots[0];
-    const to = rack.slots[1];
+    // Leave room in the second bay, whatever the fixture's fleet looks like.
+    const roomy: VisualState = {
+      ...rack,
+      slots: rack.slots.map((slot, index) =>
+        index === 1 ? { ...slot, printerCount: slot.printerCapacity - 1 } : slot,
+      ),
+    };
+    render(<FleetPanel store={store} visual={roomy} />);
+    const from = roomy.slots[0];
+    const to = roomy.slots[1];
     if (from === undefined || to === undefined) {
       throw new Error('the rack fixture must have two bays');
     }

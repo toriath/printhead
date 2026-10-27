@@ -7,6 +7,7 @@ import {
   assemblePrinter,
   createSim,
   testSlot,
+  withBenchWork,
 } from '../state/__fixtures__/sim.js';
 import { setSlotConfig, startPrint, tick } from '../state/actions.js';
 import { type GameState, type SlotState, createInitialState } from '../state/game-state.js';
@@ -73,7 +74,8 @@ describe('toVisualState', () => {
         nextPieceId: pieces[0]?.id,
         nextPieceName: pieces[0]?.name,
         cooldownMs: (pieces[0]?.attachDesignSeconds ?? 0) * 1000,
-        ready: false,
+        // The shipped intro has no bench work: the first piece is ready at once.
+        ready: (pieces[0]?.attachDesignSeconds ?? 0) === 0,
         selfAssembling: false,
         progress: 0,
         complete: false,
@@ -116,6 +118,8 @@ describe('toVisualState', () => {
         newGamePlusRun: 0,
         modifiers: toVisualState(state, content).ending.modifiers,
       },
+      // The commission board opens in the bench; a fresh save has none yet.
+      commissions: { open: false, offers: [], completed: 0 },
     });
   });
 
@@ -167,10 +171,11 @@ describe('toVisualState', () => {
   });
 
   it('reports assembly progress while the intro printer is being built', () => {
-    const sim = createSim().tickSeconds(pieces[0]?.attachDesignSeconds ?? 0);
-    expect(toVisualState(sim.state, content).assembly.ready).toBe(true);
+    const timed = withBenchWork(content, 30);
+    const sim = createSim(timed).tickSeconds(30);
+    expect(toVisualState(sim.state, timed).assembly.ready).toBe(true);
     sim.do({ type: 'ATTACH_PIECE', pieceId: pieces[0]?.id ?? '' });
-    const visual = toVisualState(sim.state, content);
+    const visual = toVisualState(sim.state, timed);
     expect(visual.assembly.attachedPieceIds).toEqual([pieces[0]?.id]);
     expect(visual.assembly.nextPieceId).toBe(pieces[1]?.id);
     expect(visual.assembly.progress).toBeCloseTo(1 / pieces.length);

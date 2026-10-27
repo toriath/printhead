@@ -1,8 +1,8 @@
 {
-  "version": 8,
+  "version": 9,
   "phaseId": "prestige",
   "phaseName": "The Melt-downs",
-  "simTimeMs": 11560000,
+  "simTimeMs": 16010000,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
@@ -11,82 +11,22 @@
       "index": 0,
       "materialId": "pla",
       "materialName": "PLA",
-      "objectId": "bracket",
-      "objectName": "Bracket",
+      "objectId": "gearset",
+      "objectName": "Gear set",
       "output": "parts",
       "designId": null,
       "machineTier": 3,
-      "printerCount": 7,
+      "printerCount": 8,
       "printerCapacity": 8,
       "phaseOffset": 0,
       "occupied": true,
       "running": true,
-      "progress": 0.2848766666662762,
-      "batch": 7,
+      "progress": 0.15105155555535607,
+      "batch": 8,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.9296000000000274,
-      "perfectCharge": 0.2999999999999999,
-      "overclock": {
-        "active": false,
-        "remaining": 0,
-        "cooldown": 0.75,
-        "ready": false
-      },
-      "queue": [],
-      "queueBatches": 0
-    },
-    {
-      "slotId": "slot-2",
-      "index": 1,
-      "materialId": "pla",
-      "materialName": "PLA",
-      "objectId": "bracket",
-      "objectName": "Bracket",
-      "output": "parts",
-      "designId": null,
-      "machineTier": 3,
-      "printerCount": 7,
-      "printerCapacity": 8,
-      "phaseOffset": 0.3333333333333333,
-      "occupied": true,
-      "running": true,
-      "progress": 0.04948833333294441,
-      "batch": 7,
-      "changingOver": false,
-      "changeoverProgress": 0,
-      "failureRisk": 0.21280000000002583,
-      "perfectCharge": 0.4,
-      "overclock": {
-        "active": false,
-        "remaining": 0,
-        "cooldown": 0.5,
-        "ready": false
-      },
-      "queue": [],
-      "queueBatches": 0
-    },
-    {
-      "slotId": "slot-3",
-      "index": 2,
-      "materialId": "resin",
-      "materialName": "Resin (SLA)",
-      "objectId": "money-plate",
-      "objectName": "Money plate",
-      "output": "products",
-      "designId": "money-plate",
-      "machineTier": 3,
-      "printerCount": 6,
-      "printerCapacity": 8,
-      "phaseOffset": 0.6666666666666666,
-      "occupied": true,
-      "running": true,
-      "progress": 0.07386055833333201,
-      "batch": 6,
-      "changingOver": false,
-      "changeoverProgress": 0,
-      "failureRisk": 0.8064000000000008,
-      "perfectCharge": 0.1,
+      "failureRisk": 0.921600000000009,
+      "perfectCharge": 4.440892098500626e-16,
       "overclock": {
         "active": false,
         "remaining": 0,
@@ -95,11 +35,71 @@
       },
       "queue": [],
       "queueBatches": 0
+    },
+    {
+      "slotId": "slot-2",
+      "index": 1,
+      "materialId": "resin",
+      "materialName": "Resin (SLA)",
+      "objectId": "money-plate",
+      "objectName": "Money plate",
+      "output": "products",
+      "designId": "money-plate",
+      "machineTier": 3,
+      "printerCount": 8,
+      "printerCapacity": 8,
+      "phaseOffset": 0.3333333333333333,
+      "occupied": true,
+      "running": true,
+      "progress": 0.07675745416666604,
+      "batch": 8,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0.8064000000000008,
+      "perfectCharge": 0.2,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0,
+        "ready": true
+      },
+      "queue": [],
+      "queueBatches": 0
+    },
+    {
+      "slotId": "slot-3",
+      "index": 2,
+      "materialId": "pla",
+      "materialName": "PLA",
+      "objectId": "gearset",
+      "objectName": "Gear set",
+      "output": "parts",
+      "designId": null,
+      "machineTier": 3,
+      "printerCount": 8,
+      "printerCapacity": 8,
+      "phaseOffset": 0.6666666666666666,
+      "occupied": true,
+      "running": true,
+      "progress": 0.7006066666666504,
+      "batch": 8,
+      "changingOver": false,
+      "changeoverProgress": 0,
+      "failureRisk": 0.155200000000001,
+      "perfectCharge": 0.8,
+      "overclock": {
+        "active": false,
+        "remaining": 0,
+        "cooldown": 0.16666666666666666,
+        "ready": false
+      },
+      "queue": [],
+      "queueBatches": 0
     }
   ],
   "fleet": {
-    "printers": 20,
-    "assigned": 20,
+    "printers": 24,
+    "assigned": 24,
     "slotsOwned": 3,
     "slotsActive": 3,
     "slotsMaximum": 4,
@@ -110,7 +110,7 @@
     "name": "Fourth config slot",
     "available": false,
     "affordable": false,
-    "cost": 4844,
+    "cost": 10898,
     "costResource": "parts",
     "blockedReason": "locked"
   },
@@ -123,7 +123,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -135,7 +135,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -160,15 +160,15 @@
     "complete": true
   },
   "ledger": {
-    "parts": 1237.9500000000005,
-    "money": 562101.6125191122,
+    "parts": 416,
+    "money": 548951.4886184416,
     "scrap": 18,
     "products": 0,
     "plates": 0,
     "filamentGrams": {
-      "pla": 7115.879999999995,
+      "pla": 15055.799999999992,
       "petg": 4000,
-      "resin": 7200,
+      "resin": 10279,
       "metal": 0,
       "composite": 0
     }
@@ -184,7 +184,7 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 7115.879999999995
+      "heldGrams": 15055.799999999992
     },
     {
       "materialId": "petg",
@@ -192,10 +192,10 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.0628930272821989,
-      "sellPerGram": 0.058270389776957275,
-      "priceMultiplier": 0.7861628410274861,
-      "stockGrams": 5129.999999999654,
+      "buyPerGram": 0.0785771557089091,
+      "sellPerGram": 0.07280173476430428,
+      "priceMultiplier": 0.9822144463613637,
+      "stockGrams": 6000,
       "heldGrams": 4000
     },
     {
@@ -204,11 +204,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.47273937297997487,
-      "sellPerGram": 0.4379930290659467,
-      "priceMultiplier": 1.3506839227999283,
-      "stockGrams": 2219.999999997374,
-      "heldGrams": 7200
+      "buyPerGram": 0.3577176657912362,
+      "sellPerGram": 0.33142541735558034,
+      "priceMultiplier": 1.0220504736892464,
+      "stockGrams": 10.999999999984928,
+      "heldGrams": 10279
     },
     {
       "materialId": "metal",
@@ -216,9 +216,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 1.7797259769160931,
-      "sellPerGram": 1.6489161176127602,
-      "priceMultiplier": 1.2712328406543523,
+      "buyPerGram": 1.0748685126731288,
+      "sellPerGram": 0.9958656769916538,
+      "priceMultiplier": 0.7677632233379492,
       "stockGrams": 800,
       "heldGrams": 0
     },
@@ -243,8 +243,8 @@
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
-      "cost": 269,
+      "affordable": false,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -254,8 +254,8 @@
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
-      "cost": 269,
+      "affordable": false,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -265,8 +265,8 @@
       "level": 3,
       "maxLevel": 3,
       "available": false,
-      "affordable": true,
-      "cost": 689,
+      "affordable": false,
+      "cost": 1549,
       "costResource": "parts"
     },
     {
@@ -276,8 +276,8 @@
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
-      "cost": 269,
+      "affordable": false,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -287,7 +287,7 @@
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
+      "affordable": false,
       "cost": 984,
       "costResource": "parts"
     },
@@ -310,7 +310,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 430.2694400000001,
+      "cost": 968.1075200000001,
       "costResource": "money"
     },
     {
@@ -321,7 +321,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 159300,
+      "cost": 58344,
       "costResource": "money"
     },
     {
@@ -388,10 +388,10 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 1515,
+      "threshold": 416,
       "available": false,
       "affordable": false,
-      "cost": 1512,
+      "cost": 850,
       "costResource": "parts"
     },
     {
@@ -401,10 +401,10 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 7200,
+      "threshold": 15200,
       "available": false,
       "affordable": false,
-      "cost": 1512,
+      "cost": 850,
       "costResource": "parts"
     },
     {
@@ -417,7 +417,7 @@
       "threshold": 20,
       "available": false,
       "affordable": false,
-      "cost": 1512,
+      "cost": 850,
       "costResource": "parts"
     },
     {
@@ -430,7 +430,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 1511.055,
+      "cost": 849.9687,
       "costResource": "money"
     },
     {
@@ -443,38 +443,38 @@
       "threshold": 60,
       "available": false,
       "affordable": false,
-      "cost": 1512,
+      "cost": 850,
       "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": true,
     "scrapGrams": 18,
-    "yieldGrams": 10.799999999999997,
+    "yieldGrams": 10.8,
     "yieldMaterialId": "pla"
   },
   "studio": {
     "slots": 3,
-    "freeSlots": 1,
-    "draftingDesignId": "phone-stand",
-    "draftingName": "Phone stand",
-    "draftProgress": 0.4027777777777778,
+    "freeSlots": 0,
+    "draftingDesignId": null,
+    "draftingName": null,
+    "draftProgress": 0,
     "designs": [
       {
         "designId": "phone-stand",
         "name": "Phone stand",
         "materialId": "resin",
-        "level": 0,
+        "level": 1,
         "maxLevel": 20,
-        "owned": false,
+        "owned": true,
         "levelProgress": 0,
         "productValue": 78.125,
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
-        "blockedReason": "slot-busy"
+        "blockedReason": "already-owned"
       },
       {
         "designId": "lamp-shade",
@@ -488,7 +488,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -499,12 +499,12 @@
         "level": 11,
         "maxLevel": 20,
         "owned": true,
-        "levelProgress": 0.75,
+        "levelProgress": 0.25,
         "productValue": 24864.525070448613,
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -527,7 +527,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 2,
+      "cost": 1,
       "costResource": "plates"
     },
     {
@@ -538,7 +538,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 9,
+      "cost": 8,
       "costResource": "plates"
     },
     {
@@ -580,7 +580,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 3300000,
+    "totalMs": 1860000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
@@ -594,8 +594,13 @@
     "sectionCostResource": "parts",
     "forkAllows": false,
     "slotsCommitted": true,
-    "committedPrinters": 20,
+    "committedPrinters": 24,
     "requiredPrinters": 16
+  },
+  "commissions": {
+    "open": true,
+    "offers": [],
+    "completed": 86
   },
   "ending": {
     "stage": "none",

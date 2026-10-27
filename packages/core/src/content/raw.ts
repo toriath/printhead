@@ -1,4 +1,5 @@
 import automation from '../../content/automation.json' with { type: 'json' };
+import commissions from '../../content/commissions.json' with { type: 'json' };
 import curves from '../../content/curves.json' with { type: 'json' };
 import designs from '../../content/designs.json' with { type: 'json' };
 import endgame from '../../content/endgame.json' with { type: 'json' };
@@ -32,4 +33,5 @@ export const RAW_CONTENT: RawContent = {
   failure,
   prestige,
   endgame,
+  commissions,
 };

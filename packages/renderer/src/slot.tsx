@@ -6,9 +6,12 @@ import {
   BADGE_CX,
   BADGE_CY,
   BADGE_R,
+  BASE_HEIGHT,
+  BASE_Y,
   BAY_HEIGHT,
   BAY_PADDING,
   BAY_WIDTH,
+  CHARACTER_Y,
   CORNER_RADIUS,
   LABEL_Y,
   PROGRESS_HEIGHT,
@@ -44,6 +47,11 @@ export interface SlotProps {
   readonly flourish?: FaceId;
   /** Tap the printer to overclock it, when the bay says it can. */
   readonly onPress?: (slotId: string) => void;
+  /**
+   * Drawn in its bay's box (the rack) or standing free on the floor, where
+   * the box is only an invisible hit area and a shadow grounds the machine.
+   */
+  readonly framed?: boolean;
 }
 
 const SINGLE = 1;
@@ -222,6 +230,7 @@ export function Slot({
   goliath = false,
   flourish,
   onPress,
+  framed = true,
 }: SlotProps): ReactElement {
   const assembling = assemblyParts !== undefined;
   // A machine the player owns is always on screen, configured or not.
@@ -245,7 +254,12 @@ export function Slot({
       data-slot-index={slot.index}
       data-output={slot.output}
       data-overclocked={slot.overclock.active}
-      className={pressable ? 'ph-slot ph-slot--pressable' : 'ph-slot'}
+      className={[
+        'ph-slot',
+        pressable ? 'ph-slot--pressable' : '',
+        // A good print makes the machine hop; the shell says when via its face.
+        flourish === 'happy' || flourish === 'wow' ? 'ph-slot--celebrate' : '',
+      ].join(' ')}
       {...(onPress === undefined
         ? {}
         : {
@@ -259,13 +273,24 @@ export function Slot({
     >
       <rect
         data-testid={`bay-${slot.slotId}`}
-        className={drawMachine ? 'ph-bay' : 'ph-bay ph-bay--empty'}
+        className={
+          framed ? (drawMachine ? 'ph-bay' : 'ph-bay ph-bay--empty') : 'ph-bay ph-bay--floor'
+        }
         x={0}
         y={0}
         width={BAY_WIDTH}
         height={BAY_HEIGHT}
         rx={CORNER_RADIUS * 2}
       />
+      {framed ? null : (
+        <ellipse
+          className="ph-floor-shadow"
+          cx={BAY_WIDTH / 2}
+          cy={BASE_Y + BASE_HEIGHT + CHARACTER_Y * 2}
+          rx={BAY_WIDTH * 0.42}
+          ry={BAY_WIDTH * 0.07}
+        />
+      )}
       {drawMachine ? (
         <Printer
           machineTier={slot.machineTier}
@@ -294,7 +319,8 @@ export function Slot({
       {slot.occupied ? <RiskMeter risk={slot.failureRisk} /> : null}
       {slot.occupied ? <PerfectMeter charge={slot.perfectCharge} /> : null}
       <OverclockRing slot={slot} />
-      <CountBadge count={slot.printerCount} />
+      {/* On the floor the crew stands there in person; the badge is the rack's. */}
+      {framed ? <CountBadge count={slot.printerCount} /> : null}
       <text
         data-testid={`label-${slot.slotId}`}
         className={slot.occupied ? 'ph-label' : 'ph-label ph-label--dim'}

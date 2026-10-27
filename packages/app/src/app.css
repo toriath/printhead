@@ -409,12 +409,338 @@ body {
   }
 }
 
+/* --- the guide: what to do now, what opens the next layer ---------------- */
+.guide {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+}
+
+.guide__step {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font: 600 16px / 22px var(--font-sans);
+}
+
+.guide__now {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pla);
+  color: var(--on-pla);
+  font: 700 11px / 16px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guide__gate {
+  display: grid;
+  gap: 6px;
+}
+
+.guide__gate-title {
+  font: 700 11px / 14px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.guide__reqs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.guide__req {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--plate-sunken);
+  font-size: 13px;
+}
+
+.guide__req-name,
+.guide__req-value {
+  position: relative;
+  z-index: 1;
+}
+
+.guide__req-value {
+  font: 500 12px / 18px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.guide__req-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--pla);
+}
+
+.guide__req.is-met {
+  background: var(--pla-soft);
+}
+
+.guide__req.is-met .guide__req-value {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* --- the bay card --------------------------------------------------------- */
+.bay-card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+}
+
+.bay-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bay-card__title {
+  font: 400 19px / 24px var(--font-display);
+}
+
+.bay-card__status {
+  font: 500 12px / 16px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.bay-card__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--plate-sunken);
+}
+
+.bay-card__tab {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.bay-card__tab[aria-selected="true"] {
+  background: var(--plate-raised);
+  color: var(--ink);
+}
+
+.bay-card__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.bay-card__run > button {
+  flex: 1 1 140px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 120px;
+}
+
+.field__label {
+  font: 700 11px / 14px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.field select {
+  width: 100%;
+}
+
+/* --- the action bar: sticky on phones ------------------------------------- */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0)));
+    padding: 10px max(16px, env(safe-area-inset-left, 0))
+      calc(10px + env(safe-area-inset-bottom, 0));
+    background: var(--plate-ground);
+    border-top: 1px solid var(--plate-line);
+    width: auto;
+  }
+  .action-bar > button {
+    flex: 1 1 140px;
+  }
+}
+
+/* The control the guide points at. */
+.is-next:not(:disabled) {
+  animation: next-ring 1.4s ease-in-out infinite;
+}
+
+@keyframes next-ring {
+  0%,
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: 2px;
+  }
+  50% {
+    outline: 3px solid var(--blueprint);
+    outline-offset: 4px;
+  }
+}
+
+/* --- the commission board ------------------------------------------------- */
+.board__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.board__count {
+  font: 500 12px / 16px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.board__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.order {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--plate-sunken);
+}
+
+.order__who {
+  font: 700 11px / 14px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.order__what {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 15px / 20px var(--font-sans);
+}
+
+.spool {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid var(--plate-raised);
+  box-shadow: 0 0 0 1.5px var(--plate-line-strong);
+  background: var(--pla);
+}
+
+.spool--petg {
+  background: #12897c;
+}
+.spool--resin {
+  background: #e07b12;
+}
+.spool--metal {
+  background: #5b6773;
+}
+.spool--composite {
+  background: #2e333b;
+}
+
+.order__bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--plate-line);
+  overflow: hidden;
+}
+
+.order__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+
+.order__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: 500 12px / 16px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.order__time.is-urgent {
+  color: var(--fail);
+}
+
+.order__reward {
+  color: var(--money);
+}
+
+.order__go {
+  min-height: 38px;
+}
+
+.order__go.is-loaded:disabled {
+  background: var(--pla-soft);
+  color: var(--pla-text);
+  border-color: transparent;
+}
+
+.juice__pop--order {
+  background: var(--money);
+  color: #ffffff;
+  font-size: 15px;
+  animation: pop-perfect 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
 /* --- controls: keycaps --------------------------------------------------- */
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
+}
+
+.controls__attach {
+  width: 100%;
 }
 
 .controls__config {
@@ -569,6 +895,8 @@ button:disabled {
 }
 
 .panel__row button {
+  flex: none;
+  white-space: nowrap;
   min-height: 38px;
   padding: 0 12px;
   font: 500 13px / 18px var(--font-mono);
@@ -581,6 +909,12 @@ button:disabled {
 .panel__note {
   color: var(--ink-muted);
   font-size: 13px;
+}
+
+.panel__desc {
+  display: block;
+  font: 400 12px / 16px var(--font-sans);
+  color: var(--ink-muted);
 }
 
 .panel__actions {
@@ -646,12 +980,1797 @@ button:disabled {
   .stage.is-shake-a,
   .stage.is-shake-b,
   .layer-track__layer.is-now,
-  .btn-overclock--active {
+  .btn-overclock--active,
+  .is-next {
     animation: none;
   }
   .juice__pop,
   .layer-banner {
     animation-duration: 0.01s;
     animation-delay: 1.2s;
+  }
+}
+
+/* ==========================================================================
+   Desktop shell: top bar, two sidebars, the workshop in the middle, a footer.
+   The game is played on desktop; the layout fills the window and each column
+   scrolls on its own, so the workshop never scrolls out of view.
+   ========================================================================== */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.shell {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 400px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "top top top"
+    "left center right"
+    "foot foot foot";
+}
+
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 20px;
+  background: var(--plate-raised);
+  border-bottom: 1px solid var(--plate-line);
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar__brand h1 {
+  margin: 0;
+  font: 400 24px / 28px var(--font-display);
+}
+
+.topbar__phase {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-left: 20px;
+  border-left: 1px solid var(--plate-line);
+}
+
+.topbar .hud {
+  margin-left: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar .hud__ledger {
+  flex-wrap: nowrap;
+}
+
+.topbar .stat {
+  padding: 6px 12px;
+}
+
+.topbar .stat:first-child dd {
+  font-size: 18px;
+  line-height: 22px;
+}
+
+.topbar .hud__status {
+  display: none;
+}
+
+.sidebar {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--plate-ground);
+}
+
+.sidebar--left {
+  grid-area: left;
+  border-right: 1px solid var(--plate-line);
+}
+
+.sidebar--right {
+  grid-area: right;
+  border-left: 1px solid var(--plate-line);
+  padding: 0;
+}
+
+.center {
+  grid-area: center;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.center .stage {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+}
+
+.center .stage .printhead-workshop {
+  max-height: 100%;
+}
+
+.center__hint {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.footer {
+  grid-area: foot;
+  padding: 10px 20px;
+  background: var(--plate-raised);
+  border-top: 1px solid var(--plate-line);
+}
+
+.footer .action-bar {
+  justify-content: center;
+}
+
+.footer .action-bar > button {
+  flex: 0 1 auto;
+  min-width: 180px;
+}
+
+/* The left sidebar is narrow: the bay card stacks its fields. */
+.sidebar--left .controls {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sidebar--left .bay-card__row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sidebar--left .field {
+  flex: none;
+}
+
+.sidebar--left .board__list {
+  grid-template-columns: 1fr;
+}
+
+/* --- the right sidebar's tabs ------------------------------------------- */
+.tabs {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.tabs__bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px 12px 8px;
+  background: var(--plate-ground);
+  border-bottom: 1px solid var(--plate-line);
+}
+
+.tabs__tab {
+  min-height: 34px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabs__tab[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--plate-raised);
+}
+
+.tabs__badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pla);
+  color: var(--on-pla);
+  font: 700 11px / 18px var(--font-mono);
+  text-align: center;
+}
+
+.tabs__panel {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tabs__panel .panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.tabs__panel .panel + .panel {
+  padding-top: 14px;
+  border-top: 1px solid var(--plate-line);
+}
+
+.tabs__panel .panel h2 {
+  display: none;
+}
+
+/* The fanfare sits over the workshop column rather than the whole window. */
+.layer-banner {
+  top: 90px;
+}
+
+.tabs__panel[hidden] {
+  display: none;
+}
+
+.sidebar--left .bay-card__run > button {
+  flex: none;
+}
+
+.center .stage {
+  padding: 20px;
+}
+
+.center .stage .printhead-workshop {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+}
+
+/* --- pickers: chips instead of dropdowns -------------------------------- */
+.picker {
+  display: grid;
+  gap: 6px;
+}
+
+.picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 34px;
+  margin: 0;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid var(--plate-line);
+  box-shadow: none;
+  background: var(--plate-sunken);
+  color: var(--ink-muted);
+  font: 600 13px / 16px var(--font-sans);
+}
+
+.chip:hover {
+  border-color: var(--plate-line-strong);
+  color: var(--ink);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--plate-raised);
+}
+
+.bay-card__rota {
+  justify-self: start;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+/* --- keycaps: buttons with a shortcut name it ---------------------------- */
+button[data-key]::after {
+  content: attr(data-key);
+  margin-left: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  font: 600 10px / 1 var(--font-mono);
+  opacity: 0.55;
+  vertical-align: middle;
+}
+
+kbd {
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--plate-line-strong);
+  font: 600 10px / 14px var(--font-mono);
+}
+
+/* --- the workshop log under the stage ------------------------------------ */
+.center__foot {
+  display: grid;
+  gap: 8px;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 10px 14px;
+  min-height: 92px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  border-radius: 12px;
+  background: var(--plate-sunken);
+  font: 500 12px / 18px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.log__entry:first-child {
+  color: var(--ink);
+  animation: log-in 300ms ease-out;
+}
+
+.log__entry::before {
+  content: "› ";
+  opacity: 0.5;
+}
+
+.log__entry--perfect {
+  color: var(--gold-text);
+}
+.log__entry--fail {
+  color: var(--fail);
+}
+.log__entry--order {
+  color: var(--money);
+}
+.log__entry--layer {
+  color: var(--pla-text);
+  font-weight: 700;
+}
+.log__entry--empty {
+  font-style: italic;
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --- modals -------------------------------------------------------------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: rgb(10 14 20 / 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.modal__card {
+  position: relative;
+  width: min(520px, calc(100vw - 48px));
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  border-radius: 20px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+  animation: modal-in 180ms ease-out;
+}
+
+.modal__title {
+  margin: 0;
+  font: 400 26px / 30px var(--font-display);
+}
+
+.modal__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.modal__label {
+  margin: 0 0 6px;
+  font: 700 11px / 14px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.modal__list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* The dev Editor's toggle sits bottom-right; keep the footer clear of it. */
+.footer {
+  padding-right: 120px;
+}
+
+/* --- the top bar holds its line however big the ledger gets ------------- */
+.topbar {
+  gap: 16px;
+  min-width: 0;
+}
+
+.topbar__phase,
+.app__phase-name,
+.topbar .stat dd {
+  white-space: nowrap;
+}
+
+.topbar .hud {
+  min-width: 0;
+}
+
+.topbar .hud__ledger {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topbar .stat {
+  padding: 5px 10px;
+}
+
+.topbar .stat dd {
+  font-size: 13px;
+}
+
+.stat--filament dd {
+  display: flex;
+  gap: 10px;
+}
+
+/* Requirement chips keep "12 / 30" on one line. */
+.guide__req-value {
+  white-space: nowrap;
+}
+
+/* A narrower right column leaves the workshop room to breathe. */
+.shell {
+  grid-template-columns: 320px minmax(0, 1fr) 380px;
+}
+
+.topbar .stat {
+  flex: none;
+}
+
+/* --- the spool shelf ------------------------------------------------------ */
+.shelf {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+}
+
+.shelf .stat {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.shelf .stat--filament dd {
+  margin: 6px 0 0;
+  display: grid;
+  gap: 4px;
+}
+
+.shelf .stock {
+  font: 500 13px / 18px var(--font-sans);
+}
+
+.shelf .stock__grams {
+  font: 600 12px / 18px var(--font-mono);
+}
+
+.shelf .stat,
+.shelf .stat--filament dd,
+.shelf .stock {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+}
+
+.shelf .stock {
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip .spool {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+/* --- the assembly bench (intro) ----------------------------------------- */
+.bench {
+  flex: 1 1 auto;
+  min-height: 360px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr);
+  gap: 16px;
+}
+
+.bench__printer {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  padding: 20px;
+  border-radius: 20px;
+  border: 2px dashed transparent;
+  background: radial-gradient(circle at 50% 60%, rgb(255 255 255 / 0.05), transparent 60%),
+    var(--plate-sunken);
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.bench__printer.is-dragging {
+  border-color: var(--plate-line-strong);
+}
+
+.bench__printer.is-over {
+  border-color: var(--pla);
+  background-color: color-mix(in srgb, var(--pla) 10%, var(--plate-sunken));
+}
+
+.bench__svg {
+  width: min(100%, 380px);
+  height: auto;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.bench__svg.is-snap-a {
+  animation: bench-snap-a 420ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.bench__svg.is-snap-b {
+  animation: bench-snap-b 420ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes bench-snap-b {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.06, 0.95);
+  }
+  60% {
+    transform: scale(0.98, 1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes bench-snap-a {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.06, 0.95);
+  }
+  60% {
+    transform: scale(0.98, 1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bench__ghost {
+  opacity: 0.16;
+  transition: opacity 150ms;
+}
+
+.is-dragging .bench__ghost {
+  opacity: 0.4;
+  animation: ghost-pulse 900ms ease-in-out infinite alternate;
+}
+
+.is-over .bench__ghost {
+  opacity: 0.7;
+}
+
+@keyframes ghost-pulse {
+  to {
+    opacity: 0.15;
+  }
+}
+
+.bench__caption {
+  margin: 0;
+  font: 400 18px / 24px var(--font-display);
+  color: var(--ink-muted);
+}
+
+.is-over .bench__caption {
+  color: var(--pla-text);
+}
+
+.bench__click {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  font: 400 34px / 1 var(--font-display);
+  color: var(--pla-text);
+  pointer-events: none;
+  animation-name: bench-click;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes bench-click {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(0.7) rotate(-6deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -40px) scale(1.15) rotate(4deg);
+  }
+}
+
+.bench__tray {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--plate-raised);
+  border: 1px solid var(--plate-line);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.bench__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bench__count {
+  font: 600 12px / 16px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.bench__pieces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.piece__card {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 6px 12px 6px 6px;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid var(--plate-line);
+  box-shadow: none;
+  background: var(--plate-sunken);
+  color: var(--ink);
+  touch-action: none;
+  user-select: none;
+}
+
+.piece__art {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--plate-raised);
+}
+
+.piece__name {
+  font: 600 14px / 18px var(--font-sans);
+}
+
+.piece__state {
+  font: 500 11px / 14px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.piece__bake {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--pla);
+  transition: width 200ms linear;
+}
+
+.piece.is-ready .piece__card {
+  cursor: grab;
+  border-color: var(--pla);
+  background: var(--plate-raised);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pla) 25%, transparent);
+  animation: piece-wiggle 1.6s ease-in-out infinite;
+}
+
+.piece.is-ready .piece__state {
+  color: var(--pla-text);
+  font-weight: 700;
+}
+
+.piece.is-ready .piece__card:disabled,
+.piece__card:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.piece.is-later .piece__card {
+  opacity: 0.45;
+}
+
+.piece.is-done .piece__card {
+  opacity: 0.55;
+  background: transparent;
+  border-style: dashed;
+}
+
+.piece.is-done .piece__name {
+  text-decoration: line-through;
+}
+
+.piece.is-lifted .piece__card {
+  opacity: 0.3;
+  animation: none;
+}
+
+@keyframes piece-wiggle {
+  0%,
+  80%,
+  100% {
+    transform: rotate(0);
+  }
+  85% {
+    transform: rotate(-1.2deg);
+  }
+  90% {
+    transform: rotate(1.2deg);
+  }
+  95% {
+    transform: rotate(-0.6deg);
+  }
+}
+
+.bench__attach {
+  justify-self: start;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+.piece-ghost {
+  position: fixed;
+  z-index: 60;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  pointer-events: none;
+  filter: drop-shadow(0 12px 18px rgb(0 0 0 / 0.35));
+  transform: rotate(-4deg) scale(1.05);
+  transition: transform 120ms;
+}
+
+.piece-ghost.is-over {
+  transform: rotate(0) scale(1.15);
+}
+
+.piece-ghost .piece__art {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+/* --- fastening: screws and the power button ----------------------------- */
+.bench__rig {
+  position: relative;
+  width: min(100%, 380px);
+}
+
+.bench__rig .bench__svg {
+  width: 100%;
+}
+
+.bench__loose {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: loose-wobble 600ms ease-in-out infinite alternate;
+}
+
+@keyframes loose-wobble {
+  from {
+    transform: translate(-1.5px, -2px) rotate(-1.5deg);
+  }
+  to {
+    transform: translate(1.5px, -1px) rotate(1.5deg);
+  }
+}
+
+.bench__screw,
+.bench__power {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  animation: screw-call 900ms ease-in-out infinite alternate;
+}
+
+.bench__screw {
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  border: 3px solid #1c2330;
+  background: linear-gradient(45deg, transparent 44%, #1c2330 44% 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #1c2330 44% 56%, transparent 56%), #c7cfd5;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pla) 45%, transparent);
+}
+
+.bench__screw.is-turned {
+  animation: screw-turn 380ms ease-out forwards;
+  box-shadow: none;
+  cursor: default;
+}
+
+@keyframes screw-call {
+  to {
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--pla) 10%, transparent);
+  }
+}
+
+@keyframes screw-turn {
+  from {
+    transform: translate(-50%, -50%) rotate(0) scale(1.15);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(270deg) scale(0.8);
+    opacity: 0.85;
+  }
+}
+
+.bench__power {
+  width: 56px;
+  height: 56px;
+  min-height: 0;
+  border: 3px solid #1c2330;
+  background: var(--pla);
+  color: var(--on-pla);
+  font: 700 26px / 1 var(--font-sans);
+  box-shadow: 0 4px 0 #9e1d4c, 0 0 0 6px color-mix(in srgb, var(--pla) 35%, transparent);
+}
+
+.bench__power:active {
+  transform: translate(-50%, calc(-50% + 3px));
+  box-shadow: 0 1px 0 #9e1d4c;
+}
+
+/* --- the intro: the bench, fullscreen ------------------------------------ */
+.intro-screen {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: radial-gradient(ellipse at 40% 45%, rgb(255 255 255 / 0.05), transparent 60%),
+    var(--plate-ground);
+}
+
+.intro-screen .bench {
+  width: min(1200px, 100%);
+  height: min(760px, 100%);
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+}
+
+.intro-screen .bench__rig {
+  width: min(100%, 560px);
+}
+
+.intro-screen .bench__printer {
+  background: transparent;
+}
+
+.piece__art--unknown {
+  display: grid;
+  place-items: center;
+  font: 400 20px / 1 var(--font-display);
+  color: var(--ink-muted);
+}
+
+/* --- the awakening ------------------------------------------------------- */
+.awaken {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  pointer-events: none;
+  background: var(--plate-ground);
+  transition: background-color 900ms ease-in-out;
+}
+
+/* The backdrop dissolves into the workshop while the machine flies home. */
+.awaken.is-flying {
+  background-color: transparent;
+}
+
+.awaken.is-flying .awaken__line {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+.awaken__svg {
+  width: min(56vh, 520px);
+  height: auto;
+  overflow: visible;
+  transform-origin: center;
+  transition: transform 1000ms cubic-bezier(0.6, 0, 0.3, 1);
+  animation: awaken-bounce 700ms cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+
+/* Until the flying machine lands, the floor's copy of it is not there yet. */
+.shell.is-revealed .stage [data-slot-id] {
+  opacity: 0;
+}
+
+.awaken__line {
+  margin: 0;
+  font: 400 32px / 1.2 var(--font-display);
+  color: var(--pla-text);
+  animation: awaken-line 600ms 500ms ease-out both;
+}
+
+@keyframes awaken-out {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes awaken-bounce {
+  0% {
+    transform: scale(0.9) translateY(10px);
+  }
+  45% {
+    transform: scale(1.06, 0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes awaken-line {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.shell.is-revealed .topbar {
+  animation: reveal-down 900ms 1500ms ease-out both;
+}
+.shell.is-revealed .sidebar--left {
+  animation: reveal-left 900ms 1700ms ease-out both;
+}
+.shell.is-revealed .sidebar--right {
+  animation: reveal-right 900ms 1900ms ease-out both;
+}
+.shell.is-revealed .footer {
+  animation: reveal-up 900ms 2100ms ease-out both;
+}
+
+@keyframes reveal-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+@keyframes reveal-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+@keyframes reveal-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* --- the casino: coins, jackpots, the reel ------------------------------ */
+.casino {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  pointer-events: none;
+}
+
+.coin {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  animation-name: coin-x;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6);
+  animation-fill-mode: both;
+}
+
+.coin__face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #f2c230 45%, #b07c10 100%);
+  box-shadow: 0 0 0 2px #7a5208, 0 0 10px rgb(255 210 80 / 0.7);
+  animation-name: coin-y;
+  animation-timing-function: cubic-bezier(0.3, -0.9, 0.7, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes coin-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--dx));
+  }
+}
+
+@keyframes coin-y {
+  0% {
+    transform: translateY(0) rotate(0) scale(0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(calc(var(--dy) * 0.02)) scale(1.1);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--dy)) rotate(var(--spin)) scale(0.7);
+    opacity: 0.2;
+  }
+}
+
+.money-roll {
+  display: inline-block;
+}
+
+.money-roll.is-bump {
+  animation: money-bump 380ms cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+
+@keyframes money-bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.28);
+    color: #ffe27a;
+    text-shadow: 0 0 14px rgb(255 210 80 / 0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.jackpot {
+  position: fixed;
+  width: 0;
+  height: 0;
+  display: grid;
+  place-items: center;
+  animation-name: jackpot-fade;
+  animation-fill-mode: forwards;
+}
+
+/* Everything is centred on the lucky printer and stays within a few
+   printers' reach of it, so the burst reads as *that* machine's moment. */
+.jackpot__glow {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 225 120 / 0.55), transparent 65%);
+  animation: jackpot-glow 1400ms ease-out forwards;
+}
+
+.jackpot__rays {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  background: repeating-conic-gradient(rgb(255 214 90 / 0.35) 0deg 8deg, transparent 8deg 22deg);
+  mask: radial-gradient(circle, #000 10%, transparent 62%);
+  animation: jackpot-spin 1400ms linear;
+}
+
+.jackpot__word {
+  position: absolute;
+  top: -120px;
+  white-space: nowrap;
+  font: 400 52px / 1 var(--font-display);
+  color: #ffd75a;
+  -webkit-text-stroke: 2px #7a5208;
+  text-shadow: 0 4px 0 #7a5208, 0 0 30px rgb(255 200 60 / 0.8);
+  animation: jackpot-word 1400ms cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+
+@keyframes jackpot-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes jackpot-glow {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0.4;
+  }
+}
+
+@keyframes jackpot-spin {
+  to {
+    transform: rotate(60deg);
+  }
+}
+
+@keyframes jackpot-word {
+  0% {
+    transform: scale(0.2) rotate(-12deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.15) rotate(3deg);
+    opacity: 1;
+  }
+  45% {
+    transform: scale(1) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1.05) rotate(0);
+  }
+}
+
+.reel {
+  position: fixed;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 32px;
+  border-radius: 20px;
+  background: linear-gradient(#2a2410, #14110a);
+  border: 3px solid #f2c230;
+  box-shadow: 0 0 0 6px rgb(242 194 48 / 0.2), 0 20px 50px rgb(0 0 0 / 0.5);
+  animation: reel-in 300ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.reel__eyebrow {
+  font: 700 12px / 16px var(--font-sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f2c230;
+}
+
+.reel__value {
+  min-width: 6ch;
+  text-align: center;
+  font: 600 34px / 1 var(--font-mono);
+  color: #fff6d0;
+  filter: blur(0.6px);
+}
+
+.reel.is-landed .reel__value {
+  filter: none;
+  animation: money-bump 420ms cubic-bezier(0.3, 1.8, 0.5, 1);
+  text-shadow: 0 0 18px rgb(255 210 80 / 0.9);
+}
+
+@keyframes reel-in {
+  from {
+    transform: translateX(-50%) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.mute {
+  min-height: 34px;
+  width: 38px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.intro-screen__mute {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+
+/* --- progressive disclosure ---------------------------------------------- */
+.reveal[hidden] {
+  display: none !important;
+}
+
+/* Coming out of `hidden` restarts the animation: every new thing pops in. */
+.reveal {
+  animation: reveal-pop 520ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes reveal-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.shell.no-right {
+  grid-template-columns: 320px minmax(0, 1fr) 0;
+}
+
+.shell.no-right .sidebar--right {
+  border: 0;
+  overflow: hidden;
+}
+
+.shell.no-foot {
+  grid-template-rows: auto minmax(0, 1fr) 0;
+}
+
+.shell.no-foot .footer {
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+/* A clicked printer needs no focus ring; a keyboard-focused one keeps it. */
+.stage [role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+fieldset.picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset.picker > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+/* --- tiles: materials as spools, objects as glyphs ----------------------- */
+.picker__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 6px;
+}
+
+.tile {
+  margin: 0;
+  min-height: 0;
+  padding: 8px 4px 6px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  box-shadow: none;
+  background: var(--plate-sunken);
+  color: var(--ink-muted);
+  transition: transform 120ms, border-color 120ms, background-color 120ms;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  color: var(--ink);
+}
+
+.tile[aria-pressed="true"] {
+  border-color: var(--pla);
+  background: var(--plate-raised);
+  color: var(--ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pla) 18%, transparent);
+}
+
+.tile[aria-pressed="true"] .spool-art {
+  animation: spool-spin 2.4s linear infinite;
+}
+
+@keyframes spool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tile__name {
+  font: 600 12px / 14px var(--font-sans);
+  text-align: center;
+}
+
+.tile__meta {
+  font: 500 10px / 12px var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.tile__icon {
+  margin: 5px 0;
+}
+
+/* --- icons beside words ------------------------------------------------- */
+.icon {
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+.stat dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat--money dt .icon {
+  color: var(--money);
+}
+.stat--plates dt .icon {
+  color: var(--gold);
+}
+.stat--scrap dt .icon {
+  color: var(--scrap);
+}
+
+.action-bar > button,
+.tabs__tab,
+.mute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mute .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.shelf .stock {
+  grid-template-columns: 26px 1fr auto;
+}
+
+/* --- out of filament: impossible to miss -------------------------------- */
+.stall {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -110%);
+  margin: 0;
+  min-height: 0;
+  padding: 7px 12px 7px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 2px solid #ff6b57;
+  background: #3a1210;
+  color: #ffd9d3;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.4), 0 0 0 0 rgb(255 107 87 / 0.6);
+  font: 500 11px / 14px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  animation: stall-pulse 1.1s ease-in-out infinite;
+}
+
+.stall::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: #3a1210;
+  border-right: 2px solid #ff6b57;
+  border-bottom: 2px solid #ff6b57;
+}
+
+.stall__text {
+  display: grid;
+}
+
+.stall__text strong {
+  font: 700 13px / 16px var(--font-sans);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@keyframes stall-pulse {
+  0%,
+  100% {
+    box-shadow: 0 8px 22px rgb(0 0 0 / 0.4), 0 0 0 0 rgb(255 107 87 / 0.55);
+  }
+  50% {
+    box-shadow: 0 8px 22px rgb(0 0 0 / 0.4), 0 0 0 10px rgb(255 107 87 / 0);
+  }
+}
+
+.stage.is-starved {
+  box-shadow: inset 0 0 0 2px rgb(255 107 87 / 0.5), inset 0 0 60px rgb(255 80 60 / 0.18);
+  animation: starved-edge 1.6s ease-in-out infinite;
+}
+
+@keyframes starved-edge {
+  50% {
+    box-shadow: inset 0 0 0 2px rgb(255 107 87 / 0.2), inset 0 0 30px rgb(255 80 60 / 0.06);
+  }
+}
+
+.bay-card__status.is-alarm {
+  color: #ff6b57;
+  font-weight: 700;
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.bay-card__restock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #e2483a;
+  border-color: #a8261c;
+  animation: stall-pulse 1.1s ease-in-out infinite;
+}
+
+.action-bar > button.is-alarm:not(:disabled) {
+  border-color: #ff6b57;
+  color: #fff;
+  background: #c8392c;
+  animation: stall-pulse 1.1s ease-in-out infinite;
+}
+
+.mute.is-off {
+  opacity: 0.4;
+}
+
+.intro-screen__mute {
+  display: flex;
+  gap: 4px;
+}
+
+/* The layer being printed fills as its gate nears, with no words about it. */
+.layer-track__layer.is-now {
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--pla) calc(var(--fill, 0) * 100%),
+    var(--plate-line) calc(var(--fill, 0) * 100%)
+  );
+  transition: background 600ms;
+  animation: none;
+  box-shadow: 0 0 calc(var(--fill, 0) * 10px) color-mix(in srgb, var(--pla) 70%, transparent);
+}
+
+/* --- price buttons fill toward affordability ----------------------------- */
+button.price {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+button.price::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform-origin: left;
+  transform: scaleX(var(--afford, 0));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--money) 22%, transparent),
+    color-mix(in srgb, var(--money) 40%, transparent)
+  );
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Full: the button lights and a glint runs across it, once. */
+button.price.is-ready:not(:disabled) {
+  border-color: color-mix(in srgb, var(--money) 70%, var(--plate-line));
+  animation: price-ready 600ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+button.price.is-ready:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: price-glint 900ms 120ms ease-out forwards;
+}
+
+@keyframes price-ready {
+  40% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes price-glint {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* --- discovery: new things twinkle until touched ------------------------ */
+.is-new {
+  position: relative;
+}
+
+.is-new::after {
+  content: "✦";
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  z-index: 2;
+  font-size: 14px;
+  line-height: 1;
+  color: #ffd75a;
+  text-shadow: 0 0 8px rgb(255 210 80 / 0.9);
+  pointer-events: none;
+  animation: twinkle 1.4s ease-in-out infinite;
+}
+
+.tile.is-new {
+  border-color: color-mix(in srgb, #ffd75a 60%, transparent);
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    transform: scale(0.8) rotate(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.25) rotate(20deg);
+    opacity: 1;
+  }
+}
+
+/* --- iteration 5: feel ---------------------------------------------------- */
+
+/* Parts in flight: a little bracket, tumbling onto the pile. */
+.coin--part .coin__face {
+  border-radius: 2px;
+  background: linear-gradient(var(--pla) 0 0) left / 35% 100% no-repeat,
+    linear-gradient(var(--pla) 0 0) bottom / 100% 35% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 1.5px #1c2330) drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
+}
+
+/* A gain rises off the counter it changed. */
+.float {
+  position: fixed;
+  transform: translate(-50%, 0);
+  font: 700 14px / 1 var(--font-mono);
+  color: #ffe27a;
+  text-shadow: 0 1px 0 #7a5208, 0 0 10px rgb(255 210 80 / 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: float-up 1100ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 34px) scale(1);
+  }
+}
+
+/* Sparks off the button that bought something. */
+.burst {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.burst__spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #ffd75a;
+  box-shadow: 0 0 8px #ffd75a;
+  animation: spark 700ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes spark {
+  0% {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--sx), var(--sy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* Buttons are things you press: they give under the finger and lift to it. */
+button {
+  transition: transform 90ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Switching tabs slides the panel in rather than swapping it. */
+.tabs__panel:not([hidden]) {
+  animation: panel-in 220ms ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+/* Cards breathe in when they first appear. */
+.bay-card,
+.shelf,
+.board {
+  animation: card-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin,
+  .coin__face,
+  .float,
+  .burst__spark,
+  .tabs__panel,
+  .bay-card,
+  .shelf,
+  .board {
+    animation-duration: 0.01s !important;
   }
 }

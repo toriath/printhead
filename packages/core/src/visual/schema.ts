@@ -46,8 +46,10 @@ import { z } from 'zod';
  *   perfect meter and its overclock (boost remaining, cooldown remaining,
  *   whether it can fire now), so the renderer can show both promises the bay
  *   is making: the failure coming and the Perfect print coming.
+ * - v9 — **frozen**: the commission board — every open order with its client,
+ *   what it wants, how much is delivered, the time left and what it pays.
  */
-export const VISUAL_STATE_VERSION = 8;
+export const VISUAL_STATE_VERSION = 9;
 
 const NonNegative = z.number().finite().nonnegative();
 const NonNegativeInt = z.number().int().nonnegative();
@@ -65,6 +67,34 @@ export const QueueEntryVisualSchema = z
     batches: z.number().int().positive(),
     /** The entry the bay is printing right now. */
     current: z.boolean(),
+  })
+  .strict();
+
+/** One order on the commission board. */
+export const CommissionVisualSchema = z
+  .object({
+    serial: z.number().int().positive(),
+    templateId: NonEmpty,
+    clientName: NonEmpty,
+    objectId: NonEmpty,
+    objectName: NonEmpty,
+    materialId: NonEmpty,
+    materialName: NonEmpty,
+    count: z.number().int().positive(),
+    delivered: NonNegative,
+    /** 0..1 of the time left before the client gives up. */
+    timeLeft: Unit,
+    remainingMs: NonNegative,
+    reward: NonNegative,
+  })
+  .strict();
+
+export const CommissionsVisualSchema = z
+  .object({
+    /** The board has opened this run. */
+    open: z.boolean(),
+    offers: z.array(CommissionVisualSchema),
+    completed: NonNegativeInt,
   })
   .strict();
 
@@ -481,6 +511,7 @@ export const VisualStateSchema = z
     inflation: InflationVisualSchema,
     fabricator: FabricatorVisualSchema,
     ending: EndingVisualSchema,
+    commissions: CommissionsVisualSchema,
   })
   .strict();
 

@@ -8,6 +8,8 @@ import {
   setAutomation,
 } from '@printhead/core';
 import type { ReactElement } from 'react';
+import { price } from './afford.js';
+import { contentOf, describeAutomation, describeUpgrade } from './describe.js';
 import { formatAmount, formatGrams, formatMoney } from './format.js';
 import type { GameStore } from './store.js';
 
@@ -124,12 +126,16 @@ export function UpgradePanel({ store, visual }: PanelProps): ReactElement | null
                     ? ' installed'
                     : ''}
               </span>
+              <span className="panel__desc">
+                {describeUpgrade(contentOf(store), row.upgradeId)}
+              </span>
             </span>
             {row.available ? (
               <button
                 type="button"
                 data-testid={`upgrade-${row.upgradeId}`}
                 disabled={!row.affordable}
+                {...price(visual, row.cost, row.costResource)}
                 onClick={() => store.dispatch(buyUpgrade(row.upgradeId))}
               >
                 {`${formatAmount(row.cost)} ${row.costResource}`}
@@ -158,6 +164,9 @@ export function AutomationPanel({ store, visual }: PanelProps): ReactElement | n
               {row.installed ? (
                 <span className="panel__note">{` at ${formatAmount(row.threshold)}`}</span>
               ) : null}
+              <span className="panel__desc">
+                {describeAutomation(contentOf(store), row.automationId)}
+              </span>
             </span>
             {row.installed ? (
               <button
@@ -174,6 +183,7 @@ export function AutomationPanel({ store, visual }: PanelProps): ReactElement | n
                 type="button"
                 data-testid={`automation-${row.automationId}`}
                 disabled={!row.affordable}
+                {...price(visual, row.cost, row.costResource)}
                 onClick={() => store.dispatch(buyAutomation(row.automationId))}
               >
                 {`${formatAmount(row.cost)} ${row.costResource}`}

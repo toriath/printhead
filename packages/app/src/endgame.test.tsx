@@ -51,9 +51,9 @@ describe('EndgamePanel (spec §5E)', () => {
 
   it('says why the last print is not on offer, rather than offering it (spec §7.3)', () => {
     const { store } = stubStore();
-    render(<EndgamePanel store={store} visual={endgame} />);
+    const locked = { ...endgame, fabricator: { ...endgame.fabricator, available: false } };
+    render(<EndgamePanel store={store} visual={locked} />);
     const button = screen.getByTestId('start-fabricator');
-    expect(endgame.fabricator.available).toBe(false);
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.textContent).not.toBe('Print it');
   });

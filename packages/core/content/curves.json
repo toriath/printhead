@@ -3,14 +3,14 @@
     "id": "printer-cost-tier1",
     "name": "Bench printer cost",
     "type": "exponential",
-    "base": 19.8512,
-    "growth": 1.24202
+    "base": 11.4268,
+    "growth": 1.16154
   },
   {
     "id": "upgrade-cost-machine",
     "name": "Machine upgrade cost",
     "type": "exponential",
-    "base": 168.074,
+    "base": 378.167,
     "growth": 1.6
   },
   {
@@ -24,21 +24,21 @@
     "id": "automation-cost",
     "name": "Automation upgrade cost",
     "type": "exponential",
-    "base": 719.55,
+    "base": 404.747,
     "growth": 2.1
   },
   {
     "id": "slot-cost",
     "name": "Config slot cost",
     "type": "exponential",
-    "base": 774.9,
+    "base": 1743.53,
     "growth": 2.5
   },
   {
     "id": "fork-cost",
     "name": "Farm / Goliath commitment cost (money)",
     "type": "constant",
-    "value": 10354.5
+    "value": 4000
   },
   {
     "id": "design-level-value",
@@ -59,7 +59,7 @@
     "name": "Money printed per design-second per plate",
     "type": "linear",
     "base": 0,
-    "step": 0.669
+    "step": 0.970987
   },
   {
     "id": "no-op",
@@ -71,21 +71,21 @@
     "id": "design-cost",
     "name": "Design draft cost",
     "type": "exponential",
-    "base": 1100,
-    "growth": 7.08
+    "base": 154.688,
+    "growth": 1.77
   },
   {
     "id": "money-printer-cost",
     "name": "Money printer cost",
     "type": "exponential",
-    "base": 2,
-    "growth": 2.475
+    "base": 1,
+    "growth": 2.78438
   },
   {
     "id": "design-slot-cost",
     "name": "Design desk cost",
     "type": "exponential",
-    "base": 9956.25,
+    "base": 3646.5,
     "growth": 4
   },
   {
@@ -113,7 +113,7 @@
     "id": "money-printer-cost-bundles",
     "name": "Bundle press cost",
     "type": "exponential",
-    "base": 9,
+    "base": 7.38,
     "growth": 3
   },
   {
@@ -135,7 +135,7 @@
     "name": "Money printed per design-second per plate (bundles)",
     "type": "linear",
     "base": 0,
-    "step": 3.65625
+    "step": 1.03888
   },
   {
     "id": "money-print-rate-pallets",

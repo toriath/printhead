@@ -104,6 +104,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     const melt = page.getByTestId('melt-down');
     await expect(melt).toBeEnabled();
     await melt.click();
+    await page.getByTestId('melt-down-confirm').click();
     await warp(page, MS_PER_SECOND);
 
     const after = (await snapshot(page)) as StateShape;

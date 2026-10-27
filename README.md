@@ -41,9 +41,8 @@ pnpm check          # the single verification entrypoint
 | Coverage | `vitest run --coverage` (core) | ≥ 90 % line/branch on the simulation (§13, §17) |
 
 Other scripts: `pnpm mutation` (Stryker on `systems/`, `curves/` and `visual/`
-— a full run is well over an hour, so CI gives it
-[its own job](.github/workflows/ci.yml) rather than holding the fast feedback
-behind it; a scoped run, `pnpm --filter @printhead/core exec stryker run --mutate
+— a full run is well over an hour, so CI runs it
+[nightly](.github/workflows/ci.yml) rather than on every change; a scoped run, `pnpm --filter @printhead/core exec stryker run --mutate
 'src/systems/foo.ts'`, is what you want while working on one file),
 `pnpm balance:sim [botId]`, `pnpm balance:sweep`, `pnpm balance:tune`,
 `pnpm balance:report` (see [Balancing](#balancing)),

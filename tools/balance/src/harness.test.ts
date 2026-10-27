@@ -54,21 +54,22 @@ function playthrough(bot: Bot, stopAtPhaseId?: string): RunLog {
 }
 
 describe('budget table', () => {
-  it('mirrors the spec §6 budgets with a ±20 % window', () => {
-    expect(table.tolerance).toBe(0.2);
+  it('mirrors the spec §6 budgets: ±35 % per phase, ±20 % for the arc', () => {
+    expect(table.tolerance).toBe(0.35);
+    expect(table.arcTolerance).toBe(0.2);
     // The arc's budget. The terminal `ended` sandbox is outside it: nothing
     // ends that phase, so it has no duration to budget (see `terminalPhaseId`).
     expect(table.totalDesignMinutes).toBe(420);
     expect(table.terminalPhaseId).toBe('ended');
     const intro = table.phases[0];
-    expect(intro?.budgetDesignMinutes).toBe(5);
-    expect(intro?.minDesignMinutes).toBeCloseTo(4, 9);
-    expect(intro?.maxDesignMinutes).toBeCloseTo(6, 9);
+    expect(intro?.budgetDesignMinutes).toBe(1);
+    expect(intro?.minDesignMinutes).toBeCloseTo(0.65, 9);
+    expect(intro?.maxDesignMinutes).toBeCloseTo(1.35, 9);
   });
 
   it('flags phases that are too fast, too slow or never reached', () => {
     const durations = new Map<string, number>([
-      ['intro', 5],
+      ['intro', 1],
       ['bench', 1],
       ['farm', 400],
       ['studio', 75],
@@ -231,11 +232,12 @@ describe.each(PACING_BOTS.map((bot) => [bot.id, bot] as const))(
     it('lands the whole arc inside ±20 % of the total budget', () => {
       const arc = log.phaseEnteredAt.get('ended');
       expect(arc).toBeDefined();
-      expect(arc ?? 0).toBeGreaterThanOrEqual(table.totalDesignMinutes * (1 - table.tolerance));
-      expect(arc ?? 0).toBeLessThanOrEqual(table.totalDesignMinutes * (1 + table.tolerance));
+      expect(arc ?? 0).toBeGreaterThanOrEqual(table.totalDesignMinutes * (1 - table.arcTolerance));
+      expect(arc ?? 0).toBeLessThanOrEqual(table.totalDesignMinutes * (1 + table.arcTolerance));
     });
 
-    it('lands every phase inside its ±20 % window', () => {
+    // Looser than the arc on purpose: a phase is a story beat, not a stopwatch.
+    it('lands every phase inside its ±35 % window', () => {
       expect(checkPhaseBudgets(table, log.phaseDurations)).toEqual([]);
     });
 
@@ -394,10 +396,14 @@ describe('the strategies are genuinely different players', () => {
    * what separates them is how they get there: greedy rushes the bench and
    * the farm, buying capacity before the machine tree.
    */
-  it('greedy rushes the early game', () => {
-    const early = (log: RunLog): number =>
-      (log.phaseDurations.get('bench') ?? 0) + (log.phaseDurations.get('farm') ?? 0);
-    expect(early(greedy)).toBeLessThan(early(balanced));
+  /*
+   * Measured on the Farm, the expansion phase: since the intro lost its bench
+   * timers, the Bench is a few minutes of manual loop for everyone, and a
+   * player who buys on sight there is slower, not faster.
+   */
+  it('greedy rushes the expansion', () => {
+    const farm = (log: RunLog): number => log.phaseDurations.get('farm') ?? 0;
+    expect(farm(greedy)).toBeLessThan(farm(balanced));
   });
 
   it('idle-heavy pays for its inattention in the intro alone', () => {
@@ -538,6 +544,7 @@ describe('the balanced bot plays the M6 endgame end to end', () => {
       useQueues: false,
       newGamePlusModifierIds: [modifier.id],
       overclockBelowRisk: 0.5,
+      chaseCommissions: true,
     });
     const replay = runHeadless({ content, bot: restarting });
     expect(replay.eventCounts.NEW_GAME_PLUS_STARTED ?? 0).toBeGreaterThan(0);

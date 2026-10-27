@@ -1,8 +1,22 @@
 import { type VisualState, visualFixture, visualStateFixtures } from '@printhead/core';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { BAY_HEIGHT, PRESS_HEIGHT, workshopWidth } from './geometry.js';
-import { Workshop, bays, installedPresses } from './workshop.js';
+import {
+  BAY_HEIGHT,
+  BAY_WIDTH,
+  FLOOR_HEIGHT,
+  FLOOR_WIDTH,
+  PRESS_HEIGHT,
+  workshopWidth,
+} from './geometry.js';
+import {
+  Workshop,
+  bays,
+  clampToFloor,
+  floorScale,
+  installedPresses,
+  pileSize,
+} from './workshop.js';
 
 afterEach(cleanup);
 
@@ -417,5 +431,143 @@ describe('the rota strip', () => {
       throw new Error('the rack fixture must have a bay without a rota');
     }
     expect(screen.queryByTestId(`queue-${plain.slotId}`)).toBeNull();
+  });
+});
+
+describe('the free-standing floor', () => {
+  const rack = visualFixture('rack');
+
+  it('stands only the bays the workshop owns, with no boxes and no locked outlines', () => {
+    render(<Workshop visual={rack} layout="floor" />);
+    const svg = screen.getByRole('img');
+    expect(svg.getAttribute('data-layout')).toBe('floor');
+    expect(svg.querySelectorAll('[data-lead]')).toHaveLength(rack.slots.length);
+    expect(svg.querySelectorAll('.ph-bay--empty')).toHaveLength(0);
+    expect(svg.querySelectorAll('[data-testid="count-badge"]')).toHaveLength(0);
+  });
+
+  it('draws every printer a bay owns, in person, up to a crew of eight', () => {
+    const [bay] = rack.slots;
+    if (bay === undefined) {
+      throw new Error('the rack fixture needs a bay');
+    }
+    const crewOf = (count: number): VisualState => ({
+      ...rack,
+      slots: [{ ...bay, printerCount: count }],
+    });
+    const figures = (count: number): number => {
+      cleanup();
+      render(<Workshop visual={crewOf(count)} layout="floor" />);
+      return screen.getByRole('img').querySelectorAll('[data-testid="printer-figure"]').length;
+    };
+    expect(figures(1)).toBe(1);
+    expect(figures(5)).toBe(5);
+    expect(figures(8)).toBe(8);
+    expect(figures(12)).toBe(8);
+    expect(screen.getByTestId(`crew-more-${bay.slotId}`).textContent).toBe('+4');
+  });
+
+  it('puts a bay where it was placed, nearer bays bigger and drawn in front', () => {
+    const [back, front] = rack.slots;
+    if (back === undefined || front === undefined) {
+      throw new Error('the rack fixture needs two bays');
+    }
+    render(
+      <Workshop
+        visual={rack}
+        layout="floor"
+        positions={{ [back.slotId]: { x: 0.2, y: 0.1 }, [front.slotId]: { x: 0.8, y: 0.9 } }}
+      />,
+    );
+    const spots = [...screen.getByRole('img').querySelectorAll('[data-lead]')];
+    const order = spots.map((spot) => spot.getAttribute('data-slot-id'));
+    expect(order.indexOf(back.slotId)).toBeLessThan(order.indexOf(front.slotId));
+    const scaleOf = (id: string): number =>
+      Number(
+        /scale\(([\d.]+)\)/.exec(
+          spots
+            .find((spot) => spot.getAttribute('data-slot-id') === id)
+            ?.getAttribute('transform') ?? '',
+        )?.[1],
+      );
+    expect(scaleOf(front.slotId)).toBeGreaterThan(scaleOf(back.slotId));
+  });
+
+  it('leaves the rack layout exactly as it was by default', () => {
+    render(<Workshop visual={rack} />);
+    expect(screen.getByRole('img').getAttribute('data-layout')).toBe('rack');
+  });
+});
+
+describe('clampToFloor', () => {
+  it('keeps a printer wholly on the floor however far it is dragged', () => {
+    for (const wild of [
+      { x: -3, y: -3 },
+      { x: 5, y: 5 },
+      { x: 0.5, y: 0 },
+      { x: 0, y: 1 },
+    ]) {
+      const { x, y } = clampToFloor(wild);
+      const scale = floorScale(y);
+      const top = y * FLOOR_HEIGHT - BAY_HEIGHT * scale;
+      const left = x * FLOOR_WIDTH - (BAY_WIDTH * scale) / 2;
+      const right = x * FLOOR_WIDTH + (BAY_WIDTH * scale) / 2;
+      expect(top).toBeGreaterThanOrEqual(-1e-9);
+      expect(y).toBeLessThanOrEqual(1);
+      expect(left).toBeGreaterThanOrEqual(-1e-9);
+      expect(right).toBeLessThanOrEqual(FLOOR_WIDTH + 1e-9);
+    }
+  });
+
+  it('leaves a spot already on the floor alone', () => {
+    expect(clampToFloor({ x: 0.5, y: 0.8 })).toEqual({ x: 0.5, y: 0.8 });
+  });
+});
+
+describe('the stock pile', () => {
+  it('grows by a few items per doubling, and never past its cap', () => {
+    expect(pileSize(0)).toBe(0);
+    expect(pileSize(1)).toBeGreaterThan(0);
+    expect(pileSize(100)).toBeGreaterThan(pileSize(10));
+    expect(pileSize(1e12)).toBe(28);
+  });
+
+  it('piles what is in stock on the floor, and nothing when the shelf is bare', () => {
+    const rack = visualFixture('rack');
+    const stocked: VisualState = { ...rack, ledger: { ...rack.ledger, parts: 40, products: 3 } };
+    render(<Workshop visual={stocked} layout="floor" />);
+    const pile = screen.getByTestId('stock-pile');
+    expect(pile.querySelectorAll('.ph-pile-item')).toHaveLength(pileSize(40) + pileSize(3));
+    expect(pile.querySelectorAll('.ph-pile-item--product')).toHaveLength(pileSize(3));
+    cleanup();
+    const bare: VisualState = { ...rack, ledger: { ...rack.ledger, parts: 0, products: 0 } };
+    render(<Workshop visual={bare} layout="floor" />);
+    expect(screen.queryByTestId('stock-pile')).toBeNull();
+  });
+});
+
+describe('the workshop wall', () => {
+  const wallOf = (phaseId: string): string[] => {
+    cleanup();
+    const rack = visualFixture('rack');
+    render(<Workshop visual={{ ...rack, phaseId }} layout="floor" />);
+    return [...screen.getByTestId('workshop-wall').querySelectorAll('[data-wall]')].map(
+      (item) => item.getAttribute('data-wall') ?? '',
+    );
+  };
+
+  it('starts bare and fills up, layer by layer, never losing what it hung', () => {
+    const intro = wallOf('intro');
+    const farm = wallOf('farm');
+    const absurd = wallOf('absurd');
+    const end = wallOf('end');
+    expect(intro).toEqual(['pegboard', 'window']);
+    expect(farm).toEqual(expect.arrayContaining([...intro, 'shelf', 'clock']));
+    expect(absurd).toEqual(expect.arrayContaining([...farm, 'blueprint', 'plates', 'neon']));
+    expect(end).toEqual(expect.arrayContaining([...absurd, 'lights']));
+  });
+
+  it('shows a bare wall for a phase it does not know', () => {
+    expect(wallOf('somewhere-new')).toEqual(['pegboard', 'window']);
   });
 });

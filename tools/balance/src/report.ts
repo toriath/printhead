@@ -202,7 +202,8 @@ export function buildReport(input: ReportInput): readonly ReportFile[] {
     `# Balance report — ${date}`,
     '',
     `Reference bot: \`${reference.botId}\` · target ${content.pacing.targetHours} h ` +
-      `· tolerance ±${(table.tolerance * 100).toFixed(0)} %`,
+      `· tolerance ±${(table.arcTolerance * 100).toFixed(0)} % for the arc, ` +
+      `±${(table.tolerance * 100).toFixed(0)} % per phase`,
     '',
     verdict(content, reference),
     '',

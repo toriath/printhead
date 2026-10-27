@@ -1,8 +1,8 @@
 {
-  "version": 8,
+  "version": 9,
   "phaseId": "end",
   "phaseName": "The End",
-  "simTimeMs": 25042000,
+  "simTimeMs": 26970000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -16,7 +16,7 @@
       "output": "parts",
       "designId": null,
       "machineTier": 5,
-      "printerCount": 64,
+      "printerCount": 47,
       "printerCapacity": 64,
       "phaseOffset": 0,
       "occupied": false,
@@ -25,8 +25,8 @@
       "batch": 0,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.23840000000000638,
-      "perfectCharge": 0.8999999999999999,
+      "failureRisk": 0.440000000000001,
+      "perfectCharge": 0.4,
       "overclock": {
         "active": false,
         "remaining": 0,
@@ -38,8 +38,8 @@
     }
   ],
   "fleet": {
-    "printers": 64,
-    "assigned": 64,
+    "printers": 47,
+    "assigned": 47,
     "slotsOwned": 1,
     "slotsActive": 1,
     "slotsMaximum": 4,
@@ -50,7 +50,7 @@
     "name": "Second config slot",
     "available": true,
     "affordable": true,
-    "cost": 775,
+    "cost": 1744,
     "costResource": "parts",
     "blockedReason": null
   },
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -100,16 +100,16 @@
     "complete": true
   },
   "ledger": {
-    "parts": 52346,
-    "money": 2267130.0633448125,
-    "scrap": 326,
+    "parts": 52883,
+    "money": 40436756.76156963,
+    "scrap": 26,
     "products": 0,
-    "plates": 41.5716,
+    "plates": 42.0516,
     "filamentGrams": {
       "pla": 0,
-      "petg": 2250,
+      "petg": 250,
       "resin": 1500,
-      "metal": 177,
+      "metal": 851,
       "composite": 660
     }
   },
@@ -120,7 +120,7 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.16564831861822055,
+      "buyPerGram": 0.40991788974925003,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
@@ -132,11 +132,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.28619735738286495,
-      "sellPerGram": 0.2651618516152244,
-      "priceMultiplier": 1.0798379956789694,
-      "stockGrams": 6000,
-      "heldGrams": 2250
+      "buyPerGram": 0.5602829158758922,
+      "sellPerGram": 0.5191021215590141,
+      "priceMultiplier": 0.854260892679357,
+      "stockGrams": 6769.999999999072,
+      "heldGrams": 250
     },
     {
       "materialId": "resin",
@@ -144,10 +144,10 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 1.292952589868172,
-      "sellPerGram": 1.1979205745128614,
-      "priceMultiplier": 1.1150581809647981,
-      "stockGrams": 7500,
+      "buyPerGram": 3.240511195299681,
+      "sellPerGram": 3.0023336224451542,
+      "priceMultiplier": 1.1293241459656111,
+      "stockGrams": 5459.999999999127,
       "heldGrams": 1500
     },
     {
@@ -156,11 +156,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 5.218105553366018,
-      "sellPerGram": 4.834574795193616,
-      "priceMultiplier": 1.1250395668049729,
-      "stockGrams": 810.9999999999764,
-      "heldGrams": 177
+      "buyPerGram": 11.508011409088438,
+      "sellPerGram": 10.662172570520438,
+      "priceMultiplier": 1.0026408159908717,
+      "stockGrams": 20.99999999999315,
+      "heldGrams": 851
     },
     {
       "materialId": "composite",
@@ -184,7 +184,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 269,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -195,7 +195,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": true,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -206,7 +206,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": true,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -217,7 +217,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 269,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -250,7 +250,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 430.2694400000001,
+      "cost": 968.1075200000001,
       "costResource": "money"
     },
     {
@@ -261,7 +261,7 @@
       "maxLevel": 2,
       "available": true,
       "affordable": true,
-      "cost": 9956.25,
+      "cost": 3646.5,
       "costResource": "money"
     },
     {
@@ -331,7 +331,7 @@
       "threshold": 40,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -344,7 +344,7 @@
       "threshold": 400,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -357,7 +357,7 @@
       "threshold": 20,
       "available": false,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -370,7 +370,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 1511.055,
+      "cost": 849.9687,
       "costResource": "money"
     },
     {
@@ -383,13 +383,13 @@
       "threshold": 60,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": false,
-    "scrapGrams": 326,
+    "scrapGrams": 26,
     "yieldGrams": 0,
     "yieldMaterialId": "pla"
   },
@@ -404,17 +404,17 @@
         "designId": "phone-stand",
         "name": "Phone stand",
         "materialId": "resin",
-        "level": 0,
+        "level": 1,
         "maxLevel": 20,
-        "owned": false,
+        "owned": true,
         "levelProgress": 0,
         "productValue": 40,
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
-        "blockedReason": "slot-full"
+        "blockedReason": "already-owned"
       },
       {
         "designId": "lamp-shade",
@@ -428,7 +428,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -444,7 +444,7 @@
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -452,10 +452,10 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 23,
-    "platesHeld": 41.5716,
+    "platesOnOffer": 100,
+    "platesHeld": 42.0516,
     "runsCompleted": 7,
-    "moneyPerDesignSecond": 481.37625,
+    "moneyPerDesignSecond": 36355.66569,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -467,7 +467,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 31,
+      "cost": 22,
       "costResource": "plates"
     },
     {
@@ -478,18 +478,18 @@
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 27,
+      "cost": 23,
       "costResource": "plates"
     },
     {
       "moneyPrinterId": "pallet-printer",
       "name": "Pallet press",
       "tier": 3,
-      "level": 0,
+      "level": 1,
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 14,
+      "cost": 41,
       "costResource": "plates"
     },
     {
@@ -507,8 +507,8 @@
   "backdrop": "skyline",
   "inflation": {
     "active": true,
-    "multiplier": 3.3129663723644107,
-    "moneyPrinted": 2964321.757500375
+    "multiplier": 8.198357794985,
+    "moneyPrinted": 40698875.59873363
   },
   "fabricator": {
     "unlocked": true,
@@ -516,26 +516,60 @@
     "blockedReason": "slot-busy",
     "running": true,
     "complete": false,
-    "progress": 0.5696412295964869,
-    "layer": 79,
+    "progress": 0.5,
+    "layer": 70,
     "layers": 140,
-    "remainingMs": 1246560,
-    "totalMs": 2896560,
+    "remainingMs": 930000,
+    "totalMs": 1860000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 660,
-    "sections": 2,
+    "sections": 0,
     "maxSections": 4,
     "sectionRunning": false,
     "sectionProgress": 0,
     "sectionAvailable": false,
     "sectionBlockedReason": "slot-busy",
-    "sectionCost": 641,
+    "sectionCost": 250,
     "sectionCostResource": "parts",
     "forkAllows": true,
     "slotsCommitted": true,
-    "committedPrinters": 64,
+    "committedPrinters": 47,
     "requiredPrinters": 16
+  },
+  "commissions": {
+    "open": true,
+    "offers": [
+      {
+        "serial": 14,
+        "templateId": "petg-brackets",
+        "clientName": "An animation studio",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 30,
+        "delivered": 0,
+        "timeLeft": 0.5625,
+        "remainingMs": 135000,
+        "reward": 1635.5723800995074
+      },
+      {
+        "serial": 15,
+        "templateId": "petg-gears",
+        "clientName": "An animation studio",
+        "objectId": "gearset",
+        "objectName": "Gear set",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 80,
+        "delivered": 0,
+        "timeLeft": 0.875,
+        "remainingMs": 315000,
+        "reward": 5483.0616932859675
+      }
+    ],
+    "completed": 168
   },
   "ending": {
     "stage": "none",

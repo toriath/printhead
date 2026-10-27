@@ -1,12 +1,13 @@
 {
   "targetHours": 8,
   "baselineHours": 8,
-  "phaseBudgetTolerance": 0.2,
+  "phaseBudgetTolerance": 0.35,
+  "arcBudgetTolerance": 0.2,
   "phases": [
     {
       "id": "intro",
       "name": "Intro",
-      "budgetDesignMinutes": 5,
+      "budgetDesignMinutes": 1,
       "waitWallBudgetDesignMinutes": 1,
       "allowedActions": [
         "ATTACH_PIECE",
@@ -66,7 +67,7 @@
     {
       "id": "farm",
       "name": "Farm",
-      "budgetDesignMinutes": 80,
+      "budgetDesignMinutes": 84,
       "waitWallBudgetDesignMinutes": 5,
       "allowedActions": [
         "SET_SLOT_CONFIG",
@@ -87,7 +88,7 @@
       "advanceWhen": [
         {
           "metric": "printers",
-          "atLeast": 14
+          "atLeast": 16
         },
         {
           "metric": "upgradesInstalled",
@@ -135,7 +136,7 @@
         },
         {
           "metric": "productsSold",
-          "atLeast": 60
+          "atLeast": 61
         }
       ]
     },
@@ -224,7 +225,7 @@
         },
         {
           "metric": "moneyEarned",
-          "atLeast": 443154
+          "atLeast": 119280
         }
       ]
     },

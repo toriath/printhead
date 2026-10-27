@@ -30,6 +30,7 @@ export const CONTENT_FILES = [
   'failure',
   'prestige',
   'endgame',
+  'commissions',
 ] as const;
 
 export function readRawContent(contentDir: string): Record<string, unknown> {

@@ -60,6 +60,28 @@ export interface PrintCompletedEvent extends EventBase {
   readonly perfect: boolean;
 }
 
+export interface CommissionOfferedEvent extends EventBase {
+  readonly type: 'COMMISSION_OFFERED';
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+}
+
+export interface CommissionCompletedEvent extends EventBase {
+  readonly type: 'COMMISSION_COMPLETED';
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+  /** Money paid on delivery. */
+  readonly reward: number;
+}
+
+export interface CommissionExpiredEvent extends EventBase {
+  readonly type: 'COMMISSION_EXPIRED';
+  readonly serial: number;
+  readonly templateId: string;
+}
+
 export interface SlotOverclockedEvent extends EventBase {
   readonly type: 'SLOT_OVERCLOCKED';
   readonly slotId: string;
@@ -329,6 +351,9 @@ export type DomainEvent =
   | ForkChosenEvent
   | PhaseAdvancedEvent
   | SlotOverclockedEvent
+  | CommissionOfferedEvent
+  | CommissionCompletedEvent
+  | CommissionExpiredEvent
   | ActionRejectedEvent;
 
 export type DomainEventType = DomainEvent['type'];
@@ -367,6 +392,9 @@ export const DOMAIN_EVENT_TYPES = [
   'FORK_CHOSEN',
   'PHASE_ADVANCED',
   'SLOT_OVERCLOCKED',
+  'COMMISSION_OFFERED',
+  'COMMISSION_COMPLETED',
+  'COMMISSION_EXPIRED',
   'ACTION_REJECTED',
 ] as const satisfies readonly DomainEventType[];
 

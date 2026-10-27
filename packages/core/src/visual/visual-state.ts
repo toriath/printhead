@@ -7,6 +7,7 @@ import { clamp } from '../math/scalar.js';
 import type { GameState, SlotState } from '../state/game-state.js';
 import { assemblyPieces, isPieceReady, nextPiece } from '../systems/assembly.js';
 import { automationAvailability, nextAutomationCost } from '../systems/automation.js';
+import { commissionReward, commissionTemplate, isBoardOpen } from '../systems/commissions.js';
 import {
   designAvailability,
   designSlotCount,
@@ -587,6 +588,46 @@ function toEndingVisual(state: GameState, content: Content, machineTier: number)
   };
 }
 
+function toCommissionsVisual(
+  state: GameState,
+  content: Content,
+  curves: CurveRegistry,
+): VisualState['commissions'] {
+  const materials = indexById(content.materials);
+  const objects = indexById(content.objects);
+  const clients = indexById(content.commissions.clients);
+  const inflation = inflationMultiplier(state, content, curves);
+  const offers: VisualState['commissions']['offers'][number][] = [];
+  for (const offer of state.commissions.open) {
+    const template = commissionTemplate(content, offer.templateId);
+    const material = template === undefined ? undefined : materials.get(template.materialId);
+    const object = template === undefined ? undefined : objects.get(template.objectId);
+    if (template === undefined || material === undefined || object === undefined) {
+      continue;
+    }
+    const limitMs = template.timeLimitDesignSeconds * MS_PER_SECOND;
+    offers.push({
+      serial: offer.serial,
+      templateId: template.id,
+      clientName: clients.get(offer.clientId)?.name ?? offer.clientId,
+      objectId: object.id,
+      objectName: object.name,
+      materialId: material.id,
+      materialName: material.name,
+      count: template.count,
+      delivered: Math.min(offer.delivered, template.count),
+      timeLeft: clamp(offer.remainingMs / limitMs, NONE, FULL),
+      remainingMs: Math.max(offer.remainingMs, NONE),
+      reward: commissionReward(content, template, inflation),
+    });
+  }
+  return {
+    open: isBoardOpen(state, content),
+    offers,
+    completed: state.stats.commissionsCompleted,
+  };
+}
+
 export function toVisualState(state: GameState, content: Content): VisualState {
   const modifiers = computeModifiers(state, content);
   const curves = curveRegistryFor(content.curves);
@@ -632,6 +673,7 @@ export function toVisualState(state: GameState, content: Content): VisualState {
     backdrop: currentBackdropId(state, content),
     inflation: toInflationVisual(state, content, curves),
     fabricator: toFabricatorVisual(state, content, curves),
+    commissions: toCommissionsVisual(state, content, curveRegistryFor(content.curves)),
     ending: toEndingVisual(state, content, machineTier),
   };
 }

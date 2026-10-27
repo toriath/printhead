@@ -24,6 +24,8 @@ import {
   buySlot,
   buyUpgrade,
   chooseFork,
+  commissionReward,
+  commissionTemplate,
   computeModifiers,
   countPrinters,
   createCurveRegistry,
@@ -635,6 +637,43 @@ function overclockMoves(state: GameState, content: Content, belowRisk: number): 
     .map((slot) => overclockSlot(slot.id));
 }
 
+/**
+ * The open commission most worth chasing: the biggest reward per part still
+ * owed, among those the workshop can stock today.
+ */
+function commissionTarget(
+  state: GameState,
+  content: Content,
+): { readonly material: MaterialDef; readonly object: ObjectDef } | null {
+  let best: { material: MaterialDef; object: ObjectDef; value: number } | null = null;
+  for (const offer of state.commissions.open) {
+    const template = commissionTemplate(content, offer.templateId);
+    const material = content.materials.find((def) => def.id === template?.materialId);
+    const object = content.objects.find((def) => def.id === template?.objectId);
+    if (template === undefined || material === undefined || object === undefined) {
+      continue;
+    }
+    const owed = Math.max(template.count - offer.delivered, 1);
+    // Only an order the workshop can actually deliver: enough batches before
+    // the deadline with every machine on it, and the filament affordable now.
+    const batchSeconds = object.printDesignSeconds / material.printSpeedMultiplier;
+    const batches = offer.remainingMs / 1000 / batchSeconds;
+    const deliverable = batches * object.partsYield * countPrinters(state);
+    const grams = (owed / object.partsYield) * object.filamentGrams;
+    const stocked = state.filamentGrams[material.id] ?? 0;
+    const affordable =
+      stocked >= grams || state.resources.money >= (grams - stocked) * material.costPerGram;
+    if (deliverable < owed || !affordable) {
+      continue;
+    }
+    const value = commissionReward(content, template, 1) / owed;
+    if (best === null || value > best.value) {
+      best = { material, object, value };
+    }
+  }
+  return best === null ? null : { material: best.material, object: best.object };
+}
+
 export interface PolicyOptions {
   readonly id: string;
   readonly checkInDesignSeconds: number;
@@ -684,6 +723,8 @@ export interface PolicyOptions {
    * mostly misses it by construction.
    */
   readonly overclockBelowRisk: number;
+  /** Load the bays for the best open commission instead of the best margin. */
+  readonly chaseCommissions: boolean;
 }
 
 /** What one batch of filament costs at today's price, across every bay. */
@@ -1341,14 +1382,19 @@ export function createPolicyBot(options: PolicyOptions): Bot {
       if (first === undefined) {
         return [];
       }
-      const object = bestObject(content, state.phaseId);
+      // An open commission sets the target when there is one worth chasing:
+      // that is what the board is for, and it replaces chasing the margin.
+      const order = options.chaseCommissions ? commissionTarget(state, content) : null;
+      const object = order?.object ?? bestObject(content, state.phaseId);
       if (object === undefined) {
         return [];
       }
-      const material = options.chaseMargin
-        ? (bestMaterial(state, content, object, first.materialId) ??
-          cheapestMaterial(state, content))
-        : cheapestMaterial(state, content);
+      const material =
+        order?.material ??
+        (options.chaseMargin
+          ? (bestMaterial(state, content, object, first.materialId) ??
+            cheapestMaterial(state, content))
+          : cheapestMaterial(state, content));
       if (material === undefined) {
         return [];
       }
@@ -1588,6 +1634,7 @@ export const greedySpenderBot = createPolicyBot({
   useQueues: false,
   newGamePlusModifierIds: null,
   overclockBelowRisk: 1,
+  chaseCommissions: true,
 });
 
 /**
@@ -1607,6 +1654,7 @@ export const balancedBot = createPolicyBot({
   useQueues: false,
   newGamePlusModifierIds: null,
   overclockBelowRisk: 0.5,
+  chaseCommissions: true,
 });
 
 /**
@@ -1624,6 +1672,7 @@ export const idleHeavyBot = createPolicyBot({
   useQueues: true,
   newGamePlusModifierIds: null,
   overclockBelowRisk: 0.5,
+  chaseCommissions: false,
 });
 
 export const BOTS: readonly Bot[] = [idleBot, greedySpenderBot, balancedBot, idleHeavyBot];

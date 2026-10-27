@@ -1,26 +1,46 @@
 import type { SlotVisual, VisualState } from '@printhead/core';
 import type { ReactElement } from 'react';
 import type { FaceId } from './character-kit.js';
+import { faceFor, kindFor } from './character.js';
 import { Fabricator } from './fabricator.js';
 import {
   BACKDROP_HEIGHT,
   BACKDROP_TOWERS,
   BACKDROP_TOWER_WIDTH,
+  BASE_HEIGHT,
+  BASE_Y,
   BAY_HEIGHT,
+  BAY_PADDING,
+  BAY_WIDTH,
   BILL_GAP,
   BILL_HEIGHT,
   BILL_STAGGER_SECONDS,
   BILL_WIDTH,
+  CHARACTER_Y,
   FABRICATOR_HEIGHT,
   FABRICATOR_WIDTH,
+  FLOOR_CREW_OFFSETS,
+  FLOOR_CREW_SCALE,
+  FLOOR_HEIGHT,
+  FLOOR_SCALE_BACK,
+  FLOOR_SCALE_FRONT,
+  FLOOR_SPOTS,
+  FLOOR_WIDTH,
   GOLIATH_SCALE,
+  PILE_ITEM,
+  PILE_MAX,
+  PILE_PER_DOUBLING,
+  PILE_ROW,
+  PILE_X,
   PRESS_HEIGHT,
   PRESS_PAD,
   bayX,
   workshopWidth,
 } from './geometry.js';
+import { Printer } from './printer.js';
 import { Slot } from './slot.js';
 import { WORKSHOP_CSS } from './styles.js';
+import { WorkshopWall } from './wall.js';
 
 /**
  * The workshop (spec §16: `renderer/` = Printer, Slot, Workshop, Goliath, …).
@@ -40,6 +60,44 @@ export interface WorkshopProps {
   readonly flourishes?: Readonly<Record<string, FaceId>>;
   /** Tap a printer to overclock its bay; omitted, the workshop is read-only. */
   readonly onSlotPress?: (slotId: string) => void;
+  /**
+   * `rack` (the default) draws every bay as a box in a row, locked ones as
+   * outlines. `floor` stands the owned bays' printers freely on the workshop
+   * floor at `positions`, and draws nothing for bays not yet bought.
+   */
+  readonly layout?: 'rack' | 'floor';
+  /** Floor positions by slot id, as fractions of the floor (feet, 0..1). */
+  readonly positions?: Readonly<Record<string, { readonly x: number; readonly y: number }>>;
+  /** The slot being dragged around the floor, drawn lifted. */
+  readonly grabbedSlotId?: string | null;
+}
+
+/** Where a bay stands on the floor: its saved spot, or the next default one. */
+export function floorSpot(
+  slotId: string,
+  index: number,
+  positions: WorkshopProps['positions'],
+): { readonly x: number; readonly y: number } {
+  return positions?.[slotId] ?? FLOOR_SPOTS[index % FLOOR_SPOTS.length] ?? { x: 0.5, y: 0.8 };
+}
+
+export function floorScale(y: number): number {
+  return FLOOR_SCALE_BACK + (FLOOR_SCALE_FRONT - FLOOR_SCALE_BACK) * y;
+}
+
+/**
+ * Keep a printer wholly on the floor. Its feet are at `y`, so its head is a
+ * bay's height (at that depth's scale) above them: the furthest back it may
+ * stand is where the head touches the top edge. Sideways, half its scaled
+ * width must stay inside either wall.
+ */
+export function clampToFloor(spot: { x: number; y: number }): { x: number; y: number } {
+  const span = FLOOR_SCALE_FRONT - FLOOR_SCALE_BACK;
+  const minY = (BAY_HEIGHT * FLOOR_SCALE_BACK) / (FLOOR_HEIGHT - BAY_HEIGHT * span);
+  const y = Math.min(Math.max(spot.y, minY), 1);
+  const half = (BAY_WIDTH * floorScale(y)) / 2 / FLOOR_WIDTH;
+  const x = Math.min(Math.max(spot.x, half), 1 - half);
+  return { x, y };
 }
 
 const EMPTY_BAY_ID = 'locked';
@@ -191,8 +249,210 @@ function Backdrop({ visual, width }: { visual: VisualState; width: number }): Re
   );
 }
 
-export function Workshop({ visual, flourishes, onSlotPress }: WorkshopProps): ReactElement {
+/** How many items a stock of `count` draws: a few per doubling, capped. */
+export function pileSize(count: number): number {
+  if (count <= 0) {
+    return 0;
+  }
+  return Math.min(PILE_MAX, Math.max(1, Math.round(PILE_PER_DOUBLING * Math.log2(count + 1))));
+}
+
+/** Row and column of the `index`-th item in a pyramid `PILE_ROW` wide. */
+function pileCell(index: number): { row: number; col: number; width: number } {
+  let row = 0;
+  let left = index;
+  let width = PILE_ROW;
+  while (left >= width && width > 1) {
+    left -= width;
+    row += 1;
+    width -= 1;
+  }
+  return { row, col: left, width };
+}
+
+/**
+ * Finished stock, piling up on the floor: brackets for Parts, gilded boxes for
+ * Products. Selling empties it — the pile is what the coins are made of.
+ */
+function StockPile({ visual }: { visual: VisualState }): ReactElement | null {
+  const parts = pileSize(visual.ledger.parts);
+  const products = pileSize(visual.ledger.products);
+  const total = Math.min(parts + products, PILE_MAX);
+  if (total === 0) {
+    return null;
+  }
+  return (
+    <g data-pile="true" data-testid="stock-pile" className="ph-pile">
+      <ellipse
+        className="ph-floor-shadow"
+        cx={PILE_X + (PILE_ROW * PILE_ITEM) / 2}
+        cy={FLOOR_HEIGHT - PILE_ITEM / 3}
+        rx={(PILE_ROW * PILE_ITEM) / 2 + PILE_ITEM / 2}
+        ry={PILE_ITEM / 2}
+      />
+      {Array.from({ length: total }, (_unused, index) => {
+        const { row, col, width } = pileCell(index);
+        const x = PILE_X + col * PILE_ITEM + ((PILE_ROW - width) * PILE_ITEM) / 2;
+        const y = FLOOR_HEIGHT - (row + 1) * (PILE_ITEM - 2) - PILE_ITEM / 3;
+        const product = index >= parts;
+        return (
+          <g
+            // biome-ignore lint/suspicious/noArrayIndexKey: an item's place in the pile is its identity
+            key={index}
+            className={product ? 'ph-pile-item ph-pile-item--product' : 'ph-pile-item'}
+            transform={`translate(${x}, ${y})`}
+          >
+            {product ? (
+              <rect
+                x={1}
+                y={1}
+                width={PILE_ITEM - 2}
+                height={PILE_ITEM - 3}
+                rx={2}
+                className="ph-pile-box"
+              />
+            ) : (
+              <path d={`M2 1h4v${PILE_ITEM - 8}h${PILE_ITEM - 8}v4H2z`} className="ph-pile-part" />
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+interface FloorItem {
+  readonly key: string;
+  readonly y: number;
+  readonly node: ReactElement;
+}
+
+/**
+ * Every printer on the floor, drawn in person (the floor lifts spec §4's
+ * once-per-slot rule; the rack keeps it). Each bay is a crew: its lead stands
+ * at the bay's spot carrying the bay's bars and label, the rest stand in
+ * formation behind it, printing the same thing a beat out of step. All of
+ * them, across all bays, are drawn back to front so nearer machines overlap
+ * farther ones.
+ */
+function FloorCrews({
+  visual,
+  positions,
+  grabbedSlotId,
+  flourishes,
+  onSlotPress,
+  assemblyParts,
+}: Pick<WorkshopProps, 'visual' | 'positions' | 'flourishes' | 'onSlotPress'> & {
+  readonly grabbedSlotId: string | null;
+  readonly assemblyParts?: readonly string[];
+}): ReactElement {
+  const items: FloorItem[] = [];
+  visual.slots.forEach((slot, index) => {
+    const spot = clampToFloor(floorSpot(slot.slotId, index, positions));
+    const flourish = flourishes?.[slot.slotId];
+    const grabbed = slot.slotId === grabbedSlotId;
+    const lift = grabbed ? BAY_PADDING * 2 : 0;
+    const place = (at: { x: number; y: number }, size = 1): string => {
+      const scale = floorScale(at.y) * size;
+      const x = at.x * FLOOR_WIDTH - (BAY_WIDTH * scale) / 2;
+      const y = at.y * FLOOR_HEIGHT - BAY_HEIGHT * scale - lift;
+      return `translate(${x}, ${y}) scale(${scale})`;
+    };
+    const className = grabbed ? 'ph-floor-spot is-grabbed' : 'ph-floor-spot';
+    const crew = Math.max(slot.printerCount - 1, 0);
+    const shown = Math.min(crew, FLOOR_CREW_OFFSETS.length);
+    const press =
+      onSlotPress !== undefined && slot.overclock.ready
+        ? () => onSlotPress(slot.slotId)
+        : undefined;
+    for (let member = 0; member < shown; member += 1) {
+      const offset = FLOOR_CREW_OFFSETS[member] ?? { x: 0, y: 0 };
+      const at = clampToFloor({ x: spot.x + offset.x, y: spot.y + offset.y });
+      items.push({
+        key: `${slot.slotId}-crew-${member}`,
+        y: at.y,
+        node: (
+          // biome-ignore lint/a11y/useKeyWithClickEvents: the crew's lead is the keyboard target for its bay
+          <g
+            key={`${slot.slotId}-crew-${member}`}
+            data-slot-id={slot.slotId}
+            data-crew={member + 1}
+            className={`${className} ph-crew${
+              flourish === 'happy' || flourish === 'wow' ? ' ph-slot--celebrate' : ''
+            }`}
+            transform={place(at, FLOOR_CREW_SCALE)}
+            onClick={press}
+          >
+            <ellipse
+              className="ph-floor-shadow"
+              cx={BAY_WIDTH / 2}
+              cy={BASE_Y + BASE_HEIGHT + CHARACTER_Y * 2}
+              rx={BAY_WIDTH * 0.42}
+              ry={BAY_WIDTH * 0.07}
+            />
+            <Printer
+              machineTier={slot.machineTier}
+              parts="all"
+              running={slot.running}
+              // Each machine a beat out of step, so the crew reads as many.
+              phaseOffset={(slot.phaseOffset + (member + 1) * 0.137) % 1}
+              progress={slot.progress}
+              output={slot.output}
+              kind={kindFor(slot, false)}
+              face={faceFor(slot, flourish)}
+              overclocked={slot.overclock.active}
+            />
+          </g>
+        ),
+      });
+    }
+    items.push({
+      key: slot.slotId,
+      y: spot.y,
+      node: (
+        <g
+          key={slot.slotId}
+          data-slot-id={slot.slotId}
+          data-lead="true"
+          className={className}
+          transform={place(spot)}
+        >
+          <Slot
+            slot={slot}
+            framed={false}
+            selfAssembling={visual.assembly.selfAssembling}
+            {...(index === 0 && assemblyParts !== undefined ? { assemblyParts } : {})}
+            {...(flourish === undefined ? {} : { flourish })}
+            {...(onSlotPress === undefined ? {} : { onPress: onSlotPress })}
+          />
+          {crew > shown ? (
+            <text
+              className="ph-crew-more"
+              data-testid={`crew-more-${slot.slotId}`}
+              x={BAY_WIDTH - BAY_PADDING}
+              y={CHARACTER_Y + BAY_PADDING * 3}
+              textAnchor="end"
+            >
+              {`+${crew - shown}`}
+            </text>
+          ) : null}
+        </g>
+      ),
+    });
+  });
+  return <>{items.sort((a, b) => a.y - b.y).map((item) => item.node)}</>;
+}
+
+export function Workshop({
+  visual,
+  flourishes,
+  onSlotPress,
+  layout = 'rack',
+  positions,
+  grabbedSlotId = null,
+}: WorkshopProps): ReactElement {
   const rack = bays(visual);
+  const floor = layout === 'floor';
   /*
    * The final print takes the whole frame (spec §4: "a deliberate return to
    * total commitment"). Every bay was cleared to start it, so drawing the rack
@@ -203,12 +463,16 @@ export function Workshop({ visual, flourishes, onSlotPress }: WorkshopProps): Re
     ? FABRICATOR_WIDTH
     : visual.goliath
       ? workshopWidth(1) * GOLIATH_SCALE
-      : workshopWidth(rack.length);
+      : floor
+        ? FLOOR_WIDTH
+        : workshopWidth(rack.length);
   const rackHeight = building
     ? FABRICATOR_HEIGHT
     : visual.goliath
       ? BAY_HEIGHT * GOLIATH_SCALE
-      : BAY_HEIGHT;
+      : floor
+        ? FLOOR_HEIGHT
+        : BAY_HEIGHT;
   const height = rackHeight + (installedPresses(visual).length > 0 ? PRESS_HEIGHT : 0);
   // During the intro the first bay holds the machine being built: the pieces
   // the player has clicked on, drawn on the printer that will keep them
@@ -223,7 +487,7 @@ export function Workshop({ visual, flourishes, onSlotPress }: WorkshopProps): Re
       data-visual-version={visual.version}
       data-phase={visual.phaseId}
       data-slot-capacity={visual.slotCapacity}
-      data-layout={building ? 'fabricator' : visual.goliath ? 'goliath' : 'rack'}
+      data-layout={building ? 'fabricator' : visual.goliath ? 'goliath' : layout}
       data-backdrop={visual.backdrop}
       data-self-assembling={visual.assembly.selfAssembling}
       viewBox={`0 0 ${width} ${height}`}
@@ -241,6 +505,19 @@ export function Workshop({ visual, flourishes, onSlotPress }: WorkshopProps): Re
           {...(flourishes === undefined ? {} : { flourishes })}
           {...(onSlotPress === undefined ? {} : { onSlotPress })}
         />
+      ) : floor ? (
+        <>
+          <WorkshopWall phaseId={visual.phaseId} />
+          <StockPile visual={visual} />
+          <FloorCrews
+            visual={visual}
+            {...(positions === undefined ? {} : { positions })}
+            grabbedSlotId={grabbedSlotId}
+            {...(flourishes === undefined ? {} : { flourishes })}
+            {...(onSlotPress === undefined ? {} : { onSlotPress })}
+            {...(assemblyParts === undefined ? {} : { assemblyParts })}
+          />
+        </>
       ) : (
         rack.map((slot, index) => {
           const flourish = flourishes?.[slot.slotId];

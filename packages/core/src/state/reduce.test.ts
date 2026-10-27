@@ -12,6 +12,7 @@ import {
   assemblePrinter,
   createSim,
   playUntil,
+  withBenchWork,
 } from './__fixtures__/sim.js';
 import {
   advancePhase,
@@ -99,8 +100,9 @@ describe('phase gating', () => {
 
 describe('intro assembly', () => {
   it('attaches pieces in order, one bench-work stretch at a time', () => {
-    const sim = createSim();
-    const first = pieces[0];
+    const timed = withBenchWork(content, 30);
+    const sim = createSim(timed);
+    const first = timed.start.assemblyPieces[0];
     expect(first).toBeDefined();
     sim.do(attachPiece(first?.id ?? ''));
     expect(sim.state.assembly.attachedPieceIds).toEqual([]);
@@ -109,7 +111,9 @@ describe('intro assembly', () => {
     sim.tickSeconds(first?.attachDesignSeconds ?? 0);
     sim.do(attachPiece(first?.id ?? ''));
     expect(sim.state.assembly.attachedPieceIds).toEqual([first?.id]);
-    expect(sim.state.assembly.cooldownMs).toBe((pieces[1]?.attachDesignSeconds ?? 0) * 1000);
+    expect(sim.state.assembly.cooldownMs).toBe(
+      (timed.start.assemblyPieces[1]?.attachDesignSeconds ?? 0) * 1000,
+    );
   });
 
   it('refuses pieces out of order', () => {

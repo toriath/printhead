@@ -181,6 +181,23 @@ function migrateV6ToV7(payload: unknown): unknown {
 }
 
 /**
+ * v7 → v8: the commission board. A v7 save never saw one, so it starts empty,
+ * with the first offer due shortly (the value `commissions.json` ships with is
+ * not known here, so a minute is used) and nothing delivered.
+ */
+const V8_FIRST_OFFER_MS = 60_000;
+function migrateV7ToV8(payload: unknown): unknown {
+  const v7 = payload as Record<string, unknown>;
+  const stats = (v7.stats ?? {}) as Record<string, unknown>;
+  return {
+    ...v7,
+    saveVersion: 8,
+    commissions: { open: [], nextOfferMs: V8_FIRST_OFFER_MS, issued: 0 },
+    stats: { ...stats, commissionsCompleted: 0 },
+  };
+}
+
+/**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
  */
@@ -191,6 +208,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   4: migrateV4ToV5,
   5: migrateV5ToV6,
   6: migrateV6ToV7,
+  7: migrateV7ToV8,
 };
 
 export class SaveMigrationError extends Error {

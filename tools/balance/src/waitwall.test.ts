@@ -31,7 +31,8 @@ describe('meaningfulOptions', () => {
   });
 
   it('is empty while the bench work for the next piece is still running', () => {
-    expect(meaningfulOptions(base, content, curves)).toEqual([]);
+    const baking = { ...base, assembly: { ...base.assembly, cooldownMs: 30_000 } };
+    expect(meaningfulOptions(baking, content, curves)).toEqual([]);
   });
 
   it('spots an affordable machine, upgrade and automation', () => {

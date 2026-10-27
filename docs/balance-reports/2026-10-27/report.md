@@ -1,6 +1,6 @@
 # Balance report — 2026-10-27
 
-Reference bot: `balanced` · target 8 h · tolerance ±20 %
+Reference bot: `balanced` · target 8 h · tolerance ±20 % for the arc, ±35 % per phase
 
 **PASS** — every phase inside its window, no wait wall over budget.
 
@@ -10,15 +10,15 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 %
 
 | Phase | Budget | idle | greedy-spender | balanced | idle-heavy |
 |---|---|---|---|---|---|
-| Intro | 5 (4–6) | 510.0 | 4.3 | 4.3 | 90.0 |
-| Bench | 30 (24–36) | — | 27.1 | 28.0 | 170.0 |
-| Farm | 80 (64–96) | — | 80.7 | 90.2 | 250.0 |
-| Studio | 75 (60–90) | — | 64.3 | 65.2 | — |
-| The Melt-downs | 90 (72–108) | — | 85.4 | 72.5 | — |
-| The Absurd | 80 (64–96) | — | 86.0 | 69.2 | — |
-| The End | 60 (48–72) | — | 59.2 | 57.2 | — |
-| Ended | sandbox | — | 102.1 | 122.5 | — |
-| **Total (the arc)** | **420** | **510.0** | **406.9** | **386.5** | **510.0** |
+| Intro | 1 (1–1) | 510.0 | 0.8 | 0.8 | 90.0 |
+| Bench | 30 (20–41) | — | 24.3 | 21.2 | 210.0 |
+| Farm | 84 (55–113) | — | 88.8 | 90.1 | 210.0 |
+| Studio | 75 (49–101) | — | 80.8 | 83.3 | — |
+| The Melt-downs | 90 (59–122) | — | 62.0 | 69.1 | — |
+| The Absurd | 80 (52–108) | — | 79.4 | 62.7 | — |
+| The End | 60 (39–81) | — | 62.9 | 55.2 | — |
+| Ended | sandbox | — | 109.9 | 126.7 | — |
+| **Total (the arc)** | **420** | **510.0** | **399.1** | **382.3** | **510.0** |
 
 The reference run took 509.0 design-minutes (8.48 wall-hours at targetHours=8) and ended in `ended`.
 
@@ -32,11 +32,11 @@ parts does not count: it is a step towards a purchase, not a decision.
 
 | Phase | Longest wall | Budget | Walls found |
 |---|---|---|---|
-| Intro | 0.6 | 1 | 8 |
-| Bench | 0.9 | 3 | 28 |
-| Farm | 0.6 | 5 | 153 |
-| Studio | 0.3 | 5 | 43 |
-| The Melt-downs | 0.8 | 6 | 4 |
+| Intro | 0.1 | 1 | 2 |
+| Bench | 0.9 | 3 | 14 |
+| Farm | 0.6 | 5 | 26 |
+| Studio | 0.3 | 5 | 4 |
+| The Melt-downs | 0.9 | 6 | 5 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
 | Ended | 0.0 | 60 | 0 |
@@ -63,23 +63,23 @@ are not players: read these as where to look, not as verdicts.
 
 | Bot | Chores | Most repeated | Intro | Bench | Farm | Studio | The Melt-downs | The Absurd | The End |
 |---|---|---|---|---|---|---|---|---|---|
-| greedy-spender | 70 % | SET_SLOT_CONFIG ×588 | 4 | 22 | 15 | 27 | 54 | 39 | 51 |
-| balanced | 70 % | SET_SLOT_CONFIG ×593 | 4 | 23 | 17 | 27 | 44 | 29 | 51 |
-| idle-heavy | 73 % | SELL_PARTS ×16 | 70 | 120 | 180 | — | — | — | — |
+| greedy-spender | 48 % | SET_SLOT_CONFIG ×298 | 1 | 13 | 28 | 41 | 38 | 26 | 37 |
+| balanced | 55 % | SET_SLOT_CONFIG ×332 | 1 | 13 | 34 | 41 | 45 | 27 | 26 |
+| idle-heavy | 49 % | RECYCLE_SCRAP ×11 | 60 | 100 | 50 | — | — | — | — |
 
-Never bought by any bot: `pallet-printer`, `central-bank`.
+Never bought by any bot: `central-bank`.
 
-Build-order divergence, `greedy-spender` vs `balanced`: 0.03 (0 = the same order, ~0.5 = unrelated).
-Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.00 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `balanced`: 0.00 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.08 (0 = the same order, ~0.5 = unrelated).
 
 ## Activity
 
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
 | idle | 51 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 6108 | 2486 | 68537 | 9838 | 12.6 % | ended |
-| balanced | 6108 | 2140 | 80597 | 11411 | 12.4 % | ended |
-| idle-heavy | 51 | 75 | 1977 | 172 | 8.0 % | farm |
+| greedy-spender | 6108 | 909 | 2097 | 125 | 5.6 % | ended |
+| balanced | 6108 | 860 | 18666 | 1927 | 9.4 % | ended |
+| idle-heavy | 51 | 77 | 1847 | 147 | 7.4 % | farm |
 
 ---
 

@@ -16,8 +16,9 @@
  *   finished), the New Game Plus run counter with its chosen modifiers, and
  *   the count of Plates ever engraved (which is what the presses read).
  * - v7 (M7 balance overhaul): every bay's perfect meter and overclock clocks.
+ * - v8 (commissions): the commission board and the count of orders delivered.
  */
-export const SAVE_SCHEMA_VERSION = 7;
+export const SAVE_SCHEMA_VERSION = 8;
 
 /** Every version this build can still load — the fixture corpus mirrors it. */
-export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;

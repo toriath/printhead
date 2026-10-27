@@ -330,7 +330,7 @@ describe('balance view', () => {
     open(fakeHost());
     const timer = screen.getByTestId('editor-phase-timer');
     expect(timer.textContent).toContain('intro');
-    expect(timer.textContent).toContain('/ 5 design-min');
+    expect(timer.textContent).toContain('/ 1 design-min');
     expect(timer.getAttribute('data-over-budget')).toBe('false');
   });
 

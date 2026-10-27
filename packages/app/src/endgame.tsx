@@ -7,6 +7,7 @@ import {
 } from '@printhead/core';
 import { Ending } from '@printhead/renderer';
 import { type ReactElement, useState } from 'react';
+import { price } from './afford.js';
 import { formatAmount, formatGrams, formatPercent } from './format.js';
 import type { GameStore } from './store.js';
 
@@ -60,6 +61,7 @@ export function EndgamePanel({ store, visual }: EndgamePanelProps): ReactElement
                 type="button"
                 data-testid={`buy-${node.upgradeId}`}
                 disabled={!node.affordable}
+                {...price(visual, node.cost, node.costResource)}
                 onClick={() => store.dispatch(buyUpgrade(node.upgradeId))}
               >
                 {`${formatAmount(node.cost)} ${node.costResource}`}

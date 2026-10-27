@@ -68,8 +68,8 @@ describe('phase FSM', () => {
   });
 
   it('accumulates the spec §6 design-minute budgets', () => {
-    expect(budgetThroughPhase(phases, 'intro')).toBe(5);
-    expect(budgetThroughPhase(phases, 'bench')).toBe(35);
+    expect(budgetThroughPhase(phases, 'intro')).toBe(1);
+    expect(budgetThroughPhase(phases, 'bench')).toBe(31);
     expect(budgetThroughPhase(phases, 'end')).toBe(420);
     // The terminal sandbox is outside the arc's 420-minute budget (spec §6);
     // its nominal five minutes are what the harness uses as a run-out.

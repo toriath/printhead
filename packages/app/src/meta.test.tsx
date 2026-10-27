@@ -52,11 +52,17 @@ describe('StudioPanel (spec §5D)', () => {
 
   it('shows the bench when a commission is on it', () => {
     const { store } = stubStore();
-    render(<StudioPanel store={store} visual={studio} />);
-    expect(studio.studio.draftingDesignId).not.toBeNull();
-    expect(screen.getByTestId('studio-drafting').textContent).toContain(
-      studio.studio.draftingName ?? '',
-    );
+    const drafting: VisualState = {
+      ...studio,
+      studio: {
+        ...studio.studio,
+        draftingDesignId: 'money-plate',
+        draftingName: 'The Money Plate',
+        draftProgress: 0.4,
+      },
+    };
+    render(<StudioPanel store={store} visual={drafting} />);
+    expect(screen.getByTestId('studio-drafting').textContent).toContain('The Money Plate');
   });
 
   it('offers a draft the workshop can pay for, and refuses to offer one it cannot', () => {
@@ -173,7 +179,11 @@ describe('PrestigePanel (spec §5D, §5E)', () => {
     render(<PrestigePanel store={store} visual={studio} />);
     expect(studio.prestige.available).toBe(true);
     fireEvent.click(screen.getByTestId('melt-down'));
+    // It asks first: nothing is thrown away until the dialog is confirmed.
+    expect(dispatched).toEqual([]);
+    fireEvent.click(screen.getByTestId('melt-down-confirm'));
     expect(dispatched).toEqual([{ type: 'PRESTIGE' }]);
+    expect(screen.queryByTestId('melt-down-dialog')).toBeNull();
   });
 
   it('disables it and says why when the projection blocks it', () => {

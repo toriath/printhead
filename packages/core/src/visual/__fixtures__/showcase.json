@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "phaseId": "studio",
   "phaseName": "Studio",
   "simTimeMs": 4620000,
@@ -535,5 +535,25 @@
         "active": false
       }
     ]
+  },
+  "commissions": {
+    "open": true,
+    "offers": [
+      {
+        "serial": 3,
+        "templateId": "petg-gears",
+        "clientName": "The corner caf\u00e9",
+        "objectId": "gearset",
+        "objectName": "Gear set",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 80,
+        "delivered": 36,
+        "timeLeft": 0.55,
+        "remainingMs": 198000,
+        "reward": 422.4
+      }
+    ],
+    "completed": 2
   }
 }

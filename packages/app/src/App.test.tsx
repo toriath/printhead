@@ -44,29 +44,168 @@ function attachAll(harness: Harness, store: GameStore): void {
   }
 }
 
-describe('App shell', () => {
-  it('renders the phase, the HUD and the workshop', async () => {
-    const { game } = await boot();
-    render(<App store={game.store} />);
-    expect(screen.getByTestId('phase').textContent).toBe('intro');
-    expect(screen.getByTestId('phase-name').textContent).toBe('Intro');
-    expect(screen.getByRole('img')).toBeDefined();
-    expect(screen.getByTestId('money').textContent).toBe('¤0');
-    expect(screen.getByTestId('print-status').textContent).toBe('no printer');
-  });
+describe('the assembly bench', () => {
+  // jsdom has no PointerEvent; a MouseEvent carries the coordinates a drag needs.
+  if (window.PointerEvent === undefined) {
+    class PointerEventShim extends MouseEvent {
+      readonly pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerId = init.pointerId ?? 0;
+      }
+    }
+    window.PointerEvent = PointerEventShim as unknown as typeof PointerEvent;
+  }
 
-  it('keeps the attach button disabled until the bench work is done', async () => {
+  it('seats a piece dropped on the printer, and attaches it once its screws are turned', async () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
     const first = store.getContent().start.assemblyPieces[0];
-    const attach = screen.getByTestId('attach');
-    expect(attach).toHaveProperty('disabled', true);
-    expect(attach.textContent).toContain('s');
-
     harness.warp((first?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
+    const card = document.querySelector<HTMLButtonElement>(`[data-piece="${first?.id}"]`);
+    const target = document.querySelector<HTMLElement>('.bench__printer');
+    if (card === null || target === null) {
+      throw new Error('expected the bench');
+    }
+    // jsdom lays nothing out: give the printer a box to aim at.
+    target.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }) as DOMRect;
+
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerMove(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    // Seated, not fastened: the reducer has not heard about it yet.
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+    fireEvent.click(screen.getByTestId('screw-0'));
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+    fireEvent.click(screen.getByTestId('screw-1'));
+    expect(store.getState().assembly.attachedPieceIds).toEqual([first?.id]);
+    expect(screen.queryByTestId('screw-0')).toBeNull();
+  });
+
+  it('switches the controller on with its power button rather than screws', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const pieces = store.getContent().start.assemblyPieces;
+    for (const piece of pieces.slice(0, -1)) {
+      harness.warp(piece.attachDesignSeconds * MS_PER_SECOND);
+      fireEvent.click(screen.getByTestId('attach'));
+    }
+    const last = pieces.at(-1);
+    expect(last?.id).toBe('controller');
+    const card = document.querySelector<HTMLButtonElement>(`[data-piece="${last?.id}"]`);
+    const target = document.querySelector<HTMLElement>('.bench__printer');
+    if (card === null || target === null) {
+      throw new Error('expected the bench');
+    }
+    target.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }) as DOMRect;
+    fireEvent.pointerDown(card, { clientX: 500, clientY: 500, pointerId: 1 });
+    fireEvent.pointerMove(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 50, clientY: 50, pointerId: 1 });
+    expect(screen.queryByTestId('screw-0')).toBeNull();
+    fireEvent.click(screen.getByTestId('power-on'));
+    expect(store.getState().assembly.attachedPieceIds).toHaveLength(pieces.length);
+  });
+});
+
+describe('progressive disclosure', () => {
+  const shown = (testId: string): boolean =>
+    screen.getByTestId(testId).closest('[hidden]') === null;
+
+  it('brings in each piece of the interface when its idea first matters', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    // A working machine and nothing else: no ledger lines, nothing to sell.
+    expect(shown('money')).toBe(false);
+    expect(shown('parts')).toBe(false);
+    expect(shown('sell')).toBe(false);
+    expect(shown('log')).toBe(false);
+
+    fireEvent.click(screen.getByTestId('configure'));
+    const object = store.getContent().objects[0];
+    harness.warp((object?.printDesignSeconds ?? 0) * MS_PER_SECOND);
+    // The first Part: now there is something to count and something to sell.
+    expect(shown('parts')).toBe(true);
+    expect(shown('sell')).toBe(true);
+    expect(shown('log')).toBe(true);
+    expect(shown('money')).toBe(false);
+
+    fireEvent.click(screen.getByTestId('sell'));
+    expect(shown('money')).toBe(true);
+  });
+});
+
+describe('keyboard shortcuts', () => {
+  it('press the button the screen offers, and nothing the screen withholds', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const first = store.getContent().start.assemblyPieces[0];
+    fireEvent.keyDown(window, { key: 'a' });
+    expect(store.getState().assembly.attachedPieceIds).toEqual([first?.id]);
+    for (const _piece of store.getContent().start.assemblyPieces.slice(1)) {
+      fireEvent.keyDown(window, { key: 'a' });
+    }
+    expect(store.getState().assembly.attachedPieceIds).toHaveLength(
+      store.getContent().start.assemblyPieces.length,
+    );
+    // Sell is on screen but disabled with nothing to sell: the key does nothing.
+    fireEvent.keyDown(window, { key: 's' });
+    expect(store.getState().stats.partsSold).toBe(0);
+  });
+
+  it('stays out of the way while a field has focus or a key is modified', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    const first = store.getContent().start.assemblyPieces[0];
+    harness.warp((first?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
+    fireEvent.keyDown(window, { key: 'a', metaKey: true });
+    const field = document.createElement('input');
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: 'a' });
+    field.remove();
+    expect(store.getState().assembly.attachedPieceIds).toEqual([]);
+  });
+});
+
+describe('App shell', () => {
+  it('opens on the bench and nothing else: no ledger, no panels', async () => {
+    const { game } = await boot();
+    render(<App store={game.store} />);
+    expect(screen.getByTestId('phase').textContent).toBe('intro');
+    expect(screen.getByTestId('assembly-bench')).toBeDefined();
+    expect(screen.queryByTestId('money')).toBeNull();
+    expect(screen.queryByTestId('ledger')).toBeNull();
+    expect(screen.queryByTestId('phase-name')).toBeNull();
+  });
+
+  it('lets the first piece on straight away: there is nothing to wait for', async () => {
+    const { game } = await boot();
+    render(<App store={game.store} />);
+    const first = game.store.getContent().start.assemblyPieces[0];
     expect(screen.getByTestId('attach')).toHaveProperty('disabled', false);
     expect(screen.getByTestId('attach').textContent).toBe(`Attach ${first?.name}`);
+  });
+
+  it('reveals the workshop once the machine is built', async () => {
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    expect(screen.queryByTestId('assembly-bench')).toBeNull();
+    expect(screen.getByTestId('phase-name').textContent).toBe('Intro');
+    expect(screen.getByTestId('money').textContent).toBe('$0');
+    expect(screen.getByTestId('print-status').textContent).not.toBe('no printer');
   });
 
   it('walks the whole intro through the UI and lands in bench', async () => {
@@ -85,17 +224,17 @@ describe('App shell', () => {
     expect(Number(screen.getByTestId('parts').textContent)).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByTestId('sell'));
-    expect(screen.getByTestId('money').textContent).not.toBe('¤0');
+    expect(screen.getByTestId('money').textContent).not.toBe('$0');
     harness.warp(MS_PER_SECOND);
     expect(screen.getByTestId('phase').textContent).toBe('bench');
   });
 
-  it('draws each attached piece onto the printer as it is clicked on', async () => {
+  it('draws each attached piece onto the printer on the bench as it is clicked on', async () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
     const pieces = store.getContent().start.assemblyPieces;
-    const workshop = screen.getByRole('img');
+    const workshop = screen.getByTestId('bench-printer');
     expect(workshop.querySelectorAll('[data-part]')).toHaveLength(0);
 
     harness.warp((pieces[0]?.attachDesignSeconds ?? 0) * MS_PER_SECOND);
@@ -107,8 +246,8 @@ describe('App shell', () => {
     const harness = await boot();
     const { store } = harness.game;
     render(<App store={store} />);
-    const before = screen.getByTestId('filament').textContent;
     attachAll(harness, store);
+    const before = screen.getByTestId('filament').textContent;
     fireEvent.click(screen.getByTestId('configure'));
     fireEvent.click(screen.getByTestId('print'));
     expect(screen.getByTestId('filament').textContent).not.toBe(before);

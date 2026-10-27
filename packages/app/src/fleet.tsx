@@ -7,6 +7,7 @@ import {
   setSlotQueue,
 } from '@printhead/core';
 import type { ReactElement } from 'react';
+import { price } from './afford.js';
 import { formatAmount, formatPercent } from './format.js';
 import type { GameStore } from './store.js';
 
@@ -97,6 +98,7 @@ function ForkChoice({ store, visual }: FleetPanelProps): ReactElement | null {
                 type="button"
                 data-testid={`fork-${fork.forkId}`}
                 disabled={!fork.affordable}
+                {...price(visual, fork.cost, fork.costResource)}
                 onClick={() => store.dispatch(chooseFork(fork.forkId))}
               >
                 {`${formatAmount(fork.cost)} ${fork.costResource}`}
@@ -183,6 +185,7 @@ export function FleetPanel({ store, visual }: FleetPanelProps): ReactElement | n
             type="button"
             data-testid="buy-slot"
             disabled={!slotUnlock.available || !slotUnlock.affordable}
+            {...price(visual, slotUnlock.cost, slotUnlock.costResource)}
             onClick={() => store.dispatch(buySlot(slotUnlock.unlockId))}
           >
             {`${formatAmount(slotUnlock.cost)} ${slotUnlock.costResource}`}

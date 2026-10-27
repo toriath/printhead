@@ -8,3 +8,4 @@ export * from './slot.js';
 export * from './fabricator.js';
 export * from './ending.js';
 export * from './workshop.js';
+export * from './wall.js';

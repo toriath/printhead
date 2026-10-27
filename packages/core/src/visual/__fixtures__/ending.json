@@ -1,8 +1,8 @@
 {
-  "version": 8,
+  "version": 9,
   "phaseId": "end",
   "phaseName": "The End",
-  "simTimeMs": 26419000,
+  "simTimeMs": 28030000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -25,8 +25,8 @@
       "batch": 0,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.23840000000000638,
-      "perfectCharge": 0.8999999999999999,
+      "failureRisk": 0.440000000000001,
+      "perfectCharge": 0.4,
       "overclock": {
         "active": false,
         "remaining": 0,
@@ -50,7 +50,7 @@
     "name": "Second config slot",
     "available": true,
     "affordable": true,
-    "cost": 775,
+    "cost": 1744,
     "costResource": "parts",
     "blockedReason": null
   },
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -100,16 +100,16 @@
     "complete": true
   },
   "ledger": {
-    "parts": 52346,
-    "money": 2926721.1444053426,
-    "scrap": 326,
+    "parts": 52883,
+    "money": 78964495.77340072,
+    "scrap": 26,
     "products": 0,
-    "plates": 41.5716,
+    "plates": 42.0516,
     "filamentGrams": {
       "pla": 0,
-      "petg": 2750,
-      "resin": 2000,
-      "metal": 1035,
+      "petg": 2500,
+      "resin": 3750,
+      "metal": 1012,
       "composite": 660
     }
   },
@@ -120,7 +120,7 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.17739975041509612,
+      "buyPerGram": 0.517349914749511,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
@@ -132,11 +132,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.3577932158058865,
-      "sellPerGram": 0.33149541444415387,
-      "priceMultiplier": 1.260547206833329,
+      "buyPerGram": 0.8288129248003222,
+      "sellPerGram": 0.7678951748274985,
+      "priceMultiplier": 1.001272182002792,
       "stockGrams": 6000,
-      "heldGrams": 2750
+      "heldGrams": 2500
     },
     {
       "materialId": "resin",
@@ -144,11 +144,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 1.1162365420312144,
-      "sellPerGram": 1.0341931561919202,
-      "priceMultiplier": 0.8988871899435696,
-      "stockGrams": 7500,
-      "heldGrams": 2000
+      "buyPerGram": 3.40398148145165,
+      "sellPerGram": 3.153788842564954,
+      "priceMultiplier": 0.9399500317193525,
+      "stockGrams": 4489.999999999327,
+      "heldGrams": 3750
     },
     {
       "materialId": "metal",
@@ -156,11 +156,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 4.2504183259126,
-      "sellPerGram": 3.938012578958024,
-      "priceMultiplier": 0.8556982416360879,
-      "stockGrams": 104.19999999997957,
-      "heldGrams": 1035
+      "buyPerGram": 11.86952684346268,
+      "sellPerGram": 10.997116620468173,
+      "priceMultiplier": 0.8193906307804425,
+      "stockGrams": 1.333333333337743,
+      "heldGrams": 1012
     },
     {
       "materialId": "composite",
@@ -184,7 +184,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 269,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -195,7 +195,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": true,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -206,7 +206,7 @@
       "maxLevel": 3,
       "available": true,
       "affordable": true,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -217,7 +217,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": true,
-      "cost": 269,
+      "cost": 606,
       "costResource": "parts"
     },
     {
@@ -250,7 +250,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": true,
-      "cost": 430.2694400000001,
+      "cost": 968.1075200000001,
       "costResource": "money"
     },
     {
@@ -261,7 +261,7 @@
       "maxLevel": 2,
       "available": true,
       "affordable": true,
-      "cost": 9956.25,
+      "cost": 3646.5,
       "costResource": "money"
     },
     {
@@ -331,7 +331,7 @@
       "threshold": 40,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -344,7 +344,7 @@
       "threshold": 400,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -357,7 +357,7 @@
       "threshold": 20,
       "available": false,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -370,7 +370,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 1511.055,
+      "cost": 849.9687,
       "costResource": "money"
     },
     {
@@ -383,13 +383,13 @@
       "threshold": 60,
       "available": true,
       "affordable": true,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     }
   ],
   "recycler": {
     "installed": false,
-    "scrapGrams": 326,
+    "scrapGrams": 26,
     "yieldGrams": 0,
     "yieldMaterialId": "pla"
   },
@@ -404,17 +404,17 @@
         "designId": "phone-stand",
         "name": "Phone stand",
         "materialId": "resin",
-        "level": 0,
+        "level": 1,
         "maxLevel": 20,
-        "owned": false,
+        "owned": true,
         "levelProgress": 0,
         "productValue": 40,
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
-        "blockedReason": "slot-full"
+        "blockedReason": "already-owned"
       },
       {
         "designId": "lamp-shade",
@@ -428,7 +428,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -444,7 +444,7 @@
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 55139.04,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -452,10 +452,10 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 27,
-    "platesHeld": 41.5716,
+    "platesOnOffer": 140,
+    "platesHeld": 42.0516,
     "runsCompleted": 7,
-    "moneyPerDesignSecond": 481.37625,
+    "moneyPerDesignSecond": 36355.66569,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -467,7 +467,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 31,
+      "cost": 22,
       "costResource": "plates"
     },
     {
@@ -478,18 +478,18 @@
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 27,
+      "cost": 23,
       "costResource": "plates"
     },
     {
       "moneyPrinterId": "pallet-printer",
       "name": "Pallet press",
       "tier": 3,
-      "level": 0,
+      "level": 1,
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 14,
+      "cost": 41,
       "costResource": "plates"
     },
     {
@@ -507,8 +507,8 @@
   "backdrop": "skyline",
   "inflation": {
     "active": true,
-    "multiplier": 3.547995008301922,
-    "moneyPrinted": 3627176.853750016
+    "multiplier": 10.34699829499022,
+    "moneyPrinted": 79235881.23013873
   },
   "fabricator": {
     "unlocked": true,
@@ -520,28 +520,76 @@
     "layer": 140,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 2896560,
+    "totalMs": 1860000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 660,
-    "sections": 2,
+    "sections": 0,
     "maxSections": 4,
     "sectionRunning": false,
     "sectionProgress": 0,
     "sectionAvailable": false,
     "sectionBlockedReason": "already-built",
-    "sectionCost": 641,
+    "sectionCost": 250,
     "sectionCostResource": "parts",
     "forkAllows": true,
     "slotsCommitted": true,
     "committedPrinters": 64,
     "requiredPrinters": 16
   },
+  "commissions": {
+    "open": true,
+    "offers": [
+      {
+        "serial": 25,
+        "templateId": "petg-brackets",
+        "clientName": "An animation studio",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 30,
+        "delivered": 0,
+        "timeLeft": 0.14583333333333334,
+        "remainingMs": 35000,
+        "reward": 2064.226159850549
+      },
+      {
+        "serial": 26,
+        "templateId": "pla-gears",
+        "clientName": "An animation studio",
+        "objectId": "gearset",
+        "objectName": "Gear set",
+        "materialId": "pla",
+        "materialName": "PLA",
+        "count": 24,
+        "delivered": 0,
+        "timeLeft": 0.6458333333333334,
+        "remainingMs": 155000,
+        "reward": 819.4822649632255
+      },
+      {
+        "serial": 27,
+        "templateId": "petg-gears",
+        "clientName": "An animation studio",
+        "objectId": "gearset",
+        "objectName": "Gear set",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 80,
+        "delivered": 0,
+        "timeLeft": 0.9305555555555556,
+        "remainingMs": 335000,
+        "reward": 6920.072459689459
+      }
+    ],
+    "completed": 168
+  },
   "ending": {
     "stage": "credits",
     "active": true,
-    "progress": 0.7244444444444444,
-    "stageProgress": 0.504,
+    "progress": 0.7222222222222222,
+    "stageProgress": 0.5,
     "museumPrinterId": "bench-mk1",
     "museumTier": 5,
     "credits": [

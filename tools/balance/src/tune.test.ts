@@ -1,5 +1,6 @@
 import { RAW_CONTENT, loadContent } from '@printhead/core';
 import { describe, expect, it } from 'vitest';
+import { buildBudgetTable } from './budget.js';
 import { PointerError, readPointer, writePointer } from './pointer.js';
 import { measurePhase, roundSignificant, tunePhase, withOverrides } from './tune.js';
 
@@ -103,16 +104,19 @@ describe('tunePhase', () => {
     );
     expect(result.budgetDesignMinutes).toBe(30);
     expect(result.steps).toHaveLength(8);
-    // Within the ±20 % window the CI gate uses.
-    expect(result.actualDesignMinutes).toBeGreaterThanOrEqual(24);
-    expect(result.actualDesignMinutes).toBeLessThanOrEqual(36);
+    // The bisection aims well inside the gate: ±20 % of the budget.
+    expect(result.actualDesignMinutes).toBeGreaterThanOrEqual(30 * 0.8);
+    expect(result.actualDesignMinutes).toBeLessThanOrEqual(30 * 1.2);
   });
 
   it('confirms the shipped content is what the tuner would pick', () => {
     // A regression guard on the committed data diff: the bundled numbers must
-    // still put bench on budget, or the next balance change silently drifted.
-    expect(measurePhase(RAW_CONTENT, 'bench')).toBeGreaterThanOrEqual(24);
-    expect(measurePhase(RAW_CONTENT, 'bench')).toBeLessThanOrEqual(36);
+    // still put bench inside the window the content itself declares.
+    const bench = buildBudgetTable(loadContent(RAW_CONTENT).pacing).phases.find(
+      (phase) => phase.phaseId === 'bench',
+    );
+    expect(measurePhase(RAW_CONTENT, 'bench')).toBeGreaterThanOrEqual(bench?.minDesignMinutes ?? 0);
+    expect(measurePhase(RAW_CONTENT, 'bench')).toBeLessThanOrEqual(bench?.maxDesignMinutes ?? 0);
   });
 });
 

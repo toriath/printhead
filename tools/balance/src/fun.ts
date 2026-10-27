@@ -88,6 +88,9 @@ export function noveltyMoments(log: RunLog): readonly NoveltyMoment[] {
           mark(event.simTimeMs, 'perfect', 'first perfect print');
         }
         break;
+      case 'COMMISSION_COMPLETED':
+        mark(event.simTimeMs, 'commission', 'first commission delivered');
+        break;
       case 'FABRICATOR_STARTED':
         mark(event.simTimeMs, 'fabricator', 'the final print');
         break;

@@ -154,7 +154,14 @@ export const PacingFileSchema = z
   .object({
     targetHours: Positive,
     baselineHours: Positive,
+    /**
+     * How far one phase may drift from its budget. Deliberately looser than
+     * the arc's: a phase is a story beat, not a stopwatch, and a tight window
+     * per phase made the tuner trade away real choices to hit it.
+     */
     phaseBudgetTolerance: Fraction,
+    /** How far the whole arc may drift from its budget (spec §6: 8 h ± 20 %). */
+    arcBudgetTolerance: Fraction,
     phases: z.array(PhaseDefSchema).min(1),
   })
   .strict();
@@ -926,6 +933,42 @@ export const EndgameFileSchema = z
   })
   .strict();
 
+// --- commissions.json -------------------------------------------------------
+
+/**
+ * Commissions: clients post orders on a board — so many of an object in a
+ * material, before a deadline — and pay a bonus on delivery. Prints count
+ * towards every matching order automatically, so a commission is a *goal*,
+ * not a chore: the decision is which order to chase with which bay. Offers are
+ * drawn from a seeded hash of the board's issue counter, so the board a save
+ * sees is reproducible.
+ */
+export const CommissionTemplateSchema = z
+  .object({
+    id: IdSchema,
+    objectId: IdSchema,
+    materialId: IdSchema,
+    /** Parts to deliver. */
+    count: z.number().int().positive(),
+    timeLimitDesignSeconds: Positive,
+    /** Bonus money on delivery, as a multiple of what the parts sell for. */
+    rewardMultiplier: Positive,
+    unlockPhaseId: IdSchema,
+  })
+  .strict();
+
+export const CommissionsFileSchema = z
+  .object({
+    unlockPhaseId: IdSchema,
+    boardSize: z.number().int().positive(),
+    offerEveryDesignSeconds: Positive,
+    /** The first offer after the board opens, so it does not open empty. */
+    firstOfferDesignSeconds: Positive,
+    clients: z.array(z.object({ id: IdSchema, name: z.string().min(1) }).strict()).min(1),
+    templates: z.array(CommissionTemplateSchema).min(1),
+  })
+  .strict();
+
 // --- the whole content set --------------------------------------------------
 
 export const ContentSchema = z
@@ -945,6 +988,7 @@ export const ContentSchema = z
     failure: FailureFileSchema,
     prestige: PrestigeFileSchema,
     endgame: EndgameFileSchema,
+    commissions: CommissionsFileSchema,
   })
   .strict();
 
@@ -965,6 +1009,7 @@ export const CONTENT_FILE_SCHEMAS = {
   failure: FailureFileSchema,
   prestige: PrestigeFileSchema,
   endgame: EndgameFileSchema,
+  commissions: CommissionsFileSchema,
 } as const;
 
 export type ContentFileName = keyof typeof CONTENT_FILE_SCHEMAS;

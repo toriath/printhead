@@ -11,6 +11,7 @@ import {
   purchaseAutomation,
   tickAutomation,
 } from '../systems/automation.js';
+import { tickCommissions } from '../systems/commissions.js';
 import { designAvailability, hasDesign, startDesignDraft, tickStudio } from '../systems/designs.js';
 import {
   grantPrinter,
@@ -186,7 +187,8 @@ function applyTick(state: GameState, simDtMs: number, ctx: ReduceContext): GameS
   const manufactured = tickFactory(minted, ctx.content, simDtMs, modifiers, ctx.emit);
   const built = tickTheFinalPrint(state, manufactured, simDtMs, ctx);
   const automated = tickAutomation(built, ctx.content, simDtMs, ctx.emit);
-  return advanceWhileReady(automated, ctx);
+  const posted = tickCommissions(automated, ctx.content, simDtMs, ctx.emit);
+  return advanceWhileReady(posted, ctx);
 }
 
 /**

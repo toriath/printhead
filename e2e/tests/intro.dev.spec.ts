@@ -4,22 +4,23 @@ import { assemblePrinter, bootGame, content, warp } from './harness.js';
 const MS_PER_SECOND = 1000;
 
 test.describe('the intro (spec §6 phase 0)', () => {
-  test('assembles printer #1 one click at a time and prints the first Part', async ({ page }) => {
+  test('assembles printer #1 on the bench, then reveals the workshop', async ({ page }) => {
     await bootGame(page);
-    await expect(page.getByRole('heading', { name: 'PRINTHEAD' })).toBeVisible();
     await expect(page.getByTestId('phase')).toHaveText('intro');
-    await expect(page.getByTestId('parts')).toHaveText('0');
 
-    // Nothing is on the bench yet, and the button is not clickable until the
-    // first piece's bench work is done — the intro cannot be rushed.
-    const workshop = page.getByRole('img');
-    await expect(workshop.locator('[data-part]')).toHaveCount(0);
-    await expect(page.getByTestId('attach')).toBeDisabled();
+    // The intro is the bench alone: no ledger, nothing built, nothing to wait for.
+    await expect(page.getByTestId('assembly-bench')).toBeVisible();
+    await expect(page.getByTestId('ledger')).toHaveCount(0);
+    await expect(page.getByTestId('bench-printer').locator('[data-part]')).toHaveCount(0);
+    await expect(page.getByTestId('attach')).toBeEnabled();
 
     await assemblePrinter(page);
 
-    // Every piece is on the machine, and the attach button has retired itself.
+    // Built: the bench and its attach button retire, and the workshop appears.
     await expect(page.getByTestId('attach')).toHaveCount(0);
+    await expect(page.getByTestId('assembly-bench')).toHaveCount(0);
+    await expect(page.getByTestId('parts')).toHaveText('0');
+    const workshop = page.getByRole('img');
     await expect(workshop.locator('[data-part="frame"]')).toHaveCount(1);
     await expect(workshop.locator('[data-part="controller"]')).toHaveCount(1);
 

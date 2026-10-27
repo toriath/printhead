@@ -115,6 +115,26 @@ export interface AutomationSlotState {
   readonly cooldownMs: number;
 }
 
+/** One order on the commission board (see `content/commissions.json`). */
+export interface CommissionState {
+  /** Issue number on the board — stable identity for the UI and the events. */
+  readonly serial: number;
+  readonly templateId: string;
+  readonly clientId: string;
+  /** Parts delivered so far towards the template's `count`. */
+  readonly delivered: number;
+  /** Design-milliseconds until the client gives up. */
+  readonly remainingMs: number;
+}
+
+export interface CommissionBoardState {
+  readonly open: readonly CommissionState[];
+  /** Design-milliseconds until the next offer may arrive. */
+  readonly nextOfferMs: number;
+  /** Offers ever made this run; seeds the next draw. */
+  readonly issued: number;
+}
+
 export interface StatsState {
   readonly printsCompleted: number;
   readonly printsFailed: number;
@@ -141,6 +161,8 @@ export interface StatsState {
    * been made; what the tree spends is the metal, not the engraving.
    */
   readonly platesEarned: number;
+  /** Commissions delivered on time, across the game. */
+  readonly commissionsCompleted: number;
 }
 
 /**
@@ -302,6 +324,8 @@ export interface GameState {
   readonly fabricator: FabricatorState;
   /** Which run of the game this is, and on what terms (spec §18 M6). */
   readonly ngPlus: NewGamePlusState;
+  /** The commission board this run. */
+  readonly commissions: CommissionBoardState;
   readonly assembly: AssemblyState;
   readonly stats: StatsState;
 }
@@ -337,6 +361,7 @@ export const EMPTY_STATS: StatsState = {
   moneyPrinted: 0,
   prestigeCount: 0,
   platesEarned: 0,
+  commissionsCompleted: 0,
 };
 
 export function zeroResources(): ResourceLedger {
@@ -429,6 +454,11 @@ export function createInitialState(content: Content, options: InitialStateOption
     factoryProgress: 0,
     fabricator: EMPTY_FABRICATOR,
     ngPlus: EMPTY_NEW_GAME_PLUS,
+    commissions: {
+      open: [],
+      nextOfferMs: content.commissions.firstOfferDesignSeconds * MS_PER_SECOND,
+      issued: 0,
+    },
     assembly: { attachedPieceIds: [], cooldownMs: firstAssemblyCooldownMs(content) },
     stats: EMPTY_STATS,
   };

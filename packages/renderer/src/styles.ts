@@ -110,6 +110,40 @@ export const WORKSHOP_CSS = `
 
 .ph-bay { fill: var(--ph-bay); stroke: var(--ph-bay-edge); stroke-width: 1.5; }
 .ph-bay--empty { fill: none; stroke-dasharray: 5 5; opacity: 0.45; }
+.ph-bay--floor { fill: transparent; stroke: none !important; }
+.ph-floor-shadow { fill: rgba(0, 0, 0, 0.3); }
+.ph-floor-spot { cursor: grab; }
+.ph-pile-part { fill: var(--char-pla, #E23673); stroke: #1C2330; stroke-width: 1.5; stroke-linejoin: round; }
+.ph-pile-box { fill: #E2AA3A; stroke: #1C2330; stroke-width: 1.5; }
+.ph-pile-item { transform-box: fill-box; animation: ph-pile-drop 420ms cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+@keyframes ph-pile-drop { from { opacity: 0; translate: 0 -24px; } to { opacity: 1; translate: 0 0; } }
+.ph-wall { fill: rgba(255, 255, 255, 0.025); }
+.ph-wall-skirting { stroke: rgba(255, 255, 255, 0.08); stroke-width: 2; }
+.ph-wall-item { animation: ph-wall-in 700ms cubic-bezier(0.3, 1.5, 0.5, 1) both; transform-box: fill-box; transform-origin: top center; }
+@keyframes ph-wall-in { from { opacity: 0; transform: translateY(-10px) rotate(-3deg); } }
+.ph-wall-board { fill: #c9a26b; stroke: #1C2330; stroke-width: 2; }
+.ph-wall-hole { fill: #8a6a3e; }
+.ph-wall-tool { fill: none; stroke: #6C7884; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.ph-wall-window { fill: #2a4d6e; stroke: #1C2330; stroke-width: 3; }
+.ph-wall-frame { stroke: #1C2330; stroke-width: 3; }
+.ph-wall-shelf { fill: #8a6a3e; stroke: #1C2330; stroke-width: 1.5; }
+.ph-wall-spool-rim { fill: #DCE0DE; stroke: #1C2330; stroke-width: 2; }
+.ph-wall-spool-hub { fill: #FAFAF7; stroke: #1C2330; stroke-width: 1.5; }
+.ph-wall-clock { fill: #FAFAF7; stroke: #1C2330; stroke-width: 3; }
+.ph-wall-hand { stroke: #1C2330; stroke-width: 2.5; stroke-linecap: round; }
+.ph-wall-blueprint { fill: #2E5FC2; stroke: #1C2330; stroke-width: 2; }
+.ph-wall-blueprint-ink { fill: none; stroke: #cfe0ff; stroke-width: 1.5; stroke-linecap: round; }
+.ph-wall-plate { fill: #E2AA3A; stroke: #7a5208; stroke-width: 2; }
+.ph-wall-neon { font: 400 30px/1 'Tilt Warp', 'Arial Rounded MT Bold', sans-serif; fill: #ff8ab3; letter-spacing: 4px; filter: drop-shadow(0 0 4px #ff3d84) drop-shadow(0 0 12px #ff3d84); animation: ph-neon 4s steps(1) infinite; }
+@keyframes ph-neon { 0%, 92%, 96% { opacity: 1; } 93%, 97% { opacity: 0.35; } }
+.ph-wall-wire { fill: none; stroke: #1C2330; stroke-width: 1.5; }
+.ph-wall-bulb { fill: #ffd75a; filter: drop-shadow(0 0 4px #ffd75a); animation: ph-bulb 1.5s ease-in-out infinite alternate; }
+@keyframes ph-bulb { to { opacity: 0.45; } }
+.ph-slot--celebrate [data-testid="printer-figure"] > g { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-hop 520ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes ph-hop { 0% { scale: 1 1; } 25% { scale: 1.08 0.9; } 55% { scale: 0.95 1.08; translate: 0 -6px; } 100% { scale: 1 1; translate: 0 0; } }
+.ph-crew-more { font: 700 16px/1 'Martian Mono', ui-monospace, monospace; fill: var(--ph-accent); }
+.ph-floor-spot.is-grabbed { cursor: grabbing; }
+.ph-floor-spot.is-grabbed .ph-floor-shadow { fill: rgba(0, 0, 0, 0.18); }
 
 .ph-label { fill: var(--ph-ink); font-size: 11px; }
 .ph-label--dim { fill: var(--ph-dim); font-style: italic; }

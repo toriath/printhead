@@ -274,12 +274,42 @@ export const SlotStateV7Schema = SlotStateSchema.extend({
 }).strict();
 
 export const GameStateV7Schema = GameStateV6Schema.extend({
-  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  saveVersion: z.literal(7),
   slots: z.array(SlotStateV7Schema),
 }).strict();
 
+// --- v8 (commissions) ---------------------------------------------------------
+
+export const CommissionStateSchema = z
+  .object({
+    serial: z.number().int().positive(),
+    templateId: z.string().min(1),
+    clientId: z.string().min(1),
+    delivered: NonNegative,
+    remainingMs: z.number().finite(),
+  })
+  .strict();
+
+export const CommissionBoardStateSchema = z
+  .object({
+    open: z.array(CommissionStateSchema),
+    nextOfferMs: z.number().finite(),
+    issued: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const StatsStateV8Schema = StatsStateV6Schema.extend({
+  commissionsCompleted: z.number().int().nonnegative(),
+}).strict();
+
+export const GameStateV8Schema = GameStateV7Schema.extend({
+  saveVersion: z.literal(SAVE_SCHEMA_VERSION),
+  commissions: CommissionBoardStateSchema,
+  stats: StatsStateV8Schema,
+}).strict();
+
 /** The schema of the *current* state shape — what `fromSaveFile` validates against. */
-export const GameStateSchema = GameStateV7Schema;
+export const GameStateSchema = GameStateV8Schema;
 
 export const SaveFileSchema = z
   .object({
@@ -297,3 +327,4 @@ export type GameStateV4 = z.infer<typeof GameStateV4Schema>;
 export type GameStateV5 = z.infer<typeof GameStateV5Schema>;
 export type GameStateV6 = z.infer<typeof GameStateV6Schema>;
 export type GameStateV7 = z.infer<typeof GameStateV7Schema>;
+export type GameStateV8 = z.infer<typeof GameStateV8Schema>;

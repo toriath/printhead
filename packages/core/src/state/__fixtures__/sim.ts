@@ -23,6 +23,24 @@ import { reduce } from '../reduce.js';
 export const TEST_CONTENT: Content = loadContent(RAW_CONTENT);
 
 /**
+ * Content whose intro pieces take bench work to prepare. The shipped game has
+ * none (waiting to be allowed to click is not play), but the mechanic is still
+ * data-driven, so the tests that guard it run against content that uses it.
+ */
+export function withBenchWork(content: Content, seconds: number): Content {
+  return {
+    ...content,
+    start: {
+      ...content.start,
+      assemblyPieces: content.start.assemblyPieces.map((piece) => ({
+        ...piece,
+        attachDesignSeconds: seconds,
+      })),
+    },
+  };
+}
+
+/**
  * An empty slot with every field filled in. Tests build slots constantly, and
  * spelling the defaults out in each of them means a new `SlotState` field is a
  * hundred-line diff instead of a one-line one.

@@ -68,6 +68,8 @@ Changing a slot's configuration has a **changeover cost** (time + filament waste
 - The final Fabricator print requires **all slots** — a deliberate return to total commitment.
 
 ### Rendering rule
+*Lifted for the workshop floor (the app's default, §7.6): there every printer is drawn in person — a bay is a crew, its lead at the bay's spot carrying the bay's bars and label, up to seven more in formation behind it, then "+n". The rule below still holds for the classic rack layout.*
+
 **Render once per slot**, not per printer: one animated printer visual per occupied slot, reflecting the slot's material/object and the best machine tier among its printers, plus a count badge (`×7`). Empty slots: faint outline. Max 4 slot visuals; the Goliath path replaces them with one large printer.
 
 ## 5. Upgrade Trees
@@ -86,9 +88,9 @@ Changing a slot's configuration has a **changeover cost** (time + filament waste
 
 | Phase | Content | Design budget |
 |---|---|---|
-| **0 — Intro** | Assemble printer #1 manually (6–8 clicks, each attaches an SVG piece); first Part | 5 min |
+| **0 — Intro** | Assemble printer #1 by hand on the fullscreen bench (drag, screw, power on — §7.6); first Part | 1 min |
 | **1 — Bench** | Manual loop, failure/scrap/recycler, printer #2 → PETG + heated bed | 30 min |
-| **2 — Farm** | 3–8 printers, market opens, changeover pain → automation relieves it → SLA | 80 min |
+| **2 — Farm** | 3–8 printers, market opens, changeover pain → automation relieves it → SLA | 84 min |
 | **3 — Studio** | Resin, designs, products; slots 2–3; Farm/Goliath fork → Money Plate designed | 75 min |
 | **4 — Prestige runs 1–2** | Melt-down → Plates; intro replays **self-assembling**; money printing begins | 90 min |
 | **5 — The Absurd (runs 3–4)** | Buildings, printer-printing factory; on-screen inflation — the economy eats itself | 80 min |
@@ -111,6 +113,21 @@ These budgets are **data** (`content/pacing.json`) and are enforced by automated
 - **Overclock.** Tap a running bay (or its button): it prints `speedMultiplier`× faster for `durationDesignSeconds`, then cools down; while boosted, every print adds `failureChargeMultiplier`× the failure charge and `perfectChargeMultiplier`× the perfect charge. Unlocked from the intro. Data: `failure.json → overclock`.
 - **Perfect prints.** Every finished batch adds `chargePerBatch` to the bay's perfect meter; the batch that fills it yields `yieldMultiplier`× and is celebrated. The good twin of the pity timer: deterministic, visible, anticipated. Data: `failure.json → perfectPrint`.
 - **Juice** is presentation driven by domain events (pop-ups, a Perfect burst, a failure shake, a layer fanfare, faces that react); it never feeds back into the simulation.
+- **Commissions.** From the Bench on, a board of up to `boardSize` orders: a client wants *n* of an object in a material before a deadline, and pays `rewardMultiplier`× the parts' value on delivery. Every matching finished print counts automatically and the parts stay the player's, so the decision is which order to chase with which bay, never a click per delivery. Offers are drawn from a hash of the seed and the board's issue counter (no rng stream), so a save replays the same orders. Only orders the workshop can deliver today are posted (material, object and upgrade unlocks). Data: `commissions.json`.
+
+### 7.6 Desktop shell
+
+The app is desktop-first (no phone layout): a fixed-height window with a **top bar** (brand, layer track, ledger with icons, music and sound switches), a **left sidebar** (the bay card, whose materials are drawn as real spools and whose objects as glyphs; the spool shelf, each spool emptying as stock does; the order board), the **workshop floor** in the centre (the workshop log under it), a **right sidebar** of tabs that appear as their mechanics unlock and badge how many of their buttons are affordable, and a **footer** action bar (sell, restock, build). There is no "what to do next" card: an idle game is learned by poking at it. The only nudges are a soft glow on the one control worth pressing and the layer being printed in the top bar, which fills as its gate nears and names nothing. Irreversible moves confirm in a **modal** (the melt-down). Every primary action has a **keyboard shortcut** (`1`–`4` bays, `A` attach, `L` load & print, `P` print, `O` overclock, `S` sell, `F` filament, `B` build), and a key only ever clicks the button the screen offers. A refused action is said in words in the log, never swallowed.
+
+**Out of filament is loud.** A bay that is loaded but stopped because its spool cannot feed one print (`app/src/starve.ts`) gets a blinking badge over the printer (click to restock), a worried face, a red edge on the floor, an alarm status and restock button in the bay card, a pulsing restock button in the footer and an "uh-oh" sound. Silence is the worst feedback an idle game can give.
+
+**The assembly bench (intro).** The intro is the bench, fullscreen, and nothing else: no ledger, no panels, and no word of what is being built. Pieces not yet reached show as `???`. There is no waiting (every `attachDesignSeconds` is 0; waiting to be allowed to click is not play): the player drags each piece onto the half-built machine, where a ghost shows where it goes, then fastens it by turning its screws; the controller is switched on instead, and the machine wakes ("Oh. Hello."), then walks — shrinking — to its spot on the workshop floor as the workshop is revealed around it: the machine you built *is* printer #1, not a stand-in. Only the fastened piece sends `ATTACH_PIECE`, so order stays the reducer's. A small Attach button and the `A` key attach directly, for keyboards and tests. Later runs (`selfAssembling`) skip the bench.
+
+**Progressive disclosure.** Every piece of the interface arrives the first time its idea matters and stays once shown (`app/src/reveal.ts`): Parts and Sell with the first Part, Money with the first sale, the spool shelf, restock button and Market with the first low spool or purchase, Build with the first affordable printer, the Machine and Automation tabs with their first affordable row, the order board with its first order, the log with the first finished print. Empty sidebars and the footer fold away. The layer track draws only the layers already reached and names no future one. A veteran (past the Bench, or after a melt-down) sees everything.
+
+**The floor.** Printers stand free on the workshop floor rather than in a rack of boxes (`Workshop layout="floor"`): only owned bays are drawn, back to front with a little perspective, and the player drags them where they like. Placement is taste, not state: it lives in browser storage, never in the save.
+
+**Casino juice.** Money behaves like money (`app/src/casino.tsx`, `app/src/sfx.ts`): sales throw a shower of coins at a counter that rolls up rather than jumping; gains in quick succession climb a pentatonic scale; a Perfect print is a jackpot burst centred on the printer that rolled it; a delivered order spins a slot reel over the order board before its coins fly to the counter — every effect starts where its cause is. All sound is synthesised (no assets): effects, plus a generative lo-fi loop (seventh-chord pads, bass, a pentatonic pluck redrawn every bar, a swung hat) with its own switch beside the mute. None of it reaches the simulation.
 
 ---
 
@@ -126,7 +143,7 @@ These budgets are **data** (`content/pacing.json`) and are enforced by automated
 ## 9. Constraints (non-negotiable)
 
 - Development in a **Linux devcontainer** on a MacBook; web build and the **entire test/tooling suite run in the container**. No host dependencies except Apple packaging.
-- **Platforms: Web (primary, PWA from day one), macOS, iOS** via Tauri v2; signing/packaging manually on the macOS host is acceptable (scripted).
+- **Platforms: desktop first** — Web (primary, PWA from day one) and macOS via Tauri v2; signing/packaging manually on the macOS host is acceptable (scripted). *iOS/mobile is dropped: the interface is designed for a desktop window and a mouse (§7.6).*
 - Idiomatic strict TypeScript, explicit design patterns, high coverage **including mutation testing**, fully deterministic simulation.
 
 ## 10. Stack
@@ -141,7 +158,7 @@ These budgets are **data** (`content/pacing.json`) and are enforced by automated
 | State | Pure-reducer store; React subscribes via selector hook | Sim is the store |
 | Tests | Vitest + fast-check + **Stryker** + Playwright | See §13 |
 | Lint/format | Biome (+ dependency-cruiser for import rules) | Deterministic for agents |
-| Shell | **Tauri v2** | macOS + iOS from the same web bundle |
+| Shell | **Tauri v2** | macOS from the same web bundle |
 | CI | GitHub Actions **inside the devcontainer image** | Dev = CI, bit-for-bit |
 
 **Why not Godot/Unity:** the renderer is deliberately HTML/CSS/SVG (later maybe RIVE, also web-embeddable). We borrow the *data patterns* of those engines (§11) without the engines.
@@ -168,7 +185,7 @@ The coding agent must **build its own balancing instruments before tuning number
 3. **Sweep runner** (`pnpm balance:sweep`): grid/random search over selected data fields (by JSON pointer), parallel across workers, emitting CSV.
 4. **Auto-tuner** (`pnpm balance:tune`): simple optimizer (hill-climb / bisection per parameter) that adjusts chosen fields until phase times hit the §6 budget within tolerance, scored across every gated bot and penalised for fun regressions (droughts, dead content; see 7); writes the winning values **back into `content/` via a proper patch**, never into code.
 5. **Report generator** (`pnpm balance:report`): markdown + SVG charts (resource curves, phase timeline, wait-walls) into `docs/balance-reports/<date>/`; every balance PR must attach one.
-6. **CI regression:** the `balanced` and `greedy-spender` bots must each finish each phase within budget ± 20 % and total within ± 20 %; wait-walls under budget. A balance regression fails CI exactly like a failing unit test.
+6. **CI regression:** the `balanced` and `greedy-spender` bots must each reach every phase in order, finish each phase within budget ± 35 % (`phaseBudgetTolerance`) and the whole arc within ± 20 % (`arcBudgetTolerance`); wait-walls under budget. A balance regression fails CI exactly like a failing unit test. The per-phase window is looser than the arc's on purpose: a phase is a story beat, not a stopwatch, and a tight per-phase window drove the tuner to price real choices (the Farm/Goliath fork) out of the game to hit it.
 7. **Fun signals** (in the report): the budgets measure length, not quality. The report also shows the longest stretch per phase with nothing new (a *drought*), the share of actions that are upkeep chores, content no bot bought before the ending (*dead content*), and how differently the strategies ordered their purchases. Bots are not players: these say where to look.
 
 Workflow mandate: when a milestone introduces a mechanic, the agent (a) extends the bots to use it, (b) runs sweep/tune to fit the time budget, (c) commits data + report. Manual number-guessing is a smell; the tools are the way.
@@ -179,7 +196,7 @@ Workflow mandate: when a milestone introduces a mechanic, the agent (a) extends 
 |---|---|---|
 | `core` unit | Vitest | ≥ 90 % line/branch |
 | `core` properties | fast-check | Resources ≥ 0; advance(2t) ≡ advance(t)∘advance(t); prestige preserves Designs exactly; money printing monotone in Plates; buy/sell round-trips never create value; **pace invariance:** phase order & unlock sequence identical for any `targetHours` |
-| `core` mutation | **Stryker** | Score ≥ 80 % on `systems/` + curve library; CI-gated |
+| `core` mutation | **Stryker** | Score ≥ 80 % on `systems/` + curve library; runs nightly (and on demand), not per change — a run is over an hour |
 | Balance | `tools/balance` bots | §12 budgets as CI assertions |
 | Content | zod + ref-checker | All content valid; no dangling ids; no literals in systems |
 | `renderer` | Vitest + Testing Library | Every `VisualState` fixture renders; upgrade visuals snapshot-tested |
@@ -234,7 +251,7 @@ printhead/
 │   └── platform/                  # storage/time facade: web + Tauri impls
 ├── tools/balance/                 # harness, bots, sweep, tune, report (§12)
 ├── tools/stl/                     # printable-model generator: code-CAD → STL (§20)
-├── apps-tauri/                    # Tauri v2 (macOS/iOS)
+├── apps-tauri/                    # Tauri v2 (macOS)
 ├── e2e/                           # Playwright
 └── docs/                          # this spec, ADRs, balance-reports/
 ```
@@ -244,7 +261,7 @@ printhead/
 - **CI (`ci.yml`)**, inside the devcontainer image: `biome ci` → content validation → `tsc -b` → `vitest --coverage` → `stryker run` (gated) → **balance bots vs. budgets** → `playwright test` → `vite build`. Green CI = releasable, reproducible web build.
 - **Web release:** tag → build → deploy (GitHub Pages/Cloudflare Pages) + **itch.io via butler** (existing account/workflow). PWA installable from day one.
 - **macOS:** container builds web bundle → host runs `pnpm tauri build` (Xcode CLT), sign + notarize — `scripts/release-macos.sh`.
-- **iOS:** host `pnpm tauri ios build` → Xcode → TestFlight → App Store; safe-area & touch-target audit; drop the backgrounded gap on foreground (no offline progress); `navigator.storage.persist()` on web.
+- **iOS:** dropped (desktop first). On web, `navigator.storage.persist()`; the backgrounded gap is dropped on return (no offline progress).
 - Versioning: Changesets; save-schema bump whenever state shape changes.
 
 ## 18. Implementation Milestones
@@ -256,7 +273,7 @@ printhead/
 - **M4 — Slots & scale:** slots 2–4, fleet assignment UI, Farm/Goliath fork, per-slot rendering with badges.
 - **M5 — Meta + editor v2:** Design Studio, products, prestige melt-down → Plates, self-assembling intro replay, money printing; editor covers all content types via schema (should be automatic — verify).
 - **M6 — Endgame:** Endgame tree, inflation display, Fabricator final print (the one synced render), ending sequence, credits, NG+/sandbox.
-- **M7 — Ship:** PWA polish, save-corpus hardening, editor stripped from prod bundle, **printable STL generated + CI-validated (§20)**, web + itch.io release; then Tauri macOS/iOS on host.
+- **M7 — Ship:** PWA polish, save-corpus hardening, editor stripped from prod bundle, **printable STL generated + CI-validated (§20)**, web + itch.io release; then Tauri macOS on host.
 
 Each milestone: plan → tests → implement → mutation run → **balance run + report** → ADR update if architecture shifted.
 

@@ -27,7 +27,8 @@ const CONTENT_DIR = fileURLToPath(new URL('../../../packages/core/content/', imp
  * optimiser handed the whole file will happily make PLA free to hit a budget.
  */
 const DEFAULT_KNOBS: readonly ClimbKnob[] = [
-  { pointer: 'start/assemblyPieces/*/attachDesignSeconds', min: 5, max: 120, integer: true },
+  // Not the intro's attach timers: they are zero by design, because waiting
+  // to be allowed to click is not play (spec §7.6, the assembly bench).
   { pointer: 'curves/printer-cost-tier1/base', min: 5, max: 400 },
   { pointer: 'curves/printer-cost-tier1/growth', min: 1.02, max: 1.6 },
   { pointer: 'curves/upgrade-cost-machine/base', min: 5, max: 400 },
@@ -40,7 +41,9 @@ const DEFAULT_KNOBS: readonly ClimbKnob[] = [
   // a numerical one, and it stops the optimiser from buying a green timeline by
   // making the third bay a rounding error on the second.
   { pointer: 'curves/slot-cost/growth', min: 2.5, max: 12 },
-  { pointer: 'curves/fork-cost/value', min: 100, max: 20000 },
+  // The Farm/Goliath fork is run one's big decision: priced above what a
+  // Studio run holds (~$4.5k), the fit "solves" pacing by deleting the choice.
+  { pointer: 'curves/fork-cost/value', min: 2000, max: 4000 },
   // M5's meta layer. The studio is gated on drafting the capstone, so what a
   // commission costs owns most of that phase; prestige is gated on the presses,
   // so the Plate reward, the press price and the print rate own that one.

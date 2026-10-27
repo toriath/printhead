@@ -5,6 +5,7 @@ import { curveRegistryFor } from '../curves/evaluate.js';
 import { MAX_RUN_COMPLETIONS_PER_TICK, MS_PER_SECOND } from '../engine/constants.js';
 import type { EventSink } from '../events/types.js';
 import type { GameState, PrintRunState, SlotState } from '../state/game-state.js';
+import { creditCommissions } from './commissions.js';
 import { creditDesignPrints, productValueOf } from './designs.js';
 import { bankScrap, chargePerPrint, resolveBatchFailures, scrapFromFailure } from './failure.js';
 import { inflationMultiplier } from './inflation.js';
@@ -442,7 +443,20 @@ function completeRun(
   };
   const scrapped = scrapFromFailure(config.material, config.filamentGrams * outcome.failed);
 
-  const banked = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
+  const pooled = bankScrap(addPool(state, produced.pool, produced.count, produced.value), scrapped);
+  // Parts count towards the commission board (see `commissions.ts`).
+  const banked =
+    config.pool === 'parts'
+      ? creditCommissions(
+          pooled,
+          content,
+          config.material.id,
+          config.object.id,
+          produced.count,
+          inflationMultiplier(state, content, curves),
+          emit,
+        )
+      : pooled;
   // A Design levels on what it *made*, so only the successful prints count.
   const progress =
     config.pool === 'products'

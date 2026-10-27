@@ -1,8 +1,8 @@
 {
-  "version": 8,
+  "version": 9,
   "phaseId": "absurd",
   "phaseName": "The Absurd",
-  "simTimeMs": 16740000,
+  "simTimeMs": 20315000,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
@@ -50,7 +50,7 @@
     "name": "Second config slot",
     "available": true,
     "affordable": false,
-    "cost": 775,
+    "cost": 1744,
     "costResource": "parts",
     "blockedReason": null
   },
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": true,
       "affordable": false,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 10354.5,
+      "cost": 4000,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -85,7 +85,7 @@
     "totalPieces": 7,
     "nextPieceId": "frame",
     "nextPieceName": "Frame",
-    "cooldownMs": 53000,
+    "cooldownMs": 20000,
     "ready": false,
     "selfAssembling": true,
     "progress": 0,
@@ -93,10 +93,10 @@
   },
   "ledger": {
     "parts": 0,
-    "money": 1797.929999999998,
+    "money": 1019.5363499999991,
     "scrap": 0,
     "products": 0,
-    "plates": 20,
+    "plates": 10.7729,
     "filamentGrams": {
       "pla": 40,
       "petg": 0,
@@ -112,7 +112,7 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.08717490529032093,
+      "buyPerGram": 0.07225827104946712,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
@@ -124,9 +124,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 0.14690430164852517,
-      "sellPerGram": 0.12486865640124639,
-      "priceMultiplier": 1.053229575926164,
+      "buyPerGram": 0.11717087846018177,
+      "sellPerGram": 0.09959524669115451,
+      "priceMultiplier": 1.0134728934695936,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -136,9 +136,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 0.6222763686013038,
-      "sellPerGram": 0.5289349133111082,
-      "priceMultiplier": 1.01975016536979,
+      "buyPerGram": 0.48679792491494667,
+      "sellPerGram": 0.41377823617770465,
+      "priceMultiplier": 0.9624166160096367,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -148,9 +148,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 2.2942234095307814,
-      "sellPerGram": 1.950089898101164,
-      "priceMultiplier": 0.9399098291820285,
+      "buyPerGram": 1.9877397735224385,
+      "sellPerGram": 1.6895788074940727,
+      "priceMultiplier": 0.9824578579887496,
       "stockGrams": 800,
       "heldGrams": 0
     },
@@ -159,7 +159,7 @@
       "materialName": "Composite feedstock",
       "tradeable": false,
       "priceResource": "plates",
-      "available": false,
+      "available": true,
       "buyPerGram": 0.004,
       "sellPerGram": 0,
       "priceMultiplier": 1,
@@ -176,7 +176,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": false,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -187,7 +187,7 @@
       "maxLevel": 1,
       "available": true,
       "affordable": false,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -198,7 +198,7 @@
       "maxLevel": 3,
       "available": false,
       "affordable": false,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -209,7 +209,7 @@
       "maxLevel": 1,
       "available": false,
       "affordable": false,
-      "cost": 169,
+      "cost": 379,
       "costResource": "parts"
     },
     {
@@ -242,7 +242,7 @@
       "maxLevel": 2,
       "available": true,
       "affordable": true,
-      "cost": 168.074,
+      "cost": 378.167,
       "costResource": "money"
     },
     {
@@ -253,7 +253,7 @@
       "maxLevel": 2,
       "available": false,
       "affordable": false,
-      "cost": 9956.25,
+      "cost": 3646.5,
       "costResource": "money"
     },
     {
@@ -271,11 +271,11 @@
       "upgradeId": "exotic-feedstock",
       "name": "Exotic feedstock line",
       "tree": "endgame",
-      "level": 0,
+      "level": 1,
       "maxLevel": 1,
-      "available": true,
-      "affordable": true,
-      "cost": 12.2271,
+      "available": false,
+      "affordable": false,
+      "cost": 24.4542,
       "costResource": "plates"
     },
     {
@@ -284,8 +284,8 @@
       "tree": "endgame",
       "level": 0,
       "maxLevel": 1,
-      "available": false,
-      "affordable": true,
+      "available": true,
+      "affordable": false,
       "cost": 12.2271,
       "costResource": "plates"
     },
@@ -296,7 +296,7 @@
       "level": 0,
       "maxLevel": 3,
       "available": false,
-      "affordable": true,
+      "affordable": false,
       "cost": 12.2271,
       "costResource": "plates"
     },
@@ -307,7 +307,7 @@
       "level": 0,
       "maxLevel": 1,
       "available": false,
-      "affordable": true,
+      "affordable": false,
       "cost": 12.2271,
       "costResource": "plates"
     }
@@ -323,7 +323,7 @@
       "threshold": 40,
       "available": true,
       "affordable": false,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -336,7 +336,7 @@
       "threshold": 400,
       "available": true,
       "affordable": false,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -349,7 +349,7 @@
       "threshold": 20,
       "available": false,
       "affordable": false,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     },
     {
@@ -362,7 +362,7 @@
       "threshold": 250,
       "available": false,
       "affordable": true,
-      "cost": 719.55,
+      "cost": 404.747,
       "costResource": "money"
     },
     {
@@ -375,7 +375,7 @@
       "threshold": 60,
       "available": true,
       "affordable": false,
-      "cost": 720,
+      "cost": 405,
       "costResource": "parts"
     }
   ],
@@ -396,17 +396,17 @@
         "designId": "phone-stand",
         "name": "Phone stand",
         "materialId": "resin",
-        "level": 0,
+        "level": 1,
         "maxLevel": 20,
-        "owned": false,
+        "owned": true,
         "levelProgress": 0,
         "productValue": 40,
         "capstone": false,
         "available": false,
-        "affordable": false,
-        "cost": 55139.04,
+        "affordable": true,
+        "cost": 857.781002304,
         "costResource": "money",
-        "blockedReason": "missing-prerequisite"
+        "blockedReason": "already-owned"
       },
       {
         "designId": "lamp-shade",
@@ -419,8 +419,8 @@
         "productValue": 90,
         "capstone": false,
         "available": false,
-        "affordable": false,
-        "cost": 55139.04,
+        "affordable": true,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -431,12 +431,12 @@
         "level": 17,
         "maxLevel": 20,
         "owned": true,
-        "levelProgress": 0.75,
+        "levelProgress": 0.25,
         "productValue": 22912.68835871142,
         "capstone": true,
         "available": false,
-        "affordable": false,
-        "cost": 55139.04,
+        "affordable": true,
+        "cost": 857.781002304,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -445,9 +445,9 @@
   "prestige": {
     "available": false,
     "platesOnOffer": 0,
-    "platesHeld": 20,
+    "platesHeld": 10.7729,
     "runsCompleted": 4,
-    "moneyPerDesignSecond": 179.793,
+    "moneyPerDesignSecond": 101.95363500000002,
     "blockedReason": "not-worth-it"
   },
   "moneyPrinters": [
@@ -455,22 +455,22 @@
       "moneyPrinterId": "bill-printer",
       "name": "Bill printer",
       "tier": 1,
-      "level": 2,
+      "level": 3,
       "maxLevel": 5,
       "available": true,
-      "affordable": true,
-      "cost": 13,
+      "affordable": false,
+      "cost": 22,
       "costResource": "plates"
     },
     {
       "moneyPrinterId": "bundle-printer",
       "name": "Bundle press",
       "tier": 2,
-      "level": 1,
+      "level": 0,
       "maxLevel": 5,
       "available": true,
-      "affordable": false,
-      "cost": 27,
+      "affordable": true,
+      "cost": 8,
       "costResource": "plates"
     },
     {
@@ -480,7 +480,7 @@
       "level": 0,
       "maxLevel": 5,
       "available": true,
-      "affordable": true,
+      "affordable": false,
       "cost": 14,
       "costResource": "plates"
     },
@@ -499,8 +499,8 @@
   "backdrop": "workshop",
   "inflation": {
     "active": true,
-    "multiplier": 1.7434981058064185,
-    "moneyPrinted": 389525.8800001262
+    "multiplier": 1.4451654209893423,
+    "moneyPrinted": 186356.67997500504
   },
   "fabricator": {
     "unlocked": false,
@@ -512,7 +512,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 3300000,
+    "totalMs": 1860000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
@@ -528,6 +528,26 @@
     "slotsCommitted": false,
     "committedPrinters": 0,
     "requiredPrinters": 16
+  },
+  "commissions": {
+    "open": true,
+    "offers": [
+      {
+        "serial": 1,
+        "templateId": "pla-brackets",
+        "clientName": "The corner café",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "pla",
+        "materialName": "PLA",
+        "count": 12,
+        "delivered": 0,
+        "timeLeft": 0.9666666666666667,
+        "remainingMs": 145000,
+        "reward": 52.02595515561632
+      }
+    ],
+    "completed": 119
   },
   "ending": {
     "stage": "none",

@@ -195,6 +195,7 @@ export function meltDown(
         prestigeCount: state.stats.prestigeCount + ONE,
         moneyPrinted: state.stats.moneyPrinted,
         platesEarned: state.stats.platesEarned + platesAwarded,
+        commissionsCompleted: state.stats.commissionsCompleted,
       },
     },
   };
