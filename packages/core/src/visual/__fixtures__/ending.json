@@ -2,7 +2,7 @@
   "version": 9,
   "phaseId": "end",
   "phaseName": "The End",
-  "simTimeMs": 28030000,
+  "simTimeMs": 28760000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -25,8 +25,8 @@
       "batch": 0,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.440000000000001,
-      "perfectCharge": 0.4,
+      "failureRisk": 0.8400000000000012,
+      "perfectCharge": 0.9,
       "overclock": {
         "active": false,
         "remaining": 0,
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -100,16 +100,16 @@
     "complete": true
   },
   "ledger": {
-    "parts": 52883,
-    "money": 78964495.77340072,
-    "scrap": 26,
+    "parts": 53013,
+    "money": 1819971.3698368077,
+    "scrap": 80,
     "products": 0,
-    "plates": 42.0516,
+    "plates": 45.0516,
     "filamentGrams": {
-      "pla": 0,
-      "petg": 2500,
-      "resin": 3750,
-      "metal": 1012,
+      "pla": 2880,
+      "petg": 4000,
+      "resin": 3000,
+      "metal": 1008,
       "composite": 660
     }
   },
@@ -120,11 +120,11 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.517349914749511,
+      "buyPerGram": 0.14841876170835305,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 0
+      "heldGrams": 2880
     },
     {
       "materialId": "petg",
@@ -132,11 +132,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.8288129248003222,
-      "sellPerGram": 0.7678951748274985,
-      "priceMultiplier": 1.001272182002792,
-      "stockGrams": 6000,
-      "heldGrams": 2500
+      "buyPerGram": 0.27651858176996486,
+      "sellPerGram": 0.25619446600987245,
+      "priceMultiplier": 1.1644357601219728,
+      "stockGrams": 5459.9999999988995,
+      "heldGrams": 4000
     },
     {
       "materialId": "resin",
@@ -144,11 +144,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 3.40398148145165,
-      "sellPerGram": 3.153788842564954,
-      "priceMultiplier": 0.9399500317193525,
-      "stockGrams": 4489.999999999327,
-      "heldGrams": 3750
+      "buyPerGram": 0.9799951173454332,
+      "sellPerGram": 0.9079654762205439,
+      "priceMultiplier": 0.9432722714195765,
+      "stockGrams": 6000,
+      "heldGrams": 3000
     },
     {
       "materialId": "metal",
@@ -156,11 +156,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 11.86952684346268,
-      "sellPerGram": 10.997116620468173,
-      "priceMultiplier": 0.8193906307804425,
-      "stockGrams": 1.333333333337743,
-      "heldGrams": 1012
+      "buyPerGram": 3.8866247643029532,
+      "sellPerGram": 3.600957844126686,
+      "priceMultiplier": 0.9352458253849042,
+      "stockGrams": 96.66666666667903,
+      "heldGrams": 1008
     },
     {
       "materialId": "composite",
@@ -276,6 +276,50 @@
       "costResource": "money"
     },
     {
+      "upgradeId": "dual-extruder",
+      "name": "Dual extruder",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 2,
+      "available": true,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "resin-wash",
+      "name": "Resin wash station",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": true,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "engraving-jig",
+      "name": "Engraving jig",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "auto-calibration",
+      "name": "Auto-calibration",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
       "upgradeId": "exotic-feedstock",
       "name": "Exotic feedstock line",
       "tree": "endgame",
@@ -389,7 +433,7 @@
   ],
   "recycler": {
     "installed": false,
-    "scrapGrams": 26,
+    "scrapGrams": 80,
     "yieldGrams": 0,
     "yieldMaterialId": "pla"
   },
@@ -412,7 +456,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -428,7 +472,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -444,7 +488,7 @@
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -452,10 +496,10 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 140,
-    "platesHeld": 42.0516,
+    "platesOnOffer": 10,
+    "platesHeld": 45.0516,
     "runsCompleted": 7,
-    "moneyPerDesignSecond": 36355.66569,
+    "moneyPerDesignSecond": 355.72484000000003,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -463,11 +507,11 @@
       "moneyPrinterId": "bill-printer",
       "name": "Bill printer",
       "tier": 1,
-      "level": 3,
+      "level": 2,
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 22,
+      "cost": 27,
       "costResource": "plates"
     },
     {
@@ -485,11 +529,11 @@
       "moneyPrinterId": "pallet-printer",
       "name": "Pallet press",
       "tier": 3,
-      "level": 1,
+      "level": 0,
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 41,
+      "cost": 14,
       "costResource": "plates"
     },
     {
@@ -507,8 +551,8 @@
   "backdrop": "skyline",
   "inflation": {
     "active": true,
-    "multiplier": 10.34699829499022,
-    "moneyPrinted": 79235881.23013873
+    "multiplier": 2.968375234167061,
+    "moneyPrinted": 2138998.037398274
   },
   "fabricator": {
     "unlocked": true,
@@ -520,7 +564,7 @@
     "layer": 140,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1860000,
+    "totalMs": 1920000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 660,
@@ -541,7 +585,7 @@
     "open": true,
     "offers": [
       {
-        "serial": 25,
+        "serial": 27,
         "templateId": "petg-brackets",
         "clientName": "An animation studio",
         "objectId": "bracket",
@@ -550,26 +594,12 @@
         "materialName": "PETG",
         "count": 30,
         "delivered": 0,
-        "timeLeft": 0.14583333333333334,
-        "remainingMs": 35000,
-        "reward": 2064.226159850549
+        "timeLeft": 0.16666666666666666,
+        "remainingMs": 40000,
+        "reward": 592.1908592163286
       },
       {
-        "serial": 26,
-        "templateId": "pla-gears",
-        "clientName": "An animation studio",
-        "objectId": "gearset",
-        "objectName": "Gear set",
-        "materialId": "pla",
-        "materialName": "PLA",
-        "count": 24,
-        "delivered": 0,
-        "timeLeft": 0.6458333333333334,
-        "remainingMs": 155000,
-        "reward": 819.4822649632255
-      },
-      {
-        "serial": 27,
+        "serial": 28,
         "templateId": "petg-gears",
         "clientName": "An animation studio",
         "objectId": "gearset",
@@ -578,12 +608,26 @@
         "materialName": "PETG",
         "count": 80,
         "delivered": 0,
-        "timeLeft": 0.9305555555555556,
-        "remainingMs": 335000,
-        "reward": 6920.072459689459
+        "timeLeft": 0.6111111111111112,
+        "remainingMs": 220000,
+        "reward": 1985.2493566109301
+      },
+      {
+        "serial": 29,
+        "templateId": "pla-gears",
+        "clientName": "An animation studio",
+        "objectId": "gearset",
+        "objectName": "Gear set",
+        "materialId": "pla",
+        "materialName": "PLA",
+        "count": 24,
+        "delivered": 0,
+        "timeLeft": 0.6666666666666666,
+        "remainingMs": 160000,
+        "reward": 235.09531854603122
       }
     ],
-    "completed": 168
+    "completed": 161
   },
   "ending": {
     "stage": "credits",

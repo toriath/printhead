@@ -170,7 +170,7 @@
       "advanceWhen": [
         {
           "metric": "platesEarned",
-          "atLeast": 30
+          "atLeast": 45
         },
         {
           "metric": "moneyPrintersInstalled",
@@ -225,7 +225,7 @@
         },
         {
           "metric": "moneyEarned",
-          "atLeast": 119280
+          "atLeast": 100000
         }
       ]
     },

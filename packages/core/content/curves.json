@@ -38,7 +38,7 @@
     "id": "fork-cost",
     "name": "Farm / Goliath commitment cost (money)",
     "type": "constant",
-    "value": 4000
+    "value": 3740.8
   },
   {
     "id": "design-level-value",
@@ -51,7 +51,7 @@
     "id": "prestige-plates",
     "name": "Plates granted at melt-down",
     "type": "power",
-    "base": 0.5,
+    "base": 0.244168,
     "exponent": 0.5
   },
   {
@@ -59,7 +59,7 @@
     "name": "Money printed per design-second per plate",
     "type": "linear",
     "base": 0,
-    "step": 0.970987
+    "step": 1.4225
   },
   {
     "id": "no-op",
@@ -71,15 +71,15 @@
     "id": "design-cost",
     "name": "Design draft cost",
     "type": "exponential",
-    "base": 154.688,
-    "growth": 1.77
+    "base": 232.032,
+    "growth": 2.655
   },
   {
     "id": "money-printer-cost",
     "name": "Money printer cost",
     "type": "exponential",
-    "base": 1,
-    "growth": 2.78438
+    "base": 1.5,
+    "growth": 4.17657
   },
   {
     "id": "design-slot-cost",
@@ -135,7 +135,7 @@
     "name": "Money printed per design-second per plate (bundles)",
     "type": "linear",
     "base": 0,
-    "step": 1.03888
+    "step": 1.83559
   },
   {
     "id": "money-print-rate-pallets",

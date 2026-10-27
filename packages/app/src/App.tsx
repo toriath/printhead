@@ -6,6 +6,7 @@ import { CasinoLayer, MusicToggle, MuteToggle, useCasino } from './casino.js';
 import { CommissionsPanel } from './commissions.js';
 import { buildControlModel } from './controls-model.js';
 import { ActionBar, Controls } from './controls.js';
+import { DiaryButton, DiaryDrawer } from './diary.js';
 import { EndgamePanel, EndingScreen } from './endgame.js';
 import { FleetPanel } from './fleet.js';
 import { useFloor } from './floor.js';
@@ -24,6 +25,7 @@ import { unlockAudio } from './sfx.js';
 import { useShortcuts } from './shortcuts.js';
 import { starvedSlots } from './starve.js';
 import type { GameStore } from './store.js';
+import { useDiary } from './story.js';
 import { PanelTabs } from './tabs.js';
 
 /**
@@ -40,6 +42,8 @@ export interface AppProps {
 
 /** The out-of-filament badge floats clear of the printer's face. */
 const STALL_LIFT_PX = 44;
+/** The diary's "…" bubble sits off the printer's shoulder. */
+const THOUGHT_OFFSET_PX = 46;
 
 export function App({ store, loadWarning = null }: AppProps): ReactElement {
   const visual = useVisualState(store);
@@ -67,6 +71,12 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
   const state = store.getState();
   const model = buildControlModel(state, content, visual, slotId ?? undefined);
   const reveal = useReveal(state, visual, content, model);
+  const diary = useDiary(state, content);
+  const [reading, setReading] = useState(false);
+  const closeDiary = (): void => {
+    diary.markRead();
+    setReading(false);
+  };
   const floor = useFloor(visual.slots.map((slot) => slot.slotId));
   // Bays stopped for want of filament: the loudest thing on screen.
   const starved = starvedSlots(state, content);
@@ -178,6 +188,7 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
           </p>
         </div>
         <Hud visual={visual} content={content} showFilament={false} reveal={reveal} />
+        <DiaryButton diary={diary} onOpen={() => setReading(true)} />
         <MusicToggle />
         <MuteToggle />
       </header>
@@ -234,6 +245,27 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
             }}
           />
           <PopupLayer popups={juice.popups} bays={bays} anchorOf={anchorOf} />
+          {diary.fresh === null || reading
+            ? null
+            : (() => {
+                const anchor = anchorOf(0);
+                return anchor === null ? null : (
+                  <button
+                    type="button"
+                    className="thought"
+                    data-testid="diary-thought"
+                    aria-label="The printer wrote something in its diary"
+                    style={{
+                      left: anchor.left + THOUGHT_OFFSET_PX,
+                      top: anchor.top - STALL_LIFT_PX,
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => setReading(true)}
+                  >
+                    …
+                  </button>
+                );
+              })()}
           {starved.map((id) => {
             const index = visual.slots.findIndex((slot) => slot.slotId === id);
             const anchor = anchorOf(index);
@@ -369,6 +401,7 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
       </footer>
 
       <CasinoLayer casino={casino} />
+      {reading ? <DiaryDrawer diary={diary} onClose={closeDiary} /> : null}
       {awake ? <Awakening onDone={() => setAwake(false)} /> : null}
       <LayerBanner banner={juice.banner} />
       {/* The ending takes the screen when it arrives (spec §6 phase 6). */}

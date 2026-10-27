@@ -2,7 +2,7 @@
   "version": 9,
   "phaseId": "prestige",
   "phaseName": "The Melt-downs",
-  "simTimeMs": 16010000,
+  "simTimeMs": 15950000,
   "slotCapacity": 4,
   "goliath": false,
   "slots": [
@@ -21,17 +21,17 @@
       "phaseOffset": 0,
       "occupied": true,
       "running": true,
-      "progress": 0.15105155555535607,
+      "progress": 0.2675839999996346,
       "batch": 8,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.921600000000009,
-      "perfectCharge": 4.440892098500626e-16,
+      "failureRisk": 0.8387199999999851,
+      "perfectCharge": 0.9000000000000004,
       "overclock": {
-        "active": false,
-        "remaining": 0,
-        "cooldown": 0,
-        "ready": true
+        "active": true,
+        "remaining": 0.3333333333333333,
+        "cooldown": 0.8333333333333334,
+        "ready": false
       },
       "queue": [],
       "queueBatches": 0
@@ -51,12 +51,12 @@
       "phaseOffset": 0.3333333333333333,
       "occupied": true,
       "running": true,
-      "progress": 0.07675745416666604,
-      "batch": 8,
+      "progress": 0.2687175339999982,
+      "batch": 7,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.8064000000000008,
-      "perfectCharge": 0.2,
+      "failureRisk": 0.7568399999999994,
+      "perfectCharge": 0.4,
       "overclock": {
         "active": false,
         "remaining": 0,
@@ -76,30 +76,30 @@
       "output": "parts",
       "designId": null,
       "machineTier": 3,
-      "printerCount": 8,
+      "printerCount": 7,
       "printerCapacity": 8,
       "phaseOffset": 0.6666666666666666,
       "occupied": true,
       "running": true,
-      "progress": 0.7006066666666504,
-      "batch": 8,
+      "progress": 0.616745599999967,
+      "batch": 7,
       "changingOver": false,
       "changeoverProgress": 0,
-      "failureRisk": 0.155200000000001,
-      "perfectCharge": 0.8,
+      "failureRisk": 0.315199999999997,
+      "perfectCharge": 0.5,
       "overclock": {
         "active": false,
         "remaining": 0,
-        "cooldown": 0.16666666666666666,
-        "ready": false
+        "cooldown": 0,
+        "ready": true
       },
       "queue": [],
       "queueBatches": 0
     }
   ],
   "fleet": {
-    "printers": 24,
-    "assigned": 24,
+    "printers": 23,
+    "assigned": 23,
     "slotsOwned": 3,
     "slotsActive": 3,
     "slotsMaximum": 4,
@@ -123,7 +123,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -135,7 +135,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -160,15 +160,15 @@
     "complete": true
   },
   "ledger": {
-    "parts": 416,
-    "money": 548951.4886184416,
-    "scrap": 18,
+    "parts": 135,
+    "money": 883121.6782075617,
+    "scrap": 0,
     "products": 0,
     "plates": 0,
     "filamentGrams": {
-      "pla": 15055.799999999992,
+      "pla": 13182.600000000031,
       "petg": 4000,
-      "resin": 10279,
+      "resin": 9719,
       "metal": 0,
       "composite": 0
     }
@@ -184,7 +184,7 @@
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
-      "heldGrams": 15055.799999999992
+      "heldGrams": 13182.600000000031
     },
     {
       "materialId": "petg",
@@ -192,9 +192,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.0785771557089091,
-      "sellPerGram": 0.07280173476430428,
-      "priceMultiplier": 0.9822144463613637,
+      "buyPerGram": 0.0844688546591538,
+      "sellPerGram": 0.078260393841706,
+      "priceMultiplier": 1.0558606832394224,
       "stockGrams": 6000,
       "heldGrams": 4000
     },
@@ -204,11 +204,11 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.3577176657912362,
-      "sellPerGram": 0.33142541735558034,
-      "priceMultiplier": 1.0220504736892464,
-      "stockGrams": 10.999999999984928,
-      "heldGrams": 10279
+      "buyPerGram": 0.3404483533971756,
+      "sellPerGram": 0.3154253994224832,
+      "priceMultiplier": 0.9727095811347876,
+      "stockGrams": 10.999999999985162,
+      "heldGrams": 9719
     },
     {
       "materialId": "metal",
@@ -216,9 +216,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": false,
-      "buyPerGram": 1.0748685126731288,
-      "sellPerGram": 0.9958656769916538,
-      "priceMultiplier": 0.7677632233379492,
+      "buyPerGram": 1.004485688780425,
+      "sellPerGram": 0.9306559906550638,
+      "priceMultiplier": 0.7174897777003036,
       "stockGrams": 800,
       "heldGrams": 0
     },
@@ -298,7 +298,7 @@
       "level": 0,
       "maxLevel": 1,
       "available": true,
-      "affordable": true,
+      "affordable": false,
       "cost": 410,
       "costResource": "parts"
     },
@@ -334,6 +334,50 @@
       "affordable": true,
       "cost": 5667.839999999999,
       "costResource": "money"
+    },
+    {
+      "upgradeId": "dual-extruder",
+      "name": "Dual extruder",
+      "tree": "machine",
+      "level": 2,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 2362,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "resin-wash",
+      "name": "Resin wash station",
+      "tree": "machine",
+      "level": 1,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 984,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "engraving-jig",
+      "name": "Engraving jig",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": true,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "auto-calibration",
+      "name": "Auto-calibration",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 3,
+      "available": true,
+      "affordable": false,
+      "cost": 410,
+      "costResource": "parts"
     },
     {
       "upgradeId": "exotic-feedstock",
@@ -388,7 +432,7 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 416,
+      "threshold": 309,
       "available": false,
       "affordable": false,
       "cost": 850,
@@ -401,7 +445,7 @@
       "level": 1,
       "installed": true,
       "enabled": true,
-      "threshold": 15200,
+      "threshold": 13300,
       "available": false,
       "affordable": false,
       "cost": 850,
@@ -449,8 +493,8 @@
   ],
   "recycler": {
     "installed": true,
-    "scrapGrams": 18,
-    "yieldGrams": 10.8,
+    "scrapGrams": 0,
+    "yieldGrams": 0,
     "yieldMaterialId": "pla"
   },
   "studio": {
@@ -472,7 +516,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -488,7 +532,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -496,15 +540,15 @@
         "designId": "money-plate",
         "name": "Money plate",
         "materialId": "resin",
-        "level": 11,
+        "level": 14,
         "maxLevel": 20,
         "owned": true,
         "levelProgress": 0.25,
-        "productValue": 24864.525070448613,
+        "productValue": 34432.84372600395,
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -512,7 +556,7 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 11,
+    "platesOnOffer": 7,
     "platesHeld": 0,
     "runsCompleted": 0,
     "moneyPerDesignSecond": 0,
@@ -527,7 +571,7 @@
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 1,
+      "cost": 2,
       "costResource": "plates"
     },
     {
@@ -580,7 +624,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1860000,
+    "totalMs": 1920000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
@@ -594,13 +638,28 @@
     "sectionCostResource": "parts",
     "forkAllows": false,
     "slotsCommitted": true,
-    "committedPrinters": 24,
+    "committedPrinters": 23,
     "requiredPrinters": 16
   },
   "commissions": {
     "open": true,
-    "offers": [],
-    "completed": 86
+    "offers": [
+      {
+        "serial": 178,
+        "templateId": "petg-brackets",
+        "clientName": "The Ministry of Printing",
+        "objectId": "bracket",
+        "objectName": "Bracket",
+        "materialId": "petg",
+        "materialName": "PETG",
+        "count": 30,
+        "delivered": 0,
+        "timeLeft": 0.02125,
+        "remainingMs": 5100,
+        "reward": 199.5
+      }
+    ],
+    "completed": 85
   },
   "ending": {
     "stage": "none",

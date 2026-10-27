@@ -144,6 +144,27 @@ describe('progressive disclosure', () => {
   });
 });
 
+describe("the printer's diary", () => {
+  it('opens with the machine itself, waits to be read, and never insists', async () => {
+    globalThis.localStorage.removeItem('printhead:diary');
+    const harness = await boot();
+    const { store } = harness.game;
+    render(<App store={store} />);
+    attachAll(harness, store);
+    // One page, unread: a badge on the book, nothing more.
+    const open = screen.getByTestId('diary-open');
+    expect(open.textContent).toContain('1');
+    expect(screen.queryByTestId('diary')).toBeNull();
+
+    fireEvent.click(open);
+    expect(screen.getByTestId('diary')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('diary')).toBeNull();
+    // Read now: the badge is gone.
+    expect(screen.getByTestId('diary-open').textContent).not.toContain('1');
+  });
+});
+
 describe('keyboard shortcuts', () => {
   it('press the button the screen offers, and nothing the screen withholds', async () => {
     const harness = await boot();

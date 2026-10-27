@@ -14,11 +14,11 @@ Reference bot: `balanced` · target 8 h · tolerance ±20 % for the arc, ±35 % 
 | Bench | 30 (20–41) | — | 24.3 | 21.2 | 210.0 |
 | Farm | 84 (55–113) | — | 88.8 | 90.1 | 210.0 |
 | Studio | 75 (49–101) | — | 80.8 | 83.3 | — |
-| The Melt-downs | 90 (59–122) | — | 62.0 | 69.1 | — |
-| The Absurd | 80 (52–108) | — | 79.4 | 62.7 | — |
-| The End | 60 (39–81) | — | 62.9 | 55.2 | — |
-| Ended | sandbox | — | 109.9 | 126.7 | — |
-| **Total (the arc)** | **420** | **510.0** | **399.1** | **382.3** | **510.0** |
+| The Melt-downs | 90 (59–122) | — | 93.6 | 81.2 | — |
+| The Absurd | 80 (52–108) | — | 69.8 | 69.7 | — |
+| The End | 60 (39–81) | — | 62.7 | 53.0 | — |
+| Ended | sandbox | — | 88.2 | 109.7 | — |
+| **Total (the arc)** | **420** | **510.0** | **420.8** | **399.3** | **510.0** |
 
 The reference run took 509.0 design-minutes (8.48 wall-hours at targetHours=8) and ended in `ended`.
 
@@ -35,8 +35,8 @@ parts does not count: it is a step towards a purchase, not a decision.
 | Intro | 0.1 | 1 | 2 |
 | Bench | 0.9 | 3 | 14 |
 | Farm | 0.6 | 5 | 26 |
-| Studio | 0.3 | 5 | 4 |
-| The Melt-downs | 0.9 | 6 | 5 |
+| Studio | 0.3 | 5 | 5 |
+| The Melt-downs | 0.9 | 6 | 22 |
 | The Absurd | 0.0 | 6 | 0 |
 | The End | 0.0 | 8 | 0 |
 | Ended | 0.0 | 60 | 0 |
@@ -63,13 +63,13 @@ are not players: read these as where to look, not as verdicts.
 
 | Bot | Chores | Most repeated | Intro | Bench | Farm | Studio | The Melt-downs | The Absurd | The End |
 |---|---|---|---|---|---|---|---|---|---|
-| greedy-spender | 48 % | SET_SLOT_CONFIG ×298 | 1 | 13 | 28 | 41 | 38 | 26 | 37 |
-| balanced | 55 % | SET_SLOT_CONFIG ×332 | 1 | 13 | 34 | 41 | 45 | 27 | 26 |
+| greedy-spender | 47 % | SET_SLOT_CONFIG ×300 | 1 | 13 | 28 | 41 | 24 | 30 | 37 |
+| balanced | 54 % | SET_SLOT_CONFIG ×334 | 1 | 13 | 34 | 41 | 28 | 27 | 29 |
 | idle-heavy | 49 % | RECYCLE_SCRAP ×11 | 60 | 100 | 50 | — | — | — | — |
 
 Never bought by any bot: `central-bank`.
 
-Build-order divergence, `greedy-spender` vs `balanced`: 0.00 (0 = the same order, ~0.5 = unrelated).
+Build-order divergence, `greedy-spender` vs `balanced`: 0.02 (0 = the same order, ~0.5 = unrelated).
 Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.08 (0 = the same order, ~0.5 = unrelated).
 
 ## Activity
@@ -77,8 +77,8 @@ Build-order divergence, `greedy-spender` vs `idle-heavy`: 0.08 (0 = the same ord
 | Bot | Decisions | Actions | Prints | Failed | Failure rate | Final phase |
 |---|---|---|---|---|---|---|
 | idle | 51 | 0 | 0 | 0 | — | intro |
-| greedy-spender | 6108 | 909 | 2097 | 125 | 5.6 % | ended |
-| balanced | 6108 | 860 | 18666 | 1927 | 9.4 % | ended |
+| greedy-spender | 6108 | 988 | 2627 | 150 | 5.4 % | ended |
+| balanced | 6108 | 904 | 25789 | 2272 | 8.1 % | ended |
 | idle-heavy | 51 | 77 | 1847 | 147 | 7.4 % | farm |
 
 ---

@@ -28,7 +28,8 @@ export type IconName =
   | 'music'
   | 'bracket'
   | 'gearset'
-  | 'design';
+  | 'design'
+  | 'diary';
 
 const PATHS: Record<IconName, ReactNode> = {
   money: (
@@ -167,6 +168,12 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M9 3.5v2M9 14.5v2M2.5 10h2M13.5 10h2M4.4 5.4l1.4 1.4M12.2 13.2l1.4 1.4M4.4 14.6l1.4-1.4M12.2 6.8l1.4-1.4" />
       <circle cx="17" cy="17" r="2.5" />
       <path d="M17 12.5v1.5M17 20v1.5M12.5 17h1.5M20 17h1.5" />
+    </>
+  ),
+  diary: (
+    <>
+      <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z" />
+      <path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6M9 10.5h4" />
     </>
   ),
   design: (

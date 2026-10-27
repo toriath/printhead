@@ -3,30 +3,30 @@
   "savedAtMs": 1723420800000,
   "state": {
     "saveVersion": 8,
-    "simTimeMs": 26252000,
-    "tickCount": 262520,
+    "simTimeMs": 26946000,
+    "tickCount": 269460,
     "phaseId": "end",
-    "phaseEnteredAtMs": 26030100,
+    "phaseEnteredAtMs": 26704500,
     "rng": {
       "seed": 7,
       "count": 0
     },
     "resources": {
-      "parts": 52896,
-      "scrap": 26,
-      "money": 14342407.320567971,
+      "parts": 54016,
+      "scrap": 125,
+      "money": 1177242.9610098978,
       "designs": 3,
       "products": 0,
-      "plates": 41.8116
+      "plates": 44.8116
     },
-    "partsValue": 26.999165853683973,
-    "scrapValue": 1.3,
+    "partsValue": 2703.028253939021,
+    "scrapValue": 6.250000000000001,
     "productsValue": 0,
     "filamentGrams": {
-      "pla": 0,
-      "petg": 1250,
-      "resin": 0,
-      "metal": 0,
+      "pla": 1836,
+      "petg": 0,
+      "resin": 1500,
+      "metal": 847,
       "composite": 660
     },
     "printers": {
@@ -48,21 +48,21 @@
         "level": 1,
         "enabled": true,
         "threshold": 250,
-        "cooldownMs": 28000
+        "cooldownMs": 9000
       }
     },
     "market": {
       "petg": {
-        "stockGrams": 5413.999999999396,
-        "pressure": -0.19826191774511465
-      },
-      "resin": {
         "stockGrams": 6000,
         "pressure": 0
       },
+      "resin": {
+        "stockGrams": 5381.999999999198,
+        "pressure": -0.21960981508563157
+      },
       "metal": {
-        "stockGrams": 800,
-        "pressure": 0
+        "stockGrams": 15.799999999993688,
+        "pressure": -0.11764064402609704
       }
     },
     "slots": [
@@ -74,7 +74,7 @@
         "printerCount": 18,
         "autoRestart": false,
         "run": null,
-        "failureCharge": 0.440000000000001,
+        "failureCharge": 0.4992000000000013,
         "changeoverMs": 0,
         "queue": [],
         "queueIndex": 0,
@@ -101,18 +101,17 @@
     },
     "studio": null,
     "moneyPrinters": {
-      "bill-printer": 3,
-      "bundle-printer": 1,
-      "pallet-printer": 1
+      "bill-printer": 2,
+      "bundle-printer": 1
     },
     "selfAssembling": true,
-    "factoryProgress": 0.7333333333332868,
+    "factoryProgress": 0.03333333333330322,
     "fabricator": {
       "sections": 1,
       "sectionRun": null,
       "run": {
-        "remainingMs": 1644000,
-        "totalMs": 1704000
+        "remainingMs": 1680000,
+        "totalMs": 1740000
       },
       "completedAtMs": null
     },
@@ -123,29 +122,15 @@
     "commissions": {
       "open": [
         {
-          "serial": 5,
-          "templateId": "petg-brackets",
-          "clientId": "cafe",
-          "delivered": 0,
-          "remainingMs": 103000
-        },
-        {
-          "serial": 6,
+          "serial": 9,
           "templateId": "pla-gears",
           "clientId": "cafe",
           "delivered": 0,
-          "remainingMs": 163000
-        },
-        {
-          "serial": 7,
-          "templateId": "pla-brackets",
-          "clientId": "cafe",
-          "delivered": 0,
-          "remainingMs": 133000
+          "remainingMs": 204000
         }
       ],
-      "nextOfferMs": 43000,
-      "issued": 7
+      "nextOfferMs": 24000,
+      "issued": 9
     },
     "assembly": {
       "attachedPieceIds": [
@@ -160,21 +145,21 @@
       "cooldownMs": 0
     },
     "stats": {
-      "printsCompleted": 47,
-      "printsFailed": 13,
-      "partsProduced": 65,
+      "printsCompleted": 120,
+      "printsFailed": 24,
+      "partsProduced": 1011,
       "partsSold": 0,
-      "moneyEarned": 13348139.544723975,
-      "filamentPurchasedGrams": 2770,
+      "moneyEarned": 186336.80185666535,
+      "filamentPurchasedGrams": 7467,
       "filamentSoldGrams": 0,
-      "scrapProducedGrams": 26,
+      "scrapProducedGrams": 125,
       "scrapRecycledGrams": 0,
       "productsProduced": 0,
       "productsSold": 0,
-      "moneyPrinted": 14595507.633310163,
+      "moneyPrinted": 1493713.177640041,
       "prestigeCount": 7,
-      "platesEarned": 90,
-      "commissionsCompleted": 168
+      "platesEarned": 76,
+      "commissionsCompleted": 163
     }
   }
 }

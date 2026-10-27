@@ -620,3 +620,28 @@ describe('discovery', () => {
     expect(globalThis.localStorage.getItem('printhead:seen')).toContain('tab:test-a');
   });
 });
+
+describe('the diary pages', () => {
+  it('each page has its own id and some words, and the first is the hello', async () => {
+    const { DIARY } = await import('./story.js');
+    expect(new Set(DIARY.map((entry) => entry.id)).size).toBe(DIARY.length);
+    expect(DIARY.every((entry) => entry.text.length > 20)).toBe(true);
+    expect(DIARY[0]?.text.startsWith('Oh. Hello.')).toBe(true);
+  });
+
+  it('writes nothing before the machine is built, and the hello once it is', async () => {
+    const { DIARY } = await import('./story.js');
+    const fresh = createInitialState(content, { seed: 1 });
+    expect(DIARY.filter((entry) => entry.unlocked(fresh, content))).toEqual([]);
+    const built = {
+      ...fresh,
+      assembly: {
+        ...fresh.assembly,
+        attachedPieceIds: content.start.assemblyPieces.map((piece) => piece.id),
+      },
+    };
+    expect(DIARY.filter((entry) => entry.unlocked(built, content)).map((e) => e.id)).toEqual([
+      'hello',
+    ]);
+  });
+});

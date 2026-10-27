@@ -163,6 +163,74 @@
     ]
   },
   {
+    "id": "dual-extruder",
+    "name": "Dual extruder",
+    "tree": "machine",
+    "maxLevel": 2,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["enclosure"],
+    "unlockPhaseId": "studio",
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "combine": "multiply",
+        "value": 1.2
+      }
+    ]
+  },
+  {
+    "id": "resin-wash",
+    "name": "Resin wash station",
+    "tree": "machine",
+    "maxLevel": 1,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["sla-unit"],
+    "unlockPhaseId": "studio",
+    "effects": [
+      {
+        "type": "failureChargeMultiplier",
+        "combine": "multiply",
+        "value": 0.85
+      }
+    ]
+  },
+  {
+    "id": "engraving-jig",
+    "name": "Engraving jig",
+    "tree": "design",
+    "maxLevel": 2,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "money",
+    "requiresUpgradeIds": ["polish-station"],
+    "unlockPhaseId": "prestige",
+    "effects": [
+      {
+        "type": "productValueMultiplier",
+        "combine": "multiply",
+        "value": 1.15
+      }
+    ]
+  },
+  {
+    "id": "auto-calibration",
+    "name": "Auto-calibration",
+    "tree": "machine",
+    "maxLevel": 3,
+    "costCurveId": "upgrade-cost-sla",
+    "costResource": "parts",
+    "requiresUpgradeIds": ["dual-extruder"],
+    "unlockPhaseId": "prestige",
+    "effects": [
+      {
+        "type": "printSpeedMultiplier",
+        "combine": "multiply",
+        "value": 1.1
+      }
+    ]
+  },
+  {
     "id": "exotic-feedstock",
     "name": "Exotic feedstock line",
     "tree": "endgame",

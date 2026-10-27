@@ -2,7 +2,7 @@
   "version": 9,
   "phaseId": "absurd",
   "phaseName": "The Absurd",
-  "simTimeMs": 20320000,
+  "simTimeMs": 24660000,
   "slotCapacity": 1,
   "goliath": true,
   "slots": [
@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": true,
       "available": false,
       "affordable": true,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -93,10 +93,10 @@
   },
   "ledger": {
     "parts": 48316,
-    "money": 997493.1753894772,
+    "money": 1000136.0361925564,
     "scrap": 0,
     "products": 0,
-    "plates": 10.7729,
+    "plates": 26.7729,
     "filamentGrams": {
       "pla": 516,
       "petg": 0,
@@ -112,7 +112,7 @@
       "tradeable": false,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.07230326663606403,
+      "buyPerGram": 0.10977207933666007,
       "sellPerGram": 0,
       "priceMultiplier": 1,
       "stockGrams": 0,
@@ -124,9 +124,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.11794850396998811,
-      "sellPerGram": 0.1002562283744899,
-      "priceMultiplier": 1.0195641000882938,
+      "buyPerGram": 0.1384166847534311,
+      "sellPerGram": 0.11765418204041644,
+      "priceMultiplier": 0.7880913661622055,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -136,9 +136,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 0.48380170585705967,
-      "sellPerGram": 0.4112314499785007,
-      "priceMultiplier": 0.9558977432656947,
+      "buyPerGram": 0.9040119858577752,
+      "sellPerGram": 0.7684101879791089,
+      "priceMultiplier": 1.1764792120970946,
       "stockGrams": 6000,
       "heldGrams": 0
     },
@@ -148,9 +148,9 @@
       "tradeable": true,
       "priceResource": "money",
       "available": true,
-      "buyPerGram": 1.9758819923011437,
-      "sellPerGram": 1.679499693455972,
-      "priceMultiplier": 0.9759892919631522,
+      "buyPerGram": 3.543451233935188,
+      "sellPerGram": 3.0119335488449095,
+      "priceMultiplier": 1.1528599125400338,
       "stockGrams": 800,
       "heldGrams": 0
     },
@@ -268,13 +268,57 @@
       "costResource": "money"
     },
     {
+      "upgradeId": "dual-extruder",
+      "name": "Dual extruder",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 2,
+      "available": true,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "resin-wash",
+      "name": "Resin wash station",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": true,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "engraving-jig",
+      "name": "Engraving jig",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "auto-calibration",
+      "name": "Auto-calibration",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": true,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
       "upgradeId": "exotic-feedstock",
       "name": "Exotic feedstock line",
       "tree": "endgame",
       "level": 1,
       "maxLevel": 1,
       "available": false,
-      "affordable": false,
+      "affordable": true,
       "cost": 24.4542,
       "costResource": "plates"
     },
@@ -285,7 +329,7 @@
       "level": 0,
       "maxLevel": 1,
       "available": true,
-      "affordable": false,
+      "affordable": true,
       "cost": 12.2271,
       "costResource": "plates"
     },
@@ -296,7 +340,7 @@
       "level": 0,
       "maxLevel": 3,
       "available": false,
-      "affordable": false,
+      "affordable": true,
       "cost": 12.2271,
       "costResource": "plates"
     },
@@ -307,7 +351,7 @@
       "level": 0,
       "maxLevel": 1,
       "available": false,
-      "affordable": false,
+      "affordable": true,
       "cost": 12.2271,
       "costResource": "plates"
     }
@@ -404,7 +448,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -420,7 +464,7 @@
         "capstone": false,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       },
@@ -428,15 +472,15 @@
         "designId": "money-plate",
         "name": "Money plate",
         "materialId": "resin",
-        "level": 17,
+        "level": 20,
         "maxLevel": 20,
         "owned": true,
-        "levelProgress": 0.25,
-        "productValue": 22912.68835871142,
+        "levelProgress": 0,
+        "productValue": 28533.858187665566,
         "capstone": true,
         "available": false,
         "affordable": true,
-        "cost": 857.781002304,
+        "cost": 4342.516324163998,
         "costResource": "money",
         "blockedReason": "already-owned"
       }
@@ -444,10 +488,10 @@
   },
   "prestige": {
     "available": true,
-    "platesOnOffer": 15,
-    "platesHeld": 10.7729,
-    "runsCompleted": 4,
-    "moneyPerDesignSecond": 101.95363500000002,
+    "platesOnOffer": 7,
+    "platesHeld": 26.7729,
+    "runsCompleted": 6,
+    "moneyPerDesignSecond": 262.11304,
     "blockedReason": null
   },
   "moneyPrinters": [
@@ -455,22 +499,22 @@
       "moneyPrinterId": "bill-printer",
       "name": "Bill printer",
       "tier": 1,
-      "level": 3,
+      "level": 2,
       "maxLevel": 5,
       "available": true,
       "affordable": false,
-      "cost": 22,
+      "cost": 27,
       "costResource": "plates"
     },
     {
       "moneyPrinterId": "bundle-printer",
       "name": "Bundle press",
       "tier": 2,
-      "level": 0,
+      "level": 1,
       "maxLevel": 5,
       "available": true,
       "affordable": true,
-      "cost": 8,
+      "cost": 23,
       "costResource": "plates"
     },
     {
@@ -480,7 +524,7 @@
       "level": 0,
       "maxLevel": 5,
       "available": true,
-      "affordable": false,
+      "affordable": true,
       "cost": 14,
       "costResource": "plates"
     },
@@ -499,8 +543,8 @@
   "backdrop": "workshop",
   "inflation": {
     "active": true,
-    "multiplier": 1.4460653327212805,
-    "moneyPrinted": 186866.44815000554
+    "multiplier": 2.1954415867332013,
+    "moneyPrinted": 845751.0203995309
   },
   "fabricator": {
     "unlocked": false,
@@ -512,7 +556,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1860000,
+    "totalMs": 1920000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
@@ -544,10 +588,10 @@
         "delivered": 0,
         "timeLeft": 0.9333333333333333,
         "remainingMs": 140000,
-        "reward": 52.0583519779661
+        "reward": 79.03589712239526
       }
     ],
-    "completed": 119
+    "completed": 144
   },
   "ending": {
     "stage": "none",

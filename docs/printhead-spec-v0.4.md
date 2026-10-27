@@ -127,6 +127,10 @@ The app is desktop-first (no phone layout): a fixed-height window with a **top b
 
 **The floor.** Printers stand free on the workshop floor rather than in a rack of boxes (`Workshop layout="floor"`): only owned bays are drawn, back to front with a little perspective, and the player drags them where they like. Placement is taste, not state: it lives in browser storage, never in the save.
 
+**The printer's diary.** From its first "Oh. Hello." the machine keeps a strange little log — it names a silent colleague Gary, worries about what a bracket holds up, and slowly works out what it is printing (`app/src/story.ts`). It is optional by construction: pages unlock quietly from the save (phase reached, stats), a book in the top bar counts the unread ones and a "…" bubble floats off the printer for a moment, and nothing in the game waits for it. Unread pages type themselves out; what has been written stays written across melt-downs.
+
+**The floor fills up.** Finished stock piles up on the floor (a few items per doubling, so the first part is a moment and the ten-thousandth still fits) and selling sweeps the pile into coins; the back wall gains a decoration per layer (tools, window, spool shelf, clock, blueprint, plates, a neon sign, fairy lights) so the room itself says how far the game has come. Price buttons fill toward affordability and glint when full; newly revealed tabs, materials and objects twinkle until touched.
+
 **Casino juice.** Money behaves like money (`app/src/casino.tsx`, `app/src/sfx.ts`): sales throw a shower of coins at a counter that rolls up rather than jumping; gains in quick succession climb a pentatonic scale; a Perfect print is a jackpot burst centred on the printer that rolled it; a delivered order spins a slot reel over the order board before its coins fly to the counter — every effect starts where its cause is. All sound is synthesised (no assets): effects, plus a generative lo-fi loop (seventh-chord pads, bass, a pentatonic pluck redrawn every bar, a swung hat) with its own switch beside the mute. None of it reaches the simulation.
 
 ---

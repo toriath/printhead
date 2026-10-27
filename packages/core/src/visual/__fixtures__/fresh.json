@@ -63,7 +63,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": false
     },
@@ -75,7 +75,7 @@
       "chosen": false,
       "available": false,
       "affordable": false,
-      "cost": 4000,
+      "cost": 3740.8,
       "costResource": "money",
       "requiredForFinalPrint": true
     }
@@ -268,6 +268,50 @@
       "costResource": "money"
     },
     {
+      "upgradeId": "dual-extruder",
+      "name": "Dual extruder",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "resin-wash",
+      "name": "Resin wash station",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 1,
+      "available": false,
+      "affordable": false,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
+      "upgradeId": "engraving-jig",
+      "name": "Engraving jig",
+      "tree": "design",
+      "level": 0,
+      "maxLevel": 2,
+      "available": false,
+      "affordable": false,
+      "cost": 410,
+      "costResource": "money"
+    },
+    {
+      "upgradeId": "auto-calibration",
+      "name": "Auto-calibration",
+      "tree": "machine",
+      "level": 0,
+      "maxLevel": 3,
+      "available": false,
+      "affordable": false,
+      "cost": 410,
+      "costResource": "parts"
+    },
+    {
       "upgradeId": "exotic-feedstock",
       "name": "Exotic feedstock line",
       "tree": "endgame",
@@ -404,7 +448,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 154.688,
+        "cost": 232.032,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -420,7 +464,7 @@
         "capstone": false,
         "available": false,
         "affordable": false,
-        "cost": 154.688,
+        "cost": 232.032,
         "costResource": "money",
         "blockedReason": "locked"
       },
@@ -436,7 +480,7 @@
         "capstone": true,
         "available": false,
         "affordable": false,
-        "cost": 154.688,
+        "cost": 232.032,
         "costResource": "money",
         "blockedReason": "locked"
       }
@@ -459,7 +503,7 @@
       "maxLevel": 5,
       "available": false,
       "affordable": false,
-      "cost": 1,
+      "cost": 2,
       "costResource": "plates"
     },
     {
@@ -512,7 +556,7 @@
     "layer": 0,
     "layers": 140,
     "remainingMs": 0,
-    "totalMs": 1860000,
+    "totalMs": 1920000,
     "materialId": "composite",
     "filamentGrams": 600,
     "heldGrams": 0,
