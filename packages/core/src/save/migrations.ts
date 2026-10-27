@@ -224,6 +224,11 @@ function migrateV8ToV9(payload: unknown): unknown {
   };
 }
 
+/** v9 → v10: run modifiers. A v9 run was taken on plain terms. */
+function migrateV9ToV10(payload: unknown): unknown {
+  return { ...(payload as Record<string, unknown>), saveVersion: 10, runModifierId: null };
+}
+
 /**
  * Keyed by the version being migrated *from*: `MIGRATIONS[n]` upgrades an
  * `n` payload to `n + 1`. Released versions must load forever (spec §13).
@@ -237,6 +242,7 @@ export const MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   6: migrateV6ToV7,
   7: migrateV7ToV8,
   8: migrateV8ToV9,
+  9: migrateV9ToV10,
 };
 
 export class SaveMigrationError extends Error {

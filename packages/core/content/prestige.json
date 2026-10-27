@@ -50,5 +50,100 @@
       "rateCurveId": "money-print-rate-central-bank",
       "unlockPhaseId": "absurd"
     }
+  ],
+  "runModifierOffers": 3,
+  "runModifiers": [
+    {
+      "id": "overdrive",
+      "name": "Overdrive",
+      "description": "Every printer runs half again as fast, and fails half again as often.",
+      "effects": [
+        {
+          "type": "printSpeedMultiplier",
+          "combine": "multiply",
+          "value": 1.5
+        },
+        {
+          "type": "failureChargeMultiplier",
+          "combine": "multiply",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "id": "bumper-crop",
+      "name": "Bumper crop",
+      "description": "Each print yields 40% more, but takes a little longer.",
+      "effects": [
+        {
+          "type": "partsYieldMultiplier",
+          "combine": "multiply",
+          "value": 1.4
+        },
+        {
+          "type": "printSpeedMultiplier",
+          "combine": "multiply",
+          "value": 0.85
+        }
+      ]
+    },
+    {
+      "id": "engravers-run",
+      "name": "Engraver's run",
+      "description": "The next melt-down pays half again as many plates.",
+      "effects": [
+        {
+          "type": "platesMultiplier",
+          "combine": "multiply",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "id": "boutique",
+      "name": "Boutique",
+      "description": "Products sell for 60% more; Parts come off the bed in fewer numbers.",
+      "effects": [
+        {
+          "type": "productValueMultiplier",
+          "combine": "multiply",
+          "value": 1.6
+        },
+        {
+          "type": "partsYieldMultiplier",
+          "combine": "multiply",
+          "value": 0.8
+        }
+      ]
+    },
+    {
+      "id": "careful-hands",
+      "name": "Careful hands",
+      "description": "Half the failures — and a little slower for the care.",
+      "effects": [
+        {
+          "type": "failureChargeMultiplier",
+          "combine": "multiply",
+          "value": 0.5
+        },
+        {
+          "type": "printSpeedMultiplier",
+          "combine": "multiply",
+          "value": 0.9
+        }
+      ]
+    },
+    {
+      "id": "fire-sale",
+      "name": "Fire sale",
+      "description": "Market fees halved for the whole run.",
+      "effects": [
+        {
+          "type": "marketFeeMultiplier",
+          "combine": "multiply",
+          "value": 0.5
+        }
+      ]
+    }
   ]
 }

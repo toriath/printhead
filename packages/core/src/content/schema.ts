@@ -367,6 +367,8 @@ export const UpgradeEffectTypeSchema = z.enum([
    * "print a factory (outputs printers)"). `add`, so factory levels stack.
    */
   'printerFactoryRate',
+  /** Plates a melt-down awards — a run modifier's way to shorten the grind. */
+  'platesMultiplier',
 ]);
 
 export const UpgradeEffectSchema = z
@@ -805,6 +807,21 @@ export const MoneyPrinterDefSchema = z
  * what makes "prestige preserves Designs exactly" a property of the data as
  * well as of the code.
  */
+/**
+ * A run modifier: picked at a melt-down for the run that follows, one of a few
+ * offered by a seeded draw. Each is a trade (faster but messier, richer in one
+ * thing and poorer in another), written as the same effect records the
+ * upgrade tree uses, so a modifier is content and never a special case.
+ */
+export const RunModifierSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1),
+    description: z.string().min(1),
+    effects: z.array(UpgradeEffectSchema).min(1),
+  })
+  .strict();
+
 export const PrestigeFileSchema = z
   .object({
     requiredDesignId: IdSchema,
@@ -833,6 +850,9 @@ export const PrestigeFileSchema = z
     minimumPlates: Positive,
     unlockPhaseId: IdSchema,
     moneyPrinters: z.array(MoneyPrinterDefSchema).min(1),
+    runModifiers: z.array(RunModifierSchema).min(1),
+    /** How many run modifiers a melt-down offers to choose from. */
+    runModifierOffers: z.number().int().positive(),
   })
   .strict()
   .refine(

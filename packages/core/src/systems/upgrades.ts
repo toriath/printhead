@@ -98,6 +98,11 @@ export function computeModifiers(state: GameState, content: Content): ModifierMa
       modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, IDENTITY));
     }
   }
+  // The run modifier picked at the last melt-down: the same records once more.
+  const run = content.prestige.runModifiers.find((def) => def.id === state.runModifierId);
+  for (const effect of run?.effects ?? []) {
+    modifiers.set(effect.type, foldEffect(modifiers.get(effect.type), effect, IDENTITY));
+  }
   return modifiers;
 }
 

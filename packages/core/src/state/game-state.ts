@@ -345,6 +345,8 @@ export interface GameState {
   readonly fabricator: FabricatorState;
   /** Which run of the game this is, and on what terms (spec §18 M6). */
   readonly ngPlus: NewGamePlusState;
+  /** The run modifier picked at the last melt-down, in force for this run. */
+  readonly runModifierId: string | null;
   /** The commission board this run. */
   readonly commissions: CommissionBoardState;
   /** The shop front this run. */
@@ -479,6 +481,7 @@ export function createInitialState(content: Content, options: InitialStateOption
     factoryProgress: 0,
     fabricator: EMPTY_FABRICATOR,
     ngPlus: EMPTY_NEW_GAME_PLUS,
+    runModifierId: null,
     commissions: {
       open: [],
       nextOfferMs: content.commissions.firstOfferDesignSeconds * MS_PER_SECOND,

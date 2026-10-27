@@ -166,7 +166,10 @@ grind(() => state.phaseId !== 'intro');
  * exists to pin.
  */
 const curves = createCurveRegistry(content.curves);
-const afford = (amount: number): void => grind(() => state.resources.parts >= amount);
+// The budget is generous: the automation rack is priced to be a goal, not a click.
+const AFFORD_LIMIT_SECONDS = 4 * 3600;
+const afford = (amount: number): void =>
+  grind(() => state.resources.parts >= amount, AFFORD_LIMIT_SECONDS);
 
 // A few more machines first: one printer cannot earn its way to a machine node
 // inside the generator's grind budget, and a player would not try.

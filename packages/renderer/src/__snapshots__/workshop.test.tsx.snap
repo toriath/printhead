@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-1 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="10" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="11" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -282,7 +282,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-2 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="10" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="11" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;
@@ -563,7 +563,7 @@ exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change
 `;
 
 exports[`machine-tier visuals (spec §5A) > snapshots each tier so an art change is a reviewed diff > machine-tier-3 1`] = `
-"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="10" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
+"<svg class="printhead-workshop" role="img" aria-label="PRINTHEAD workshop — Studio" data-visual-version="11" data-phase="studio" data-slot-capacity="1" data-layout="rack" data-backdrop="workshop" data-self-assembling="true" viewBox="0 0 160 252" preserveAspectRatio="xMidYMid meet"><title>PRINTHEAD — Studio</title><style>
 .printhead-workshop {
   --ph-ink: #d7dee6;
   --ph-dim: #7b8794;

@@ -18,7 +18,7 @@
  * - v7 (M7 balance overhaul): every bay's perfect meter and overclock clocks.
  * - v8 (commissions): the commission board and the count of orders delivered.
  */
-export const SAVE_SCHEMA_VERSION = 9;
+export const SAVE_SCHEMA_VERSION = 10;
 
 /** Every version this build can still load — the fixture corpus mirrors it. */
-export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+export const SUPPORTED_SAVE_VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;

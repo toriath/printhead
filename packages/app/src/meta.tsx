@@ -145,6 +145,8 @@ export function StudioPanel({ store, visual }: MetaPanelProps): ReactElement | n
 export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement | null {
   const { prestige: melt } = visual;
   const [confirming, setConfirming] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
+  const choice = picked ?? melt.offers[0]?.id ?? null;
   // Hidden until the melt-down is a real prospect: the capstone exists, or the
   // workshop has already been through one.
   const known = melt.available || melt.platesHeld > 0 || melt.runsCompleted > 0;
@@ -180,6 +182,24 @@ export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement |
         onClose={() => setConfirming(false)}
         testId="melt-down-dialog"
       >
+        {melt.offers.length === 0 ? null : (
+          <fieldset className="runmods">
+            <legend className="modal__label">Pick how the next run goes</legend>
+            {melt.offers.map((offer) => (
+              <button
+                key={offer.id}
+                type="button"
+                aria-pressed={offer.id === choice}
+                className="runmod"
+                data-testid={`run-modifier-${offer.id}`}
+                onClick={() => setPicked(offer.id)}
+              >
+                <span className="runmod__name">{offer.name}</span>
+                <span className="runmod__desc">{offer.description}</span>
+              </button>
+            ))}
+          </fieldset>
+        )}
         <div className="modal__columns">
           <div>
             <h3 className="modal__label">You keep</h3>
@@ -207,7 +227,8 @@ export function PrestigePanel({ store, visual }: MetaPanelProps): ReactElement |
             data-testid="melt-down-confirm"
             onClick={() => {
               setConfirming(false);
-              store.dispatch(prestige());
+              store.dispatch(prestige(choice ?? undefined));
+              setPicked(null);
             }}
           >
             Melt it down

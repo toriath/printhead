@@ -35,6 +35,10 @@ export interface LogEntry {
   readonly id: number;
   readonly text: string;
   readonly tone: PopupTone | 'layer' | 'agent';
+  /** Lines of the same kind in a row collapse into one, counting up. */
+  readonly group?: string;
+  readonly count?: number;
+  readonly total?: number;
 }
 
 export interface Juice {
@@ -130,6 +134,35 @@ export function useJuice(store: GameStore): Juice {
       const entry = { id: nextId.current, text, tone };
       setLog((current) => [entry, ...current].slice(0, MAX_LOG));
     };
+    /**
+     * A line that repeats (a run of failed prints) collapses into the line on
+     * top, counting up, instead of pushing everything else off the log.
+     */
+    const tally = (
+      group: string,
+      amount: number,
+      describe: (count: number, total: number) => string,
+      tone: LogEntry['tone'],
+    ): void => {
+      setLog((current) => {
+        const top = current[0];
+        if (top !== undefined && top.group === group) {
+          const count = (top.count ?? 1) + 1;
+          const total = (top.total ?? 0) + amount;
+          return [{ ...top, count, total, text: describe(count, total) }, ...current.slice(1)];
+        }
+        nextId.current += 1;
+        const entry = {
+          id: nextId.current,
+          text: describe(1, amount),
+          tone,
+          group,
+          count: 1,
+          total: amount,
+        };
+        return [entry, ...current].slice(0, MAX_LOG);
+      });
+    };
     /*
      * Agents talk about what they do: a line from their persona, now and then,
      * when the thing they were hired for happens on their watch.
@@ -206,7 +239,15 @@ export function useJuice(store: GameStore): Juice {
         }
         case 'PRINT_FAILED':
           pop(event.slotId, `Spaghetti −${Math.round(event.scrapGrams)} g`, 'fail');
-          note(`A print failed: ${Math.round(event.scrapGrams)} g of scrap`, 'fail');
+          tally(
+            'print-failed',
+            event.scrapGrams,
+            (count, grams) =>
+              count === 1
+                ? `A print failed: ${Math.round(grams)} g of scrap`
+                : `${count} prints failed: ${Math.round(grams)} g of scrap`,
+            'fail',
+          );
           react(event.slotId, 'fail', FAIL_MS);
           setShake((n) => n + 1);
           break;
@@ -327,19 +368,24 @@ export function LayerTrack({
   content,
   phaseId,
   progress = 0,
+  gate,
 }: {
   content: Content;
   phaseId: string;
   /** 0..1 — how far the layer being printed has got; it fills, wordlessly. */
   progress?: number;
+  /** The layer's gate in numbers, shown only to a player who hovers for it. */
+  gate?: string;
 }): ReactElement {
   const layers = printLayers(content);
   const current = layers.findIndex((phase) => phase.id === phaseId);
   const done = current < 0 ? layers.length : current;
   // Only the layers already printed are drawn: the stack grows as the game
   // does, and how tall it will get stays a surprise.
+  // One faint, unnamed layer above the current one promises there is more.
+  const more = done < layers.length - 1;
   return (
-    <div className="layer-track">
+    <div className="layer-track" title={gate}>
       <div className="layer-track__stack" aria-hidden="true">
         {layers.slice(0, done + 1).map((layer, index) => (
           <span
@@ -348,6 +394,7 @@ export function LayerTrack({
             style={index === done ? ({ '--fill': progress } as CSSProperties) : undefined}
           />
         ))}
+        {more ? <span className="layer-track__layer is-next" /> : null}
       </div>
       <div className="layer-track__text">
         <span className="layer-track__count">

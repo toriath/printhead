@@ -41,6 +41,7 @@ import {
   moneyPrinterAvailability,
   moneyPrinterLevel,
   nextMoneyPrinterCost,
+  offeredRunModifiers,
   platesFor,
   prestigeAvailability,
 } from '../systems/prestige.js';
@@ -350,6 +351,17 @@ function toPrestigeVisual(
     runsCompleted: state.stats.prestigeCount,
     moneyPerDesignSecond: moneyPrintRate(state, content, curves),
     blockedReason: blocked,
+    offers: offeredRunModifiers(state, content).map(({ id, name, description }) => ({
+      id,
+      name,
+      description,
+    })),
+    current: (() => {
+      const def = content.prestige.runModifiers.find((m) => m.id === state.runModifierId);
+      return def === undefined
+        ? null
+        : { id: def.id, name: def.name, description: def.description };
+    })(),
   };
 }
 

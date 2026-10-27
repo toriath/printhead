@@ -62,16 +62,16 @@ describe('bundled content', () => {
     expect(pacing.baselineHours).toBe(8);
     expect(pacing.targetHours).toBe(8);
     /*
-     * Spec §6's table totals 485 design-minutes across the nine *playable*
-     * phases (420 for the original seven, plus The Shop and The Agency grown
-     * in since). `ended` is the last — the post-game sandbox the FSM comes to
+     * Spec §6's table totals 465 design-minutes across the nine *playable*
+     * phases (the original seven, plus The Shop and The Agency grown in since,
+     * less the grind taken out of the Melt-downs). `ended` is the last — the post-game sandbox the FSM comes to
      * rest in (spec §15: "Intro → … → Ended") — and it is not part of the arc's
      * budget: nothing ends it, so its "duration" is however long the player
      * stays. Its nominal budget is what the harness uses as a run-out.
      */
     const playable = pacing.phases.slice(0, -1);
     const total = playable.reduce((sum, phase) => sum + phase.budgetDesignMinutes, 0);
-    expect(total).toBe(485);
+    expect(total).toBe(465);
     expect(pacing.phases.at(-1)?.id).toBe('ended');
   });
 });

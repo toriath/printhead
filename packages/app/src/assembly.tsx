@@ -205,7 +205,9 @@ export function AssemblyBench({ store, visual, content }: AssemblyBenchProps): R
     if (drag !== null && overTarget(event.clientX, event.clientY)) {
       setSeated(drag.pieceId);
       setTurned([]);
-      sfx.click();
+      // The piece lands with a thunk and the machine takes it with a ring.
+      sfx.stamp();
+      setSnap((n) => n + 1);
     }
     setDrag(null);
   };

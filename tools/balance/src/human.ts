@@ -39,6 +39,14 @@ const WANDER_CHANCE = 0.012;
 const WANDER_MIN = 6;
 const WANDER_MAX = 40;
 const SHOP_PRICES = ['bargain', 'fair', 'premium', null] as const;
+const RUN_MODIFIER_TASTES = [
+  'overdrive',
+  'bumper-crop',
+  'engravers-run',
+  'boutique',
+  'careful-hands',
+  'fire-sale',
+];
 
 export interface HumanTraits {
   readonly attention: number;
@@ -60,6 +68,8 @@ export function createHumanBot(seed: number): Bot & { readonly traits: HumanTrai
     overclockBelowRisk: between(draw, 0.2, 1),
     chaseCommissions: draw() < 0.8,
     shopPrice: SHOP_PRICES[Math.floor(draw() * SHOP_PRICES.length)] ?? null,
+    // A taste in run modifiers, shuffled by the seed.
+    runModifiers: [...RUN_MODIFIER_TASTES].sort(() => draw() - 0.5),
   });
   const traits: HumanTraits = {
     attention: between(draw, 0.55, 0.95),

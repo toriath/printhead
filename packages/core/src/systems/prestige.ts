@@ -2,6 +2,7 @@ import type { Content, MoneyPrinterDef } from '../content/schema.js';
 import type { CurveRegistry } from '../curves/evaluate.js';
 import { evaluateCurveById } from '../curves/evaluate.js';
 import { MS_PER_SECOND } from '../engine/constants.js';
+import { hashUnit } from '../rng/mulberry32.js';
 import type { GameState, MoneyPrinterLedger, UpgradeLedger } from '../state/game-state.js';
 import { createInitialState } from '../state/game-state.js';
 import { type Cost, nextCost } from './cost.js';
@@ -9,6 +10,7 @@ import { hasCapstoneDesign } from './designs.js';
 import { payCost } from './economy.js';
 import { isPhaseReached } from './phases.js';
 import { withResource } from './resources.js';
+import { computeModifiers, modifierOf } from './upgrades.js';
 
 /**
  * Prestige — the melt-down (spec §5D) — and the money printer it pays for
@@ -58,7 +60,25 @@ export function platesFor(state: GameState, content: Content, curves: CurveRegis
   if (reading <= NONE) {
     return NONE;
   }
-  return Math.floor(evaluateCurveById(curves, content.prestige.plateCurveId, reading));
+  const bonus = modifierOf(computeModifiers(state, content), 'platesMultiplier', ONE);
+  return Math.floor(evaluateCurveById(curves, content.prestige.plateCurveId, reading) * bonus);
+}
+
+/**
+ * The run modifiers a melt-down offers, drawn by a seeded hash of the run
+ * number so a replay is offered the same three, and each melt-down a fresh
+ * hand.
+ */
+export function offeredRunModifiers(
+  state: GameState,
+  content: Content,
+): readonly Content['prestige']['runModifiers'][number][] {
+  const run = state.stats.prestigeCount;
+  return [...content.prestige.runModifiers]
+    .map((def) => ({ def, draw: hashUnit(`run-modifier:${run}:${def.id}`, state.rng.seed) }))
+    .sort((a, b) => a.draw - b.draw)
+    .slice(NONE, content.prestige.runModifierOffers)
+    .map((entry) => entry.def);
 }
 
 export type PrestigeRejection = 'locked' | 'missing-prerequisite' | 'not-worth-it';
@@ -146,6 +166,7 @@ export function meltDown(
   state: GameState,
   content: Content,
   curves: CurveRegistry,
+  runModifierId: string | null = null,
 ): PrestigeResult {
   const platesAwarded = platesFor(state, content, curves);
   // The seed is handed over only to satisfy `createInitialState`; the run's own
@@ -180,6 +201,8 @@ export function meltDown(
        * through the ending and melted down on the far side of it.
        */
       ngPlus: state.ngPlus,
+      // The modifier picked for the run that starts now (null: none taken).
+      runModifierId,
       // The workshop is scrapped, not the relationships: clients remember
       // who delivered, and the shop's name means what it meant.
       commissions: { ...fresh.commissions, loyalty: state.commissions.loyalty },

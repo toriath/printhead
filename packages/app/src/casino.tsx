@@ -90,6 +90,10 @@ export interface Casino {
 const COIN_FLIGHT_MS = 900;
 /** Frames to wait for a counter that is only now being revealed. */
 const SHOWER_RETRIES = 6;
+/** The highest step on the coin scale a streak climbs to. */
+const STREAK_PITCH_MAX = 10;
+/** How long a refused button shakes its head. */
+const REFUSE_MS = 420;
 const FLOAT_MS = 1100;
 /** Gains this close together keep a streak going. */
 const STREAK_WINDOW_MS = 8000;
@@ -241,7 +245,9 @@ export function useCasino(store: GameStore): Casino {
     };
     const launch = (start: Spot, end: Spot, money: number): void => {
       const count = coinsFor(money);
-      const level = sfx.combo(performance.now());
+      // The coins climb the scale with the visible streak, so the sound and
+      // the 🔥 pill always tell the same story.
+      const level = Math.min(streakCount.current, STREAK_PITCH_MAX);
       const batch: Coin[] = [];
       for (let i = 0; i < count; i += 1) {
         nextId.current += 1;
@@ -367,6 +373,21 @@ export function useCasino(store: GameStore): Casino {
         case 'PRINT_FAILED':
           sfx.thud();
           break;
+        case 'ACTION_REJECTED': {
+          // A refusal answers the button that asked: it shakes its head.
+          sfx.sigh();
+          const press = lastPress.current;
+          if (press !== null && performance.now() - press.at < PRESS_RECENT_MS) {
+            const button = document.elementFromPoint(press.x, press.y)?.closest('button');
+            if (button !== null && button !== undefined) {
+              button.classList.remove('is-refused');
+              void (button as HTMLElement).offsetWidth;
+              button.classList.add('is-refused');
+              later(REFUSE_MS, () => button.classList.remove('is-refused'));
+            }
+          }
+          break;
+        }
         case 'PRESTIGED': {
           const stage = document.querySelector('.stage')?.getBoundingClientRect();
           if (stage === undefined || stage.width === 0) {
