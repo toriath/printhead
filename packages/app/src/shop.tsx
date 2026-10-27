@@ -1,5 +1,5 @@
 import { type DomainEvent, type VisualState, setShopPrice } from '@printhead/core';
-import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type ReactElement, useEffect, useRef, useState } from 'react';
 import { formatMoney } from './format.js';
 import type { GameStore } from './store.js';
 
@@ -120,5 +120,107 @@ export function ShopPanel({ store, visual }: ShopPanelProps): ReactElement | nul
       </ol>
       <p className="shopfront__tally">{`${shop.served} served · ${shop.missed} turned away`}</p>
     </section>
+  );
+}
+
+interface Walker {
+  readonly id: number;
+  readonly from: number;
+  readonly to: number;
+  readonly hue: number;
+  readonly hat: boolean;
+  readonly served: boolean;
+}
+
+/** How long one visit takes on screen, there and back. */
+const WALK_MS = 3600;
+/** At most this many customers on the floor at once. */
+const MAX_WALKERS = 5;
+
+function hash(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    h = (h * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * Customers you can see: each visit is a little figure that walks in from the
+ * edge of the workshop floor to the stock pile, pauses, and walks out — with a
+ * Part held high and a coin over its head, or empty-handed and glum.
+ * Decoration only, driven by the shop's events.
+ */
+export function ShopFloor({
+  store,
+  stage,
+}: {
+  store: GameStore;
+  stage: { readonly current: HTMLElement | null };
+}): ReactElement {
+  const [walkers, setWalkers] = useState<readonly Walker[]>([]);
+  const nextId = useRef(0);
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const unsubscribe = store.onEvent((event: DomainEvent) => {
+      if (event.type !== 'CUSTOMER_SERVED' && event.type !== 'CUSTOMER_LEFT') {
+        return;
+      }
+      const box = stage.current?.getBoundingClientRect();
+      const pile = stage.current?.querySelector('[data-pile]')?.getBoundingClientRect();
+      if (box === undefined || box.width === 0) {
+        return;
+      }
+      nextId.current += 1;
+      const seed = hash(`${event.customerId}:${nextId.current}`);
+      const walker: Walker = {
+        id: nextId.current,
+        from: box.width + 30,
+        to: pile === undefined || pile.width === 0 ? box.width * 0.25 : pile.right - box.left + 18,
+        hue: seed % 360,
+        hat: seed % 3 === 0,
+        served: event.type === 'CUSTOMER_SERVED',
+      };
+      setWalkers((current) => [...current, walker].slice(-MAX_WALKERS));
+      timers.push(
+        setTimeout(
+          () => setWalkers((current) => current.filter((w) => w.id !== walker.id)),
+          WALK_MS,
+        ),
+      );
+    });
+    return () => {
+      unsubscribe();
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+    };
+  }, [store, stage]);
+  return (
+    <div className="shopfloor" aria-hidden="true">
+      {walkers.map((walker) => (
+        <span
+          key={walker.id}
+          className={walker.served ? 'customer is-served' : 'customer is-missed'}
+          style={
+            {
+              '--from': `${walker.from}px`,
+              '--to': `${walker.to}px`,
+              '--hue': walker.hue,
+              animationDuration: `${WALK_MS}ms`,
+            } as CSSProperties
+          }
+        >
+          <svg viewBox="0 0 24 40" className="customer__body" aria-hidden="true">
+            {walker.hat ? (
+              <rect x="5" y="0" width="14" height="5" rx="1.5" className="customer__hat" />
+            ) : null}
+            <circle cx="12" cy="9" r="5.5" className="customer__head" />
+            <path d="M5 38V22a7 7 0 0 1 14 0v16" className="customer__coat" />
+          </svg>
+          <span className="customer__carry">{walker.served ? '◆' : '…'}</span>
+        </span>
+      ))}
+    </div>
   );
 }

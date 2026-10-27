@@ -3214,3 +3214,105 @@ button:not(:disabled):active {
 .log__entry--agent {
   color: var(--blueprint);
 }
+
+/* --- customers on the floor -------------------------------------------- */
+.shopfloor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 16px;
+}
+
+.customer {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  width: 22px;
+  height: 38px;
+  transform: translateX(var(--from));
+  animation-name: customer-visit;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes customer-visit {
+  0% {
+    transform: translateX(var(--from)) scaleX(-1);
+  }
+  42% {
+    transform: translateX(var(--to)) scaleX(-1);
+  }
+  58% {
+    transform: translateX(var(--to)) scaleX(1);
+  }
+  100% {
+    transform: translateX(var(--from)) scaleX(1);
+  }
+}
+
+.customer__body {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: customer-bob 360ms ease-in-out infinite alternate;
+}
+
+@keyframes customer-bob {
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+.customer__head {
+  fill: hsl(var(--hue) 45% 78%);
+  stroke: #1c2330;
+  stroke-width: 1.5;
+}
+.customer__coat {
+  fill: hsl(var(--hue) 55% 50%);
+  stroke: #1c2330;
+  stroke-width: 1.5;
+}
+.customer__hat {
+  fill: hsl(calc(var(--hue) + 160) 50% 35%);
+  stroke: #1c2330;
+  stroke-width: 1.2;
+}
+
+.customer__carry {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  font: 700 12px / 1 var(--font-sans);
+  opacity: 0;
+  animation: carry 3600ms linear forwards;
+}
+
+.customer.is-served .customer__carry {
+  color: #ffd75a;
+  text-shadow: 0 0 6px rgb(255 210 80 / 0.8);
+}
+
+.customer.is-missed .customer__carry {
+  color: var(--ink-muted);
+}
+
+.customer.is-missed .customer__head {
+  fill: hsl(var(--hue) 15% 70%);
+}
+
+@keyframes carry {
+  0%,
+  50% {
+    opacity: 0;
+  }
+  58%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

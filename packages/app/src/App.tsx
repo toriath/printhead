@@ -23,7 +23,7 @@ import { AutomationPanel, MarketPanel, RecyclerPanel, UpgradePanel } from './pan
 import { useReveal } from './reveal.js';
 import * as sfx from './sfx.js';
 import { unlockAudio } from './sfx.js';
-import { ShopPanel } from './shop.js';
+import { ShopFloor, ShopPanel } from './shop.js';
 import { useShortcuts } from './shortcuts.js';
 import { starvedSlots } from './starve.js';
 import type { GameStore } from './store.js';
@@ -250,6 +250,7 @@ export function App({ store, loadWarning = null }: AppProps): ReactElement {
             }}
           />
           <PopupLayer popups={juice.popups} bays={bays} anchorOf={anchorOf} />
+          <ShopFloor store={store} stage={stage} />
           {diary.fresh === null || reading
             ? null
             : (() => {
