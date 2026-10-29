@@ -18,7 +18,7 @@ import { type SweepPoint, axisAroundCurrent, gridOf, sampleGrid, toCsv } from '.
 
 const execFileAsync = promisify(execFile);
 
-/** 4 cores in the devcontainer; leave one for the parent and the OS. */
+/** Leave a core for the parent and the OS, and cap at three workers. */
 const MAX_WORKERS = Math.max(1, Math.min(3, cpus().length - 1));
 const WORKER = fileURLToPath(new URL('./sweep-worker.ts', import.meta.url));
 

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "(cd / && npm i -g pnpm@10.15.0) && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @printhead/app build",
+  "outputDirectory": "packages/app/dist",
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
+  ]
+}

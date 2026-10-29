@@ -7,7 +7,6 @@
   },
   "files": {
     "ignore": [
-      "**/.devcontainer/**",
       "**/node_modules/**",
       "**/.pnpm-store/**",
       "**/dev-dist/**",

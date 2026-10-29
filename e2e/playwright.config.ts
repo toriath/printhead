@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright runs chromium inside the devcontainer (spec §13).
+ * Playwright runs chromium, locally and in CI (spec §13).
  *
  * Two servers, two projects, on purpose:
  *

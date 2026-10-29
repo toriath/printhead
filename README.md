@@ -20,11 +20,17 @@ The binding specification is [`docs/printhead-spec-v0.4.md`](docs/printhead-spec
 > summary. `VisualState` is frozen at v7; saves are at v6. M7 is the ship:
 > PWA polish, save-corpus hardening and the printable STL of the printer itself.
 
-## Quick start (inside the devcontainer)
+## Quick start
+
+Needs pnpm 10.15 (`npm i -g pnpm@10.15.0`) and any Node ≥ 22 to launch it.
+The project pins its own Node through `devEngines.runtime` in `package.json`:
+pnpm downloads Node 22.21.1 and runs every script with it, so a laptop on a
+newer Node and CI run the same simulation bit-for-bit.
 
 ```bash
 pnpm install
 pnpm check          # the single verification entrypoint
+pnpm --filter @printhead/app dev   # the game on http://localhost:5173
 ```
 
 `pnpm check` runs, in order:
