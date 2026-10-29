@@ -154,7 +154,7 @@ The app is desktop-first (no phone layout): a fixed-height window with a **top b
 
 ## 9. Constraints (non-negotiable)
 
-- Development in a **Linux devcontainer** on a MacBook; web build and the **entire test/tooling suite run in the container**. No host dependencies except Apple packaging.
+- Development directly on a MacBook with pnpm; the project pins its own Node (22, via `devEngines.runtime`), so the host and CI run the **entire test/tooling suite** on the same runtime. *(The original Linux devcontainer was retired: it slowed every check and CI already gives a clean machine.)*
 - **Platforms: desktop first** — Web (primary, PWA from day one) and macOS via Tauri v2; signing/packaging manually on the macOS host is acceptable (scripted). *iOS/mobile is dropped: the interface is designed for a desktop window and a mouse (§7.6).*
 - Idiomatic strict TypeScript, explicit design patterns, high coverage **including mutation testing**, fully deterministic simulation.
 
@@ -163,7 +163,7 @@ The app is desktop-first (no phone layout): a fixed-height window with a **top b
 | Concern | Choice | Rationale |
 |---|---|---|
 | Language | TypeScript (strict, `noUncheckedIndexedAccess`) | One language everywhere; agent-friendly |
-| Monorepo | pnpm workspaces | Simple, container-friendly |
+| Monorepo | pnpm workspaces | Simple; pins its own Node runtime |
 | App/renderer | React 18 + Vite | SVG-in-JSX ideal for the vector printer |
 | Simulation | Pure TS `core` package, zero DOM/React deps | Testable, portable, renderer-swappable |
 | Content/balance | **JSON data + zod schemas** (§11) | Values are data, not code |
@@ -171,7 +171,7 @@ The app is desktop-first (no phone layout): a fixed-height window with a **top b
 | Tests | Vitest + fast-check + **Stryker** + Playwright | See §13 |
 | Lint/format | Biome (+ dependency-cruiser for import rules) | Deterministic for agents |
 | Shell | **Tauri v2** | macOS from the same web bundle |
-| CI | GitHub Actions **inside the devcontainer image** | Dev = CI, bit-for-bit |
+| CI | GitHub Actions on `ubuntu-latest`, the same pinned Node 22 | Dev = CI on the simulation |
 
 **Why not Godot/Unity:** the renderer is deliberately HTML/CSS/SVG (later maybe RIVE, also web-embeddable). We borrow the *data patterns* of those engines (§11) without the engines.
 
@@ -212,7 +212,7 @@ Workflow mandate: when a milestone introduces a mechanic, the agent (a) extends 
 | Balance | `tools/balance` bots | §12 budgets as CI assertions |
 | Content | zod + ref-checker | All content valid; no dangling ids; no literals in systems |
 | `renderer` | Vitest + Testing Library | Every `VisualState` fixture renders; upgrade visuals snapshot-tested |
-| E2E | Playwright (chromium, in container) | Intro; save→reload equality; time away changes nothing; prestige; editor smoke (dev build) |
+| E2E | Playwright (chromium) | Intro; save→reload equality; time away changes nothing; prestige; editor smoke (dev build) |
 | Saves | Fixture corpus | Every released schema version loads forever |
 
 TDD is the default working mode. Determinism rule: **no `Math.random`, no `Date.now` in `core`** — inject seeded `rng` (mulberry32, forkable streams) and `now`. Every bug reproducible from `(seed, actionLog)`.
@@ -244,7 +244,6 @@ A dev-only in-app **Editor panel** — think Unity Inspector for this game:
 
 ```
 printhead/
-├── .devcontainer/                 # node:22-bookworm + pnpm + Playwright deps + Biome
 ├── .github/workflows/             # ci.yml · release-web.yml
 ├── packages/
 │   ├── core/
@@ -268,17 +267,17 @@ printhead/
 └── docs/                          # this spec, ADRs, balance-reports/
 ```
 
-## 17. Devcontainer, CI, Release
+## 17. CI, Release
 
-- **CI (`ci.yml`)**, inside the devcontainer image: `biome ci` → content validation → `tsc -b` → `vitest --coverage` → `stryker run` (gated) → **balance bots vs. budgets** → `playwright test` → `vite build`. Green CI = releasable, reproducible web build.
+- **CI (`ci.yml`)**, on GitHub's Ubuntu runner with the pinned Node: `biome ci` → content validation → `tsc -b` → `vitest --coverage` → `stryker run` (gated) → **balance bots vs. budgets** → `playwright test` → `vite build`. Green CI = releasable, reproducible web build.
 - **Web release:** tag → build → deploy (GitHub Pages/Cloudflare Pages) + **itch.io via butler** (existing account/workflow). PWA installable from day one.
-- **macOS:** container builds web bundle → host runs `pnpm tauri build` (Xcode CLT), sign + notarize — `scripts/release-macos.sh`.
+- **macOS:** `vite build` makes the web bundle → host runs `pnpm tauri build` (Xcode CLT), sign + notarize — `scripts/release-macos.sh`.
 - **iOS:** dropped (desktop first). On web, `navigator.storage.persist()`; the backgrounded gap is dropped on return (no offline progress).
 - Versioning: Changesets; save-schema bump whenever state shape changes.
 
 ## 18. Implementation Milestones
 
-- **M0 — Skeleton:** devcontainer, monorepo, CI green, Biome + dependency-cruiser rules, content pipeline (zod, validation, hot-reload), pacing plumbing (`targetHours` → `paceScale`).
+- **M0 — Skeleton:** monorepo, CI green, Biome + dependency-cruiser rules, content pipeline (zod, validation, hot-reload), pacing plumbing (`targetHours` → `paceScale`).
 - **M1 — Core loop + harness v1:** tick engine, Parts/Filament/Money, single slot, print+sell, seeded RNG, saves v1, **headless harness with first bot** proving the loop end-to-end.
 - **M2 — Renderer v1:** slot-based printer SVG, machine-tier visuals, idle animation with phase offsets, `VisualState` v1 frozen.
 - **M3 — Economy + tooling v2 + editor v1:** materials/strategies, pity failure + scrap + recycler, market + auto-trading, automation tier 1, changeover; **sweep/tune/report tools operational; balance budgets enforced in CI; editor panel with content inspector + time controls.**
@@ -303,7 +302,7 @@ Each milestone: plan → tests → implement → mutation run → **balance run 
 
 The game about a 3D printer ships with a real, printable model of its own printer — a free thank-you download alongside releases.
 
-- **Source of truth is code-CAD:** OpenSCAD or Python **build123d/CadQuery** in `tools/stl/` (both run headless in the devcontainer). The model is parametric and derives its silhouette from the renderer's SVG shapes — the flat vector printer, extruded into the physical world. Machine-tier variants (acrylic/aluminum/steel frame) are parameters matching §5A; default export is the max-tier printer.
+- **Source of truth is code-CAD:** OpenSCAD or Python **build123d/CadQuery** in `tools/stl/` (both run headless; CI installs them with apt). The model is parametric and derives its silhouette from the renderer's SVG shapes — the flat vector printer, extruded into the physical world. Machine-tier variants (acrylic/aluminum/steel frame) are parameters matching §5A; default export is the max-tier printer.
 - **Printability by construction:** watertight/manifold; minimum wall thickness ≥ 1.2 mm; no unsupported overhangs > 45° (or split into parts with printed pins); fits a 180 mm bed; target < 2 h print at 0.2 mm layer height.
 - **CI-validated like everything else:** `pnpm stl:build` regenerates deterministically; `pnpm stl:check` runs a mesh audit (manifold, min thickness) plus a **PrusaSlicer CLI slice pass**. An unprintable model fails CI exactly like a failing test.
 - **Release artifact:** `printhead.stl` (+ 3MF with recommended print settings) attached to every web/itch release, and linked from the post-credits screen: *"print your printer."*

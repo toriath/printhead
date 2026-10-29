@@ -74,11 +74,14 @@ export function createGameLoop(options: GameLoopOptions): GameLoop {
     if (previous === null) {
       return 0;
     }
-    const elapsed = Math.max(now - previous, 0) * timeScale;
-    if (elapsed >= threshold) {
+    const gap = Math.max(now - previous, 0);
+    // "Away" is judged on the real wall-clock gap, before any dev warp: at
+    // ×100 a one-second frame is not an hour of absence.
+    if (gap >= threshold) {
       // The player was away. Nothing happened while they were gone.
       return 0;
     }
+    const elapsed = gap * timeScale;
     store.advanceWallClock(elapsed);
     return elapsed;
   }

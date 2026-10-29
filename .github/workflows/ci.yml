@@ -15,30 +15,26 @@ concurrency:
 
 jobs:
   check:
-    name: pnpm check (devcontainer)
+    name: pnpm check
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-
-      # Spec §17: CI runs inside the devcontainer image, so dev == CI bit-for-bit.
-      - name: Build the devcontainer and run the full check
-        uses: devcontainers/ci@v0.3
+      # pnpm comes from `packageManager`; Node from `devEngines.runtime`, which
+      # pnpm downloads and runs every script with — the same 22.x as a laptop.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          imageName: ghcr.io/${{ github.repository }}/devcontainer
-          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
-          push: never
-          runCmd: |
-            set -euo pipefail
-            corepack enable
-            pnpm install --frozen-lockfile
-            pnpm check
-            # The §12.6 budget gate also runs inside `pnpm check` (vitest);
-            # this prints the timeline and the blockers when it fails.
-            pnpm balance:sim
-            pnpm exec playwright install chromium
-            pnpm e2e
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      # The §12.6 budget gate also runs inside `pnpm check` (vitest);
+      # this prints the timeline and the blockers when it fails.
+      - run: pnpm balance:sim
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
 
   # Mutation testing is a separate job on purpose (spec §13, §17). A full run is
   # long — well over an hour on a four-core box — because a fifth of the mutants
@@ -61,14 +57,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build the devcontainer and run the mutation gate
-        uses: devcontainers/ci@v0.3
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          imageName: ghcr.io/${{ github.repository }}/devcontainer
-          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
-          push: never
-          runCmd: |
-            set -euo pipefail
-            corepack enable
-            pnpm install --frozen-lockfile
-            pnpm mutation
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm mutation

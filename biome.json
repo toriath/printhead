@@ -7,7 +7,7 @@
   },
   "files": {
     "ignore": [
-      "**/.devcontainer/**",
+      "**/.vercel/**",
       "**/node_modules/**",
       "**/.pnpm-store/**",
       "**/dev-dist/**",

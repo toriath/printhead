@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { assemblePrinter, bootGame, replaceState, snapshot, warp } from './harness.js';
+import {
+  assemblePrinter,
+  bootGame,
+  openTab,
+  replaceState,
+  snapshot,
+  warp,
+  workshop,
+} from './harness.js';
 
 const MS_PER_SECOND = 1000;
 
@@ -59,6 +67,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     await replaceState(page, inTheStudio as never);
     await warp(page, MS_PER_SECOND);
 
+    await openTab(page, 'studio');
     const studio = page.getByTestId('studio');
     await expect(studio).toBeVisible();
 
@@ -78,7 +87,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     await warp(page, 5 * 60 * MS_PER_SECOND);
     await page.getByTestId('print').click();
     await warp(page, 20 * 60 * MS_PER_SECOND);
-    await expect(page.getByRole('img').locator('[data-output="products"]')).not.toHaveCount(0);
+    await expect(workshop(page).locator('[data-output="products"]')).not.toHaveCount(0);
 
     const printed = (await snapshot(page)) as StateShape;
     expect(printed.slots[0]?.designId).toBe('money-plate');
@@ -100,6 +109,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     const before = (await snapshot(page)) as StateShape;
     expect(before.designs['money-plate']).toEqual({ level: 4, printsOnLevel: 2 });
 
+    await openTab(page, 'meltdown');
     await expect(page.getByTestId('prestige')).toBeVisible();
     const melt = page.getByTestId('melt-down');
     await expect(melt).toBeEnabled();
@@ -118,7 +128,7 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
 
     // And the intro replays itself: no clicks, the pieces clip on by themselves
     // (spec §6 phase 4).
-    await expect(page.getByRole('img')).toHaveAttribute('data-self-assembling', 'true');
+    await expect(workshop(page)).toHaveAttribute('data-self-assembling', 'true');
     await warp(page, 10 * 60 * MS_PER_SECOND);
     const rebuilt = (await snapshot(page)) as StateShape;
     expect(
@@ -144,12 +154,13 @@ test.describe('the Design Studio and the melt-down (spec §5D)', () => {
     }));
     await warp(page, MS_PER_SECOND);
 
+    await openTab(page, 'meltdown');
     await page.getByTestId('press-bill-printer').click();
     await warp(page, MS_PER_SECOND);
     expect(((await snapshot(page)) as StateShape).moneyPrinters['bill-printer']).toBe(1);
 
     // The mint appears in the workshop, and the money starts arriving.
-    await expect(page.getByRole('img').locator('[data-testid="mint"]')).toBeVisible();
+    await expect(workshop(page).locator('[data-testid="mint"]')).toBeVisible();
     await warp(page, 60 * MS_PER_SECOND);
     expect(((await snapshot(page)) as StateShape).stats.moneyPrinted).toBeGreaterThan(0);
   });

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * The E2E driver.
@@ -117,6 +117,22 @@ export async function assemblePrinter(page: Page): Promise<void> {
     await warp(page, seconds * MS_PER_SECOND);
     await page.getByTestId('attach').click();
   }
+}
+
+/**
+ * The workshop drawing. The page has other images now (spools, icons, the
+ * shop floor), so the workshop is found by its accessible name.
+ */
+export function workshop(page: Page): Locator {
+  return page.getByRole('img', { name: /PRINTHEAD workshop/ });
+}
+
+/**
+ * Open one of the right sidebar's tabs. Every panel stays in the document but
+ * only the open tab's is visible, the way a player sees it.
+ */
+export async function openTab(page: Page, id: string): Promise<void> {
+  await page.getByTestId(`tab-${id}`).click();
 }
 
 /**

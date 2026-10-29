@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { assemblePrinter, bootGame, content, warp } from './harness.js';
+import { assemblePrinter, bootGame, content, warp, workshop } from './harness.js';
 
 const MS_PER_SECOND = 1000;
 
@@ -20,12 +20,13 @@ test.describe('the intro (spec §6 phase 0)', () => {
     await expect(page.getByTestId('attach')).toHaveCount(0);
     await expect(page.getByTestId('assembly-bench')).toHaveCount(0);
     await expect(page.getByTestId('parts')).toHaveText('0');
-    const workshop = page.getByRole('img');
-    await expect(workshop.locator('[data-part="frame"]')).toHaveCount(1);
-    await expect(workshop.locator('[data-part="controller"]')).toHaveCount(1);
+    const drawing = workshop(page);
+    // (Printed Parts on the floor reuse the printer's own shapes, so "at least one".)
+    await expect(drawing.locator('[data-part="frame"]')).not.toHaveCount(0);
+    await expect(drawing.locator('[data-part="controller"]')).not.toHaveCount(0);
 
+    // One click loads the bay and starts the print.
     await page.getByTestId('configure').click();
-    await page.getByTestId('print').click();
     await expect(page.getByTestId('print-status')).toContainText('printing Bracket');
 
     const printSeconds = (await content(page)).objects[0]?.printDesignSeconds ?? 0;
@@ -46,9 +47,12 @@ test.describe('the intro (spec §6 phase 0)', () => {
     await expect(page.getByTestId('printer-figure')).toHaveAttribute('data-nozzle', 'brass');
   });
 
-  test('draws the whole slot rack, empty bays included (spec §4)', async ({ page }) => {
+  test('stands the first printer alone on the workshop floor (spec §4)', async ({ page }) => {
     await bootGame(page);
-    const capacity = await page.getByRole('img').getAttribute('data-slot-capacity');
-    await expect(page.locator('[data-testid^="bay-"]')).toHaveCount(Number(capacity));
+    // The workshop is drawn once the printer wakes up; the intro is the bench alone.
+    await assemblePrinter(page);
+    // The floor draws the bays the workshop owns, not empty rack spaces.
+    await expect(workshop(page)).toHaveAttribute('data-layout', 'floor');
+    await expect(workshop(page).locator('[data-testid^="bay-slot-"]')).toHaveCount(1);
   });
 });

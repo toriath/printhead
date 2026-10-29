@@ -8,6 +8,15 @@ import { contentWriteBack } from './vite/content-write-back.js';
 const contentDir = fileURLToPath(new URL('../core/content', import.meta.url));
 
 /**
+ * What the release banner says (`src/release.tsx`). `RELEASE_CHANNEL` wins;
+ * otherwise a Vercel preview deployment is a preview and every other build is
+ * a beta, until the day someone builds with `RELEASE_CHANNEL=stable`.
+ */
+const releaseChannel =
+  process.env.RELEASE_CHANNEL ?? (process.env.VERCEL_ENV === 'preview' ? 'preview' : 'beta');
+const buildSha = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? '';
+
+/**
  * The web build (spec §9: "PWA from day one", §11: content hot-reload in dev).
  *
  * `base: './'` keeps the bundle portable: the same artefact is served from a
@@ -16,6 +25,10 @@ const contentDir = fileURLToPath(new URL('../core/content', import.meta.url));
  */
 export default defineConfig({
   base: './',
+  define: {
+    'import.meta.env.VITE_RELEASE_CHANNEL': JSON.stringify(releaseChannel),
+    'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildSha),
+  },
   plugins: [
     react(),
     contentHotReload({ contentDir }),

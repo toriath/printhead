@@ -18,3 +18,4 @@ dist-types/
 dev-dist/
 # Local mutation-run transcripts. CI is the system of record for the score.
 .mutation-*.log
+.vercel

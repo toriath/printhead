@@ -6,7 +6,7 @@ A finite idle game about a 3D printer. **The complete, binding specification is
 ## Ground rules (summary — the spec wins on any conflict)
 
 - Work milestone by milestone (spec §18, M0 → M7). One milestone = one epic branch.
-- Everything must build and test **inside this devcontainer**. Never assume host tools.
+- Build and test on the host with pnpm 10.15; `devEngines.runtime` pins Node 22, so `pnpm` scripts never run on the host's own Node. No Docker needed.
 - All gameplay numbers live in `packages/core/content/` as data — no literals in `systems/` (CI-enforced).
 - TDD by default; Stryker mutation score ≥ 80 % on core systems (nightly CI job); balance bots enforce the 8 h pacing budget in CI (arc ±20 %, each phase ±35 %).
 - The simulation is pure TypeScript (ADR-001 — do not revisit) with no DOM deps, no `Math.random`, no `Date.now`.

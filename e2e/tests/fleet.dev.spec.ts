@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { assemblePrinter, bootGame, replaceState, snapshot, warp } from './harness.js';
+import {
+  assemblePrinter,
+  bootGame,
+  openTab,
+  replaceState,
+  snapshot,
+  warp,
+  workshop,
+} from './harness.js';
 
 const MS_PER_SECOND = 1000;
 
@@ -49,6 +57,7 @@ test.describe('the fleet (spec §4)', () => {
     await warp(page, MS_PER_SECOND);
 
     // One bay, full: the rack is now the thing holding the fleet back.
+    await openTab(page, 'fleet');
     const fleet = page.getByTestId('fleet');
     await expect(fleet).toBeVisible();
     await expect(page.getByTestId('bay-status-slot-1')).toContainText('8/8');
@@ -78,23 +87,32 @@ test.describe('the fleet (spec §4)', () => {
     await replaceState(page, inTheFarm as never);
     await warp(page, MS_PER_SECOND);
 
-    const workshop = page.getByRole('img');
-    await expect(workshop).toHaveAttribute('data-layout', 'rack');
+    const drawing = workshop(page);
+    await expect(drawing).toHaveAttribute('data-layout', 'floor');
+    await openTab(page, 'fleet');
     await page.getByTestId('buy-slot').click();
     await warp(page, MS_PER_SECOND);
-    // The count badge is the "render once per slot" rule of spec §4 in action.
-    await expect(workshop.locator('[data-testid="count-badge"]')).toHaveCount(1);
+    // The new bay stands on the workshop floor, next to the first.
+    await expect(drawing.locator('[data-testid^="bay-slot-"]')).toHaveCount(2);
   });
 
   test('commits the run to one branch of the fork and closes the other', async ({ page }) => {
     await bootGame(page);
     await assemblePrinter(page);
-    await replaceState(page, (state: unknown) => ({
-      ...(inTheFarm(state) as StateShape),
-      phaseId: 'studio',
-    }));
+    // Goliath needs a sintering head and one melt-down behind it (spec §5B).
+    await replaceState(page, (state: unknown) => {
+      const typed = inTheFarm(state) as StateShape & { stats: Record<string, number> };
+      return {
+        ...typed,
+        phaseId: 'studio',
+        upgrades: { 'sintering-head': 1 },
+        resources: { ...typed.resources, money: 100_000 },
+        stats: { ...typed.stats, prestigeCount: 1 },
+      };
+    });
     await warp(page, MS_PER_SECOND);
 
+    await openTab(page, 'fleet');
     await expect(page.getByTestId('fork-farm-path')).toBeVisible();
     await expect(page.getByTestId('fork-goliath')).toBeVisible();
 
@@ -104,7 +122,7 @@ test.describe('the fleet (spec §4)', () => {
     await expect(page.getByTestId('fork-chosen-goliath')).toBeVisible();
     await expect(page.getByTestId('fork-farm-path')).toHaveCount(0);
     // The rack is gone: one giant printer stands where it was (spec §5B).
-    await expect(page.getByRole('img')).toHaveAttribute('data-layout', 'goliath');
+    await expect(workshop(page)).toHaveAttribute('data-layout', 'goliath');
     expect(((await snapshot(page)) as StateShape).forkId).toBe('goliath');
   });
 });

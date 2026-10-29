@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { assemblePrinter, bootGame, replaceState, snapshot, warp } from './harness.js';
+import {
+  assemblePrinter,
+  bootGame,
+  openTab,
+  replaceState,
+  snapshot,
+  warp,
+  workshop,
+} from './harness.js';
 
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60 * MS_PER_SECOND;
@@ -64,6 +72,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     // On-screen inflation (spec §6 phase 5): the HUD says what the presses did.
     await expect(page.getByTestId('inflation')).toContainText('×');
 
+    await openTab(page, 'endgame');
     const endgame = page.getByTestId('endgame');
     await expect(endgame).toBeVisible();
     for (const node of ['exotic-feedstock', 'print-a-building', 'print-a-factory']) {
@@ -75,7 +84,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     const bought = (await snapshot(page)) as StateShape;
     expect(bought.upgrades['print-a-factory']).toBe(1);
     // "Print a building" changes the backdrop (spec §5E).
-    await expect(page.getByRole('img').first()).toHaveAttribute('data-backdrop', 'skyline');
+    await expect(workshop(page)).toHaveAttribute('data-backdrop', 'skyline');
     // ...and the printed factory turns out machines on its own.
     await warp(page, 10 * MS_PER_MINUTE);
     const later = (await snapshot(page)) as StateShape;
@@ -88,6 +97,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     await replaceState(page, inTheEndgame as never);
     await warp(page, MS_PER_SECOND);
 
+    await openTab(page, 'endgame');
     for (const node of [
       'exotic-feedstock',
       'print-a-building',
@@ -101,6 +111,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     // The feedstock is bought with Plates (spec §3) — the market row for it
     // only appears once the tree has opened the material, and one click buys a
     // parcel, so the last print takes several.
+    await openTab(page, 'market');
     const feedstock = page.getByTestId('buy-composite');
     for (let parcel = 0; parcel < 4; parcel += 1) {
       await feedstock.click();
@@ -108,6 +119,7 @@ test.describe('the endgame (spec §5E, §6 phases 5–6)', () => {
     }
 
     // A pre-printed section first (spec §7.3): it shortens the build.
+    await openTab(page, 'endgame');
     const section = page.getByTestId('print-section');
     await expect(section).toBeEnabled();
     await section.click();
