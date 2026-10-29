@@ -8,6 +8,7 @@ import { bootGame } from './boot.js';
 import { connectContentHotReload } from './dev/content-hot-reload.js';
 import { installDevHooks, readBootOverrides } from './dev/hooks.js';
 import { mountEditor } from './dev/mount-editor.js';
+import { ReleaseBanner } from './release.js';
 
 /**
  * Shell entry point (spec §16).
@@ -68,6 +69,7 @@ async function start(): Promise<void> {
   createRoot(container as HTMLElement).render(
     <StrictMode>
       <App store={game.store} loadWarning={loadWarning} />
+      <ReleaseBanner />
       {editor}
     </StrictMode>,
   );

@@ -21,7 +21,6 @@ test.describe('saves', () => {
     await bootGame(page);
     await assemblePrinter(page);
     await page.getByTestId('configure').click();
-    await page.getByTestId('print').click();
     await warp(page, 30 * MS_PER_SECOND);
     await saveNow(page);
 
@@ -52,7 +51,6 @@ test.describe('time away (spec §7.4: no offline progress)', () => {
     await bootGame(page);
     await assemblePrinter(page);
     await page.getByTestId('configure').click();
-    await page.getByTestId('print').click();
     await saveNow(page);
     const before = await snapshot(page);
     const savedAt = await nowMs(page);

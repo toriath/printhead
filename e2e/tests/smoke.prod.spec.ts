@@ -9,10 +9,12 @@ import { expect, test } from '@playwright/test';
  */
 test('the shipped bundle boots into the intro', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'PRINTHEAD' })).toBeVisible();
+  // The intro is the bench alone: no header, no workshop yet.
   await expect(page.getByTestId('phase')).toHaveText('intro');
-  await expect(page.getByRole('img')).toBeVisible();
+  await expect(page.getByTestId('assembly-bench')).toBeVisible();
   await expect(page.getByTestId('attach')).toBeVisible();
+  // Not the finished game, and it says so on the first screen.
+  await expect(page.getByTestId('release-banner')).toContainText('Beta');
 });
 
 test('the dev test seam is stripped from the production bundle', async ({ page }) => {

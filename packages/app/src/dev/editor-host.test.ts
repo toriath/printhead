@@ -115,6 +115,19 @@ describe('createEditorHost', () => {
     expect(game.store.getContent().pacing.targetHours).toBe(8);
   });
 
+  it('judges "away" on the real gap, so a big warp is not mistaken for absence', async () => {
+    const { game, source } = await boot();
+    const host = createEditorHost({ game, source });
+    const clock = game.platform.clock as unknown as { advance(ms: number): void };
+    const before = game.store.getState().simTimeMs;
+    // ×100 on a one-second frame is 100 s of warped time — past the one-minute
+    // away threshold, but the player never left.
+    host.setTimeScale(100);
+    clock.advance(1000);
+    game.loop.frame();
+    expect(game.store.getState().simTimeMs).toBeGreaterThan(before);
+  });
+
   it('refuses a nonsensical warp', async () => {
     const { game, source } = await boot();
     const host = createEditorHost({ game, source });
